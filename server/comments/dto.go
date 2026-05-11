@@ -16,3 +16,8 @@ type CommentUpdateDTO struct {
 	Id   uuid.UUID `json:"id"`
 	Body string    `json:"body"`
 }
+
+type CommentDeleteDTO struct {
+	Id   uuid.UUID `json:"id"`
+	Type string    `json:"type"` // Soft (disable) - Hard (delete)
+}

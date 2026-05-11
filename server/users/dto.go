@@ -28,3 +28,8 @@ type UserUpdateDTO struct {
 	DataType string    `json:"datatype"`
 	Value    string    `json:"value"`
 }
+
+type UserDeleteDTO struct {
+	Id   uuid.UUID `json:"id"`
+	Type string    `json:"type"` // Soft (disable) - Hard (delete)
+}
