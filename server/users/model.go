@@ -21,8 +21,8 @@ type User struct {
 	VerifiedAt  time.Time `json:"verified_at" redis:"verfied_at"`
 }
 
-func NewUser(id uuid.UUID, username, displayname, email, country, state, langtag, timezone string) *User {
-	return &User{
+func New(id uuid.UUID, username, displayname, email, country, state, langtag, timezone string) User {
+	return User{
 		Id:          id,
 		Username:    username,
 		DisplayName: displayname,
