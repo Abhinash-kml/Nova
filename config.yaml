@@ -1,0 +1,16 @@
+app_name: "nova backend"
+
+http:
+  readtimeout: 2
+  writetimeout: 2
+  idletimeout: 2
+  readheadertimeout: 2
+  maxheaderbytes: 1024
+
+observability:
+  trace:
+    endpoint: 
+  metric:
+    endpoint:
+  log:
+    endpoint:
