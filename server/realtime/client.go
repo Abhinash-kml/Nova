@@ -59,7 +59,28 @@ func (c *Client) ReadIncoming() {
 	}
 }
 
-// TODO: Implement this
+// TODO: Subjected to improvement
 func (c *Client) ProcessOutgoing() {
 	// Write loop
+	ticker := time.NewTicker(PingInterval)
+
+	for {
+		select {
+		case message, ok := <-c.send:
+			if !ok {
+				// Handle
+			}
+
+			err := c.conn.WriteMessage(websocket.TextMessage, message)
+			if err != nil {
+				// Handle
+			}
+		case <-ticker.C:
+			err := c.conn.WriteMessage(websocket.PingMessage, nil)
+			if err != nil {
+				// Handle error here
+			}
+		}
+
+	}
 }
