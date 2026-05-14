@@ -16,7 +16,7 @@ const (
 
 type Client struct {
 	Uid  uuid.UUID
-	send chan []byte
+	send chan Envelope
 	conn *websocket.Conn
 	hub  *Hub
 }
@@ -26,7 +26,7 @@ func NewClient(uid uuid.UUID, connection *websocket.Conn, hub *Hub) *Client {
 		Uid:  uid,
 		conn: connection,
 		hub:  hub,
-		send: make(chan []byte, 1000),
+		send: make(chan Envelope, 1000),
 	}
 }
 
@@ -46,7 +46,8 @@ func (c *Client) ReadIncoming() {
 
 	// Read loop
 	for {
-		_, raw, err := c.conn.ReadMessage()
+		var incomingEnvelope Envelope
+		err := c.conn.ReadJSON(&incomingEnvelope)
 		if err != nil {
 			if websocket.IsCloseError(err, websocket.CloseAbnormalClosure,
 				websocket.CloseNormalClosure,
@@ -55,7 +56,7 @@ func (c *Client) ReadIncoming() {
 			}
 		}
 
-		c.hub.Send(raw)
+		c.hub.Send(incomingEnvelope)
 	}
 }
 
@@ -66,12 +67,12 @@ func (c *Client) ProcessOutgoing() {
 
 	for {
 		select {
-		case message, ok := <-c.send:
+		case messageEnvelope, ok := <-c.send:
 			if !ok {
 				// Handle
 			}
 
-			err := c.conn.WriteMessage(websocket.TextMessage, message)
+			err := c.conn.WriteJSON(messageEnvelope)
 			if err != nil {
 				// Handle
 			}

@@ -6,9 +6,9 @@ type Hub struct {
 	// store SessionStore
 	register   chan *Client
 	unregister chan *Client
-	send       chan []byte
-	incoming   chan []byte
-	broadcast  chan []byte
+	send       chan Envelope
+	incoming   chan Envelope
+	broadcast  chan Envelope
 
 	// pubsub PubSub
 	// pool WorkerPool
@@ -18,9 +18,9 @@ func NewHub() *Hub {
 	return &Hub{
 		register:   make(chan *Client, 100),
 		unregister: make(chan *Client, 100),
-		send:       make(chan []byte, 100),
-		incoming:   make(chan []byte, 100),
-		broadcast:  make(chan []byte, 100),
+		send:       make(chan Envelope, 100),
+		incoming:   make(chan Envelope, 100),
+		broadcast:  make(chan Envelope, 100),
 	}
 }
 
@@ -47,11 +47,11 @@ func (h *Hub) Run() {
 	}
 }
 
-func (h *Hub) Send(message []byte) {
+func (h *Hub) Send(message Envelope) {
 	h.send <- message
 }
 
-func (h *Hub) handleSend(message []byte) {
+func (h *Hub) handleSend(message Envelope) {
 
 }
 
@@ -71,18 +71,18 @@ func (h *Hub) handleUnregister(client *Client) {
 
 }
 
-func (h *Hub) Broadcast(message []byte) {
+func (h *Hub) Broadcast(message Envelope) {
 	h.broadcast <- message
 }
 
-func (h *Hub) handleBroadcast(message []byte) {
+func (h *Hub) handleBroadcast(message Envelope) {
 
 }
 
-func (h *Hub) handleIncoming(message []byte) {
+func (h *Hub) handleIncoming(message Envelope) {
 
 }
 
-func (h *Hub) enrichMessage(message []byte) {
+func (h *Hub) enrichMessage(message Envelope) {
 
 }
