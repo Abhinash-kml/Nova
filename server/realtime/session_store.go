@@ -9,7 +9,7 @@ import (
 type SessionStore interface {
 	Add(*Client)
 	Remove(*Client) bool
-	Exists(*Client) bool
+	Exists(uuid.UUID) bool
 	Get(uuid.UUID) *Client
 	ForEach(func(*Client))
 }
@@ -29,7 +29,7 @@ func (s *InMemorySessionStore) Remove(c *Client) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if !s.Exists(c) {
+	if !s.Exists(c.Uid) {
 		return false
 	}
 
@@ -37,8 +37,8 @@ func (s *InMemorySessionStore) Remove(c *Client) bool {
 	return true
 }
 
-func (s *InMemorySessionStore) Exists(c *Client) bool {
-	_, ok := s.sessions[c.Uid]
+func (s *InMemorySessionStore) Exists(uid uuid.UUID) bool {
+	_, ok := s.sessions[uid]
 	return ok
 }
 

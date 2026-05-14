@@ -91,3 +91,7 @@ func (c *Client) ProcessOutgoing() {
 
 	}
 }
+
+func (c *Client) Send(message Envelope) {
+	c.send <- message
+}
