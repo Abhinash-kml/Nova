@@ -64,22 +64,28 @@ func (c *Client) ReadIncoming() {
 func (c *Client) ProcessOutgoing() {
 	// Write loop
 	ticker := time.NewTicker(PingInterval)
+	defer ticker.Stop()
 
 	for {
 		select {
 		case messageEnvelope, ok := <-c.send:
 			if !ok {
-				// Handle
+				c.conn.WriteMessage(websocket.CloseMessage, nil)
+				return
 			}
 
+			c.conn.SetWriteDeadline(time.Now().Add(WriteWait))
 			err := c.conn.WriteJSON(messageEnvelope)
 			if err != nil {
 				// Handle
 			}
 		case <-ticker.C:
+			c.conn.SetWriteDeadline(time.Now().Add(WriteWait))
 			err := c.conn.WriteMessage(websocket.PingMessage, nil)
 			if err != nil {
 				// Handle error here
+				// Log
+				return
 			}
 		}
 
