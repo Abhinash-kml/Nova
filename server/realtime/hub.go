@@ -1,6 +1,10 @@
 package realtime
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/google/uuid"
+)
 
 type Hub struct {
 	// store SessionStore
@@ -13,6 +17,8 @@ type Hub struct {
 	broker   RealtimeBroker
 	registry SessionStore
 	// pool WorkerPool
+
+	nodeId uuid.UUID
 }
 
 func NewHub() *Hub {
@@ -116,8 +122,9 @@ func (h *Hub) handleIncoming(message Envelope) {
 
 }
 
+// TODO: Improve this
 func (h *Hub) enrichMessage(message Envelope) {
-
+	message.Header.SourceID = h.nodeId
 }
 
 func (h *Hub) SendChannel() chan Envelope {

@@ -58,7 +58,7 @@ const (
 )
 
 type Header struct {
-	SourceID   int       `json:"source_id"`
+	SourceID   uuid.UUID `json:"source_id"`
 	SenderID   uuid.UUID `json:"sender_id"`
 	ReceiverID uuid.UUID `json:"receiver_id"`
 	CreatedAt  time.Time `json:"created_at"`
@@ -87,6 +87,14 @@ type ChatMessage struct {
 	Status    MessageStatus `json:"status"`
 	EditedAt  time.Time     `json:"edited_at,omitempty"`
 	CreatedAt time.Time     `json:"created_at"`
+}
+
+type GroupMessageReceipt struct {
+	MessageId   uuid.UUID     `json:"message_id"`
+	ChatId      uuid.UUID     `json:"chat_id"`
+	UserId      uuid.UUID     `json:"user_id"`
+	Status      MessageStatus `json:"status"` // "delivered" or "read"
+	UpdatedTime time.Time     `json:"updated_time"`
 }
 
 type StatusEvent struct {
