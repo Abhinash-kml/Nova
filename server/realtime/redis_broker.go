@@ -10,13 +10,18 @@ type RedisBroker struct {
 	client       *redis.Client
 	pubsub       *redis.PubSub
 	incomingChan <-chan redis.Message
+	ctx          context.Context
+	cancel       context.CancelFunc
 }
 
-func NewRedisBroker(client *redis.Client) *RedisBroker {
+func NewRedisBroker(ctx context.Context, client *redis.Client) *RedisBroker {
+	ctx, cancel := context.WithCancel(ctx)
 	return &RedisBroker{
 		client:       client,
 		pubsub:       nil,
 		incomingChan: make(<-chan redis.Message, 100),
+		ctx:          ctx,
+		cancel:       cancel,
 	}
 }
 
@@ -48,10 +53,20 @@ func (rb *RedisBroker) Unsubscribe(channel string) {
 func (rb *RedisBroker) ListenToSubscriptions() <-chan any {
 	outChan := make(chan any, 100)
 	go func() {
-		for incomingMessage := range rb.incomingChan {
-			outChan <- incomingMessage
+	loop:
+		for {
+			select {
+			case <-rb.ctx.Done():
+				break loop
+			case message := <-rb.incomingChan:
+				outChan <- message
+			}
 		}
 	}()
 
 	return outChan
+}
+
+func (rb *RedisBroker) Stop() {
+	rb.cancel()
 }
