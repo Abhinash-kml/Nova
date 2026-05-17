@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
 )
 
@@ -22,9 +23,11 @@ type Hub struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 	nodeId uuid.UUID
+
+	config config.RealtimeHubConfig
 }
 
-func NewHub(ctx context.Context, pubsub RealtimeBroker, store SessionStore) *Hub {
+func NewHub(ctx context.Context, pubsub RealtimeBroker, store SessionStore, cfg config.RealtimeHubConfig) *Hub {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Hub{
 		register:   make(chan *Client, 100),
@@ -34,6 +37,7 @@ func NewHub(ctx context.Context, pubsub RealtimeBroker, store SessionStore) *Hub
 		broadcast:  make(chan Envelope, 100),
 		ctx:        ctx,
 		cancel:     cancel,
+		config:     cfg,
 	}
 }
 
@@ -44,7 +48,7 @@ func (h *Hub) Initialize() {
 func (h *Hub) Run() {
 	fmt.Println("Renning realtime hub with 5 gorotines")
 
-	for range 5 { // Subjected to change
+	for range h.config.Goroutine.MaxMainGoroutine {
 		go func() {
 			for {
 				select {
@@ -137,6 +141,15 @@ func (h *Hub) enrichMessage(message Envelope) {
 
 func (h *Hub) SendChannel() chan Envelope {
 	return h.send
+}
+
+// TODO: Implement this
+func (h *Hub) RouteMessages() {
+	for range h.config.Goroutine.MaxRouterGoroutine {
+		go func() {
+			// Routing logic goes here
+		}()
+	}
 }
 
 func (h *Hub) Shutdown() {

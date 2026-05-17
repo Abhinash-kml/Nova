@@ -11,6 +11,7 @@ type Config struct {
 	AppName             string              `mapstructure:"appname"`
 	HttpServerConfig    HttpServerConfig    `mapstructure:"http"`
 	ObservabilityConfig ObservabilityConfig `mapstructure:"observability"`
+	RealtimeConfig      RealtimeHubConfig   `mapstructure:"realtime-hub"`
 }
 
 type HttpServerConfig struct {
@@ -38,4 +39,13 @@ type OtelMetricConfig struct {
 
 type OtelLogConfig struct {
 	Endpoint string `mapstructure:"endpoint"`
+}
+
+type RealtimeHubConfig struct {
+	Goroutine RealtimeHubGoroutineConfig `mapstructure:"goroutine"`
+}
+
+type RealtimeHubGoroutineConfig struct {
+	MaxMainGoroutine   int `mapstructure:"main"`
+	MaxRouterGoroutine int `mapstructure:"router"`
 }
