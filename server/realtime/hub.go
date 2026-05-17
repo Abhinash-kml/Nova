@@ -1,6 +1,7 @@
 package realtime
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -18,16 +19,21 @@ type Hub struct {
 	registry SessionStore
 	// pool WorkerPool
 
+	ctx    context.Context
+	cancel context.CancelFunc
 	nodeId uuid.UUID
 }
 
-func NewHub() *Hub {
+func NewHub(ctx context.Context, pubsub RealtimeBroker, store SessionStore) *Hub {
+	ctx, cancel := context.WithCancel(ctx)
 	return &Hub{
 		register:   make(chan *Client, 100),
 		unregister: make(chan *Client, 100),
 		send:       make(chan Envelope, 100),
 		incoming:   make(chan Envelope, 100),
 		broadcast:  make(chan Envelope, 100),
+		ctx:        ctx,
+		cancel:     cancel,
 	}
 }
 
@@ -38,10 +44,12 @@ func (h *Hub) Initialize() {
 func (h *Hub) Run() {
 	fmt.Println("Renning realtime hub with 5 gorotines")
 
-	for range 5 {
+	for range 5 { // Subjected to change
 		go func() {
 			for {
 				select {
+				case <-h.ctx.Done():
+					return
 				case client := <-h.register:
 					h.handleRegister(client)
 				case client := <-h.unregister:
@@ -129,4 +137,8 @@ func (h *Hub) enrichMessage(message Envelope) {
 
 func (h *Hub) SendChannel() chan Envelope {
 	return h.send
+}
+
+func (h *Hub) Shutdown() {
+	h.cancel()
 }
