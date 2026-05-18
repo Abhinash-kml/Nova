@@ -58,11 +58,12 @@ const (
 )
 
 type Header struct {
-	SourceID   uuid.UUID `json:"source_id"`
-	SenderID   uuid.UUID `json:"sender_id"`
-	ReceiverID uuid.UUID `json:"receiver_id"`
-	CreatedAt  time.Time `json:"created_at"`
-	Hops       int       `json:"hops"`
+	SourceID   uuid.UUID     `json:"source_id"`
+	SenderID   uuid.UUID     `json:"sender_id"`
+	ReceiverID uuid.UUID     `json:"receiver_id"`
+	CreatedAt  time.Time     `json:"created_at"`
+	TTL        time.Duration `json:"ttl"`
+	Hops       int           `json:"hops"`
 }
 
 type Envelope struct {

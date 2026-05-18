@@ -1,6 +1,8 @@
 package realtime
 
 import (
+	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -56,6 +58,13 @@ func (c *Client) ReadIncoming() {
 			}
 		}
 
+		// TODO: Maybe implement a pipeline for this ?
+
+		// Drop incoming message if it exceeded its ttl (message can be delayed dudee to network issues)
+		if time.Since(incomingEnvelope.Header.CreatedAt) >= incomingEnvelope.Header.TTL {
+			continue
+		}
+
 		c.hub.Send(incomingEnvelope)
 	}
 }
@@ -75,9 +84,40 @@ func (c *Client) ProcessOutgoing() {
 			}
 
 			c.conn.SetWriteDeadline(time.Now().Add(WriteWait))
-			err := c.conn.WriteJSON(messageEnvelope)
+
+			writer, err := c.conn.NextWriter(websocket.TextMessage)
 			if err != nil {
-				// Handle
+				fmt.Println("Failed to get writer for writing websocket message. Skipped some messages...")
+				break
+			}
+
+			encoder := json.NewEncoder(writer)
+			if encoder == nil {
+				fmt.Println("Failed to create json encoder. Websocker messages skipped")
+				continue
+			}
+			err = encoder.Encode(messageEnvelope)
+			if err != nil {
+				fmt.Println("Failed to encode envelope type to json. Skipped message")
+				continue
+			}
+
+			// Batch all messages in the send channel using newline \n character
+			len := len(c.send)
+			for range len {
+				writer.Write([]byte{'\n'})
+				message := <-c.send
+				encoder := json.NewEncoder(writer)
+				err := encoder.Encode(message)
+				if err != nil {
+					fmt.Println("Failed to encode envelope type to json. Skipped message")
+					continue
+				}
+			}
+
+			if err := writer.Close(); err != nil {
+				fmt.Println("Failed to write message using websocket writer")
+				continue
 			}
 		case <-ticker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(WriteWait))
