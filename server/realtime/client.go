@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
@@ -17,18 +18,20 @@ const (
 )
 
 type Client struct {
-	Uid  uuid.UUID
-	send chan Envelope
-	conn *websocket.Conn
-	hub  *Hub
+	Uid    uuid.UUID
+	send   chan Envelope
+	conn   *websocket.Conn
+	hub    *Hub
+	config *config.WebsocketConfig
 }
 
-func NewClient(uid uuid.UUID, connection *websocket.Conn, hub *Hub) *Client {
+func NewClient(config *config.WebsocketConfig, uid uuid.UUID, connection *websocket.Conn, hub *Hub) *Client {
 	return &Client{
-		Uid:  uid,
-		conn: connection,
-		hub:  hub,
-		send: make(chan Envelope, 1000),
+		Uid:    uid,
+		conn:   connection,
+		hub:    hub,
+		send:   make(chan Envelope, 1000),
+		config: config,
 	}
 }
 
@@ -39,10 +42,10 @@ func (c *Client) ReadIncoming() {
 		c.hub.Unregister(c)
 	}()
 
-	c.conn.SetReadLimit(1024)
-	c.conn.SetReadDeadline(time.Now().Add(PongWait))
+	c.conn.SetReadLimit(int64(c.config.MessageSize))
+	c.conn.SetReadDeadline(time.Now().Add(time.Duration(c.config.PongWait)))
 	c.conn.SetPongHandler(func(appData string) error {
-		c.conn.SetReadDeadline(time.Now().Add(PongWait))
+		c.conn.SetReadDeadline(time.Now().Add(time.Duration(c.config.PongWait)))
 		return nil
 	})
 
@@ -83,7 +86,7 @@ func (c *Client) ProcessOutgoing() {
 				return
 			}
 
-			c.conn.SetWriteDeadline(time.Now().Add(WriteWait))
+			c.conn.SetWriteDeadline(time.Now().Add(time.Duration(c.config.WriteWait)))
 
 			writer, err := c.conn.NextWriter(websocket.TextMessage)
 			if err != nil {
@@ -120,7 +123,7 @@ func (c *Client) ProcessOutgoing() {
 				continue
 			}
 		case <-ticker.C:
-			c.conn.SetWriteDeadline(time.Now().Add(WriteWait))
+			c.conn.SetWriteDeadline(time.Now().Add(time.Duration(c.config.WriteWait)))
 			err := c.conn.WriteMessage(websocket.PingMessage, nil)
 			if err != nil {
 				// Handle error here

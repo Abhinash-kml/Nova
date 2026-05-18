@@ -12,6 +12,7 @@ type Config struct {
 	HttpServerConfig    HttpServerConfig    `mapstructure:"http"`
 	ObservabilityConfig ObservabilityConfig `mapstructure:"observability"`
 	RealtimeConfig      RealtimeHubConfig   `mapstructure:"realtime-hub"`
+	WebsocketConfig     WebsocketConfig     `mapstructure:"websocket"`
 }
 
 type HttpServerConfig struct {
@@ -48,4 +49,12 @@ type RealtimeHubConfig struct {
 type RealtimeHubGoroutineConfig struct {
 	MaxMainGoroutine   int `mapstructure:"main"`
 	MaxRouterGoroutine int `mapstructure:"router"`
+}
+
+type WebsocketConfig struct {
+	PingInterval int `mapstructure:"ping-interval"`
+	PongWait     int `mapstructure:"pong-wait"`
+	WriteWait    int `mapstructure:"write-wait"`
+	MessageSize  int `mapstructure:"message-size"`
+	MaxMessages  int `mapstructure:"max-messages"`
 }

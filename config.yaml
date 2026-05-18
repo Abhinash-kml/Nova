@@ -19,3 +19,10 @@ realtime-hub:
   goroutine:
     main: 5
     router: 10
+
+websocket:
+  ping-interval: 5
+  write-wait: 5
+  pong-wait: 5
+  message-size: 512
+  max-messages: 1024
