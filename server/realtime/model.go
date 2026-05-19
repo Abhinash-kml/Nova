@@ -58,6 +58,7 @@ const (
 )
 
 type Header struct {
+	Type       MessageType   `json:"message_type"`
 	SourceID   uuid.UUID     `json:"source_id"`
 	SenderID   uuid.UUID     `json:"sender_id"`
 	ReceiverID uuid.UUID     `json:"receiver_id"`

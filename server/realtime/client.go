@@ -22,13 +22,15 @@ type Client struct {
 	send   chan Envelope
 	conn   *websocket.Conn
 	hub    *Hub
+	pm     *PresenceManager
 	config *config.WebsocketConfig
 }
 
-func NewClient(config *config.WebsocketConfig, uid uuid.UUID, connection *websocket.Conn, hub *Hub) *Client {
+func NewClient(config *config.WebsocketConfig, uid uuid.UUID, connection *websocket.Conn, pm *PresenceManager, hub *Hub) *Client {
 	return &Client{
 		Uid:    uid,
 		conn:   connection,
+		pm:     pm,
 		hub:    hub,
 		send:   make(chan Envelope, 1000),
 		config: config,
@@ -66,6 +68,11 @@ func (c *Client) ReadIncoming() {
 		// Drop incoming message if it exceeded its ttl (message can be delayed dudee to network issues)
 		if time.Since(incomingEnvelope.Header.CreatedAt) >= incomingEnvelope.Header.TTL {
 			continue
+		}
+
+		// If message type is Presence event - simply send it to Presence manager
+		if incomingEnvelope.Header.Type == MessagePresence {
+			c.pm.SetStatus(c.Uid, incomingEnvelope)
 		}
 
 		c.hub.Send(incomingEnvelope)
