@@ -2,6 +2,8 @@ package realtime
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -50,8 +52,8 @@ func (rb *RedisBroker) Unsubscribe(channel string) {
 }
 
 // TODO: Improve this
-func (rb *RedisBroker) ListenToSubscriptions() <-chan any {
-	outChan := make(chan any, 100)
+func (rb *RedisBroker) ListenToSubscriptions() <-chan Envelope {
+	outChan := make(chan Envelope, 100)
 	go func() {
 	loop:
 		for {
@@ -59,7 +61,14 @@ func (rb *RedisBroker) ListenToSubscriptions() <-chan any {
 			case <-rb.ctx.Done():
 				break loop
 			case message := <-rb.incomingChan:
-				outChan <- message
+				var envelope Envelope
+				err := json.Unmarshal([]byte(message.Payload), &envelope)
+				if err != nil {
+					fmt.Println("Failed to unmarshall incoming redis pub sub message")
+					continue
+				}
+
+				outChan <- envelope
 			}
 		}
 	}()

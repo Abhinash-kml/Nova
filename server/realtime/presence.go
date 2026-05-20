@@ -37,7 +37,7 @@ func (pm *PresenceManager) SetupUser(id uuid.UUID) {
 	// Task 2 - check if they online
 	var clients []*Client
 	for index := range ids {
-		if pm.sessionStore.Exists(ids[index]) {
+		if pm.sessionStore.Exists(ids[index]) { // Check existence - if yes add them to slice
 			client := pm.sessionStore.Get(ids[index])
 			clients = append(clients, client)
 		}
@@ -92,18 +92,6 @@ func (pm *PresenceManager) SetStatus(id uuid.UUID, status Envelope) {
 func (pm *PresenceManager) Subscribe(subscriber, subscribedTo uuid.UUID) {
 	pm.addSubscriberOfUser(subscribedTo, subscriber) // 1
 
-	mapping := pm.forwardMapping[subscriber] // 2
-	userClient := pm.sessionStore.Get(subscribedTo)
-	if userClient == nil {
-		// Handle
-		return
-	}
-
-	mapping[userClient] = true
-}
-
-// 1. Remove subscriber id from inverted mapping using subscribedTo id as key
-func (pm *PresenceManager) Unsubscribe(subscriber, subscribedTo uuid.UUID) {
 	mapping := pm.forwardMapping[subscriber]
 	userClient := pm.sessionStore.Get(subscribedTo)
 	if userClient == nil {
@@ -111,7 +99,22 @@ func (pm *PresenceManager) Unsubscribe(subscriber, subscribedTo uuid.UUID) {
 		return
 	}
 
-	delete(mapping, userClient)
+	mapping[userClient] = true // 2
+}
+
+// 1. Remove subscriber from db
+// 2. Remove subscriber id from inverted mapping using subscribedTo id as key
+func (pm *PresenceManager) Unsubscribe(subscriber, subscribedTo uuid.UUID) {
+	pm.removeSubscriberOfUser(subscribedTo, subscriber) // 1
+
+	mapping := pm.forwardMapping[subscriber]
+	userClient := pm.sessionStore.Get(subscribedTo)
+	if userClient == nil {
+		// Handle
+		return
+	}
+
+	delete(mapping, userClient) // 2
 }
 
 // TODO: Implement this
@@ -119,6 +122,12 @@ func (pm *PresenceManager) getSubscribersOfUser(id uuid.UUID) []uuid.UUID {
 	return nil
 }
 
+// TODO: Implement this
 func (pm *PresenceManager) addSubscriberOfUser(id, subscriber uuid.UUID) {
+
+}
+
+// TODO: Implement this
+func (pm *PresenceManager) removeSubscriberOfUser(id, subscriber uuid.UUID) {
 
 }

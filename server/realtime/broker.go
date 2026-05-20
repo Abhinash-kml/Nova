@@ -5,5 +5,5 @@ type RealtimeBroker interface {
 	Publish(string, Envelope) error
 	Subscribe(string)
 	Unsubscribe(string)
-	ListenToSubscriptions() <-chan any
+	ListenToSubscriptions() <-chan Envelope
 }

@@ -50,6 +50,8 @@ func (h *Hub) Run() {
 
 	for range h.config.Goroutine.MaxMainGoroutine {
 		go func() {
+			h.listenToIncomingMessageFromBroker()
+
 			for {
 				select {
 				case <-h.ctx.Done():
@@ -131,7 +133,7 @@ func (h *Hub) handleBroadcast(message Envelope) {
 
 // 1. Send the incoming message to the send channel
 func (h *Hub) handleIncoming(message Envelope) {
-
+	h.handleSend(message)
 }
 
 // TODO: Improve this
@@ -141,6 +143,13 @@ func (h *Hub) enrichMessage(message Envelope) {
 
 func (h *Hub) SendChannel() chan Envelope {
 	return h.send
+}
+
+func (h *Hub) listenToIncomingMessageFromBroker() {
+	channel := h.broker.ListenToSubscriptions()
+	for message := range channel {
+		h.incoming <- message
+	}
 }
 
 // TODO: Implement this
