@@ -46,12 +46,15 @@ func (h *Hub) Initialize() {
 }
 
 func (h *Hub) Run() {
-	fmt.Println("Renning realtime hub with 5 gorotines")
+	fmt.Println("Starting hub...")
+	fmt.Println("Running ", h.config.Goroutine.MaxBrokerGoroutine, "for listening incoming messages from hub")
+	for range h.config.Goroutine.MaxBrokerGoroutine {
+		go h.listenToIncomingMessageFromBroker()
+	}
 
+	fmt.Println("Running ", h.config.Goroutine.MaxBrokerGoroutine, "for listening incoming messages from different channels of hub")
 	for range h.config.Goroutine.MaxMainGoroutine {
 		go func() {
-			h.listenToIncomingMessageFromBroker()
-
 			for {
 				select {
 				case <-h.ctx.Done():

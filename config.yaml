@@ -19,6 +19,7 @@ realtime-hub:
   goroutine:
     main: 5
     router: 10
+    broker: 10
 
 websocket:
   ping-interval: 5

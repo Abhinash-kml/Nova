@@ -49,6 +49,7 @@ type RealtimeHubConfig struct {
 type RealtimeHubGoroutineConfig struct {
 	MaxMainGoroutine   int `mapstructure:"main"`
 	MaxRouterGoroutine int `mapstructure:"router"`
+	MaxBrokerGoroutine int `mapstructure:"broker"`
 }
 
 type WebsocketConfig struct {
