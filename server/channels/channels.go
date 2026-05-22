@@ -10,9 +10,10 @@ import (
 	"github.com/google/uuid"
 )
 
-func New(ctx context.Context, name string, persist bool, hubChannel chan realtime.Envelope) *Channel {
+func New(ctx context.Context, id uuid.UUID, name string, persist bool, hubChannel chan realtime.Envelope) *Channel {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Channel{
+		Id:                id,
 		Name:              name,
 		IsPersistant:      persist,
 		Stream:            make(chan ChannelMessage, 100),
@@ -29,6 +30,8 @@ func (c *Channel) Subscribe(uid uuid.UUID) bool {
 	c.Subscribers[uid] = true
 	c.mu.Unlock()
 
+	c.handleOnSubscription()
+
 	return true
 }
 
@@ -42,6 +45,8 @@ func (c *Channel) Unsubscribe(uid uuid.UUID) bool {
 	delete(c.Subscribers, uid)
 	c.mu.Unlock()
 
+	c.handleOnUnsubscription()
+
 	return true
 }
 
@@ -53,10 +58,23 @@ func (c *Channel) Put(message ChannelMessage) {
 	c.Stream <- message
 }
 
+func (c *Channel) handleOnSubscription() {
+	if c.IsPersistant {
+		// Fetch all messages of channel
+		// Sent to subscriber
+	}
+}
+
+func (c *Channel) handleOnUnsubscription() {
+	// Think about this
+}
+
 // TODO: Improve this
 func (c *Channel) Process() {
 	ticker := time.NewTicker(c.ProcessInterval)
 	defer ticker.Stop()
+
+	go c.ProcessPersistantMessages()
 
 	go func() {
 		for {
@@ -91,7 +109,7 @@ func (c *Channel) Process() {
 	}()
 }
 
-func (c *Channel) ProcessPersistantMessages(message ChannelMessage) {
+func (c *Channel) ProcessPersistantMessages() {
 	go func() {
 		for {
 			select {

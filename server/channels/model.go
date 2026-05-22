@@ -10,7 +10,8 @@ import (
 )
 
 type Channel struct {
-	Name              string `json:"name"`
+	Id                uuid.UUID `json:"id"`
+	Name              string    `json:"name"`
 	IsPersistant      bool
 	Stream            chan ChannelMessage `json:"stream"`
 	PersistantMessage chan ChannelMessage
