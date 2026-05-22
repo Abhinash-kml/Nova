@@ -10,15 +10,17 @@ import (
 	"github.com/google/uuid"
 )
 
-func New(ctx context.Context, name string, hubChannel chan realtime.Envelope) *Channel {
+func New(ctx context.Context, name string, persist bool, hubChannel chan realtime.Envelope) *Channel {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Channel{
-		Name:        name,
-		Stream:      make(chan ChannelMessage, 100),
-		Subscribers: make(map[uuid.UUID]bool),
-		ctx:         ctx,
-		cancel:      cancel,
-		hubChannel:  hubChannel,
+		Name:              name,
+		IsPersistant:      persist,
+		Stream:            make(chan ChannelMessage, 100),
+		PersistantMessage: make(chan ChannelMessage, 100),
+		Subscribers:       make(map[uuid.UUID]bool),
+		ctx:               ctx,
+		cancel:            cancel,
+		hubChannel:        hubChannel,
 	}
 }
 
@@ -64,6 +66,10 @@ func (c *Channel) Process() {
 				return
 			case <-ticker.C:
 				message := c.Get()
+				if c.IsPersistant {
+					c.PersistantMessage <- message
+				}
+
 				rawBytes, err := json.Marshal(message)
 				if err != nil {
 					fmt.Println("Failed to marshall Channel Message to raw bytes")
@@ -83,6 +89,24 @@ func (c *Channel) Process() {
 			}
 		}
 	}()
+}
+
+func (c *Channel) ProcessPersistantMessages(message ChannelMessage) {
+	go func() {
+		for {
+			select {
+			case <-c.ctx.Done():
+				fmt.Println("Channel process terminated via context completion")
+				return
+			case message := <-c.PersistantMessage:
+				c.Persist(message)
+			}
+		}
+	}()
+}
+
+func (c *Channel) Persist(message ChannelMessage) {
+	// Store message in db logic
 }
 
 func (c *Channel) Stop() {

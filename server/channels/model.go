@@ -10,14 +10,16 @@ import (
 )
 
 type Channel struct {
-	Name            string              `json:"name"`
-	Stream          chan ChannelMessage `json:"stream"`
-	Subscribers     map[uuid.UUID]bool
-	ProcessInterval time.Duration
-	ctx             context.Context
-	cancel          context.CancelFunc
-	hubChannel      chan realtime.Envelope
-	mu              sync.RWMutex
+	Name              string `json:"name"`
+	IsPersistant      bool
+	Stream            chan ChannelMessage `json:"stream"`
+	PersistantMessage chan ChannelMessage
+	Subscribers       map[uuid.UUID]bool
+	ProcessInterval   time.Duration
+	ctx               context.Context
+	cancel            context.CancelFunc
+	hubChannel        chan realtime.Envelope
+	mu                sync.RWMutex
 }
 
 type ChannelMessage struct {
