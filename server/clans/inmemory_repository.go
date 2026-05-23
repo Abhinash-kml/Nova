@@ -18,6 +18,9 @@ func NewInMemoryClanRepository() *InMemoryClansRepository {
 }
 
 func (r *InMemoryClansRepository) Get(ctx context.Context, id uuid.UUID) (Clan, bool) {
+	r.mu.RLock()
+	defer r.mu.Unlock()
+
 	for index := range r.clans {
 		if r.clans[index].Id == id {
 			return r.clans[index], true
@@ -28,6 +31,9 @@ func (r *InMemoryClansRepository) Get(ctx context.Context, id uuid.UUID) (Clan, 
 }
 
 func (r *InMemoryClansRepository) GetByName(ctx context.Context, name string) (Clan, bool) {
+	r.mu.RLock()
+	defer r.mu.Unlock()
+
 	for index := range r.clans {
 		if r.clans[index].Name == name {
 			return r.clans[index], true
@@ -38,6 +44,9 @@ func (r *InMemoryClansRepository) GetByName(ctx context.Context, name string) (C
 }
 
 func (r *InMemoryClansRepository) GetAll(ctx context.Context) []Clan {
+	r.mu.RLock()
+	defer r.mu.Unlock()
+
 	return r.clans
 }
 
@@ -51,11 +60,9 @@ func (r *InMemoryClansRepository) Add(ctx context.Context, clan Clan) bool {
 }
 
 func (r *InMemoryClansRepository) Delete(ctx context.Context, id uuid.UUID) bool {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
 	beforeLen := len(r.clans)
 
+	r.mu.Lock()
 	r.clans = slices.DeleteFunc(r.clans, func(c Clan) bool {
 		if c.Id == id {
 			return true
@@ -63,6 +70,7 @@ func (r *InMemoryClansRepository) Delete(ctx context.Context, id uuid.UUID) bool
 
 		return false
 	})
+	r.mu.Unlock()
 
 	afterLen := len(r.clans)
 
