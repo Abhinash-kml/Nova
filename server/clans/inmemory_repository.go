@@ -1,6 +1,7 @@
 package clans
 
 import (
+	"context"
 	"slices"
 	"sync"
 
@@ -16,7 +17,7 @@ func NewInMemoryClanRepository() *InMemoryClansRepository {
 	return &InMemoryClansRepository{}
 }
 
-func (r *InMemoryClansRepository) Get(id uuid.UUID) (Clan, bool) {
+func (r *InMemoryClansRepository) Get(ctx context.Context, id uuid.UUID) (Clan, bool) {
 	for index := range r.clans {
 		if r.clans[index].Id == id {
 			return r.clans[index], true
@@ -26,7 +27,7 @@ func (r *InMemoryClansRepository) Get(id uuid.UUID) (Clan, bool) {
 	return Clan{}, false
 }
 
-func (r *InMemoryClansRepository) GetByName(name string) (Clan, bool) {
+func (r *InMemoryClansRepository) GetByName(ctx context.Context, name string) (Clan, bool) {
 	for index := range r.clans {
 		if r.clans[index].Name == name {
 			return r.clans[index], true
@@ -36,11 +37,11 @@ func (r *InMemoryClansRepository) GetByName(name string) (Clan, bool) {
 	return Clan{}, false
 }
 
-func (r *InMemoryClansRepository) GetAll() []Clan {
+func (r *InMemoryClansRepository) GetAll(ctx context.Context) []Clan {
 	return r.clans
 }
 
-func (r *InMemoryClansRepository) Add(clan Clan) bool {
+func (r *InMemoryClansRepository) Add(ctx context.Context, clan Clan) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -49,7 +50,7 @@ func (r *InMemoryClansRepository) Add(clan Clan) bool {
 	return true
 }
 
-func (r *InMemoryClansRepository) Delete(id uuid.UUID) bool {
+func (r *InMemoryClansRepository) Delete(ctx context.Context, id uuid.UUID) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

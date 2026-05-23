@@ -1,11 +1,15 @@
 package clans
 
-import "github.com/google/uuid"
+import (
+	"context"
+
+	"github.com/google/uuid"
+)
 
 type ClansRepository interface {
-	Get(uuid.UUID) Clan
-	GetByName(string) Clan
-	GetAll() []Clan
-	Add(Clan) bool
-	Delete(uuid.UUID) bool
+	Get(context.Context, uuid.UUID) (Clan, bool)
+	GetByName(context.Context, string) (Clan, bool)
+	GetAll(context.Context) []Clan
+	Add(context.Context, Clan) bool
+	Delete(context.Context, uuid.UUID) bool
 }
