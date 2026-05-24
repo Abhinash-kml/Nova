@@ -1,7 +1,9 @@
 package lobby
 
 import (
+	"context"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -25,7 +27,10 @@ const (
 type LobbyEventType int
 
 const (
-	LobbyEventStateChange = iota
+	LobbyEventJoin = iota
+	LobbyEventLeave
+	LobbyEventPromoteLeader
+	LobbyEventStateChange
 	LobbyEventSkinChange
 	LobbyEventEmote
 	LobbyEventNameChange
@@ -36,28 +41,33 @@ type LobbyPlayer struct {
 	Id       uuid.UUID        `json:"id"`
 	UserName string           `json:"username"`
 	State    LobbyPlayerState `json:"state"`
+	JoinedAt time.Time        `json:"joined_at"`
 	mu       sync.RWMutex
 }
 
 type LobbyEvent struct {
-	Type      LobbyEventType `json:"event_type"`
-	EventData map[string]any `json:"event_data"`
+	InitiatorId uuid.UUID      `json:"initiator_id"`
+	Type        LobbyEventType `json:"event_type"`
+	EventData   map[string]any `json:"event_data"`
 }
 
 // {
 // 	event_type: 1
+//  initiator_id: 123
 // 	data: {
-// 		userid: aaaa
 // 		skinid: aaaa
 // 	}
 // }
 
 type Lobby struct {
-	Id          uuid.UUID     `json:"id"`
-	LobbyMode   LobbyMode     `json:"lobby_mode"`
-	Password    string        `json:"password,omitempty"`
-	MaxMembers  int           `json:"max_members"`
-	Leader      uuid.UUID     `json:"leader_id"`
-	Members     []LobbyPlayer `json:"players"`
+	Id          uuid.UUID                  `json:"id"`
+	LobbyMode   LobbyMode                  `json:"lobby_mode"`
+	Password    string                     `json:"password,omitempty"`
+	MaxMembers  int                        `json:"max_members"`
+	Leader      uuid.UUID                  `json:"leader_id"`
+	Members     map[uuid.UUID]*LobbyPlayer `json:"players"`
 	EventStream chan LobbyEvent
+	ctx         context.Context
+	cancel      context.CancelFunc
+	mu          sync.RWMutex
 }
