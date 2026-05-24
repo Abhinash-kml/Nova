@@ -46,6 +46,7 @@ type LobbyPlayer struct {
 }
 
 type LobbyEvent struct {
+	LobbyId     uuid.UUID      `json:"lobby_id"`
 	InitiatorId uuid.UUID      `json:"initiator_id"`
 	Type        LobbyEventType `json:"event_type"`
 	EventData   map[string]any `json:"event_data"`
@@ -67,6 +68,7 @@ type Lobby struct {
 	Leader      uuid.UUID                  `json:"leader_id"`
 	Members     map[uuid.UUID]*LobbyPlayer `json:"players"`
 	EventStream chan LobbyEvent
+	manager     *LobbyManager
 	ctx         context.Context
 	cancel      context.CancelFunc
 	mu          sync.RWMutex

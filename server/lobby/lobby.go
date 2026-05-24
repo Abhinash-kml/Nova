@@ -1,12 +1,15 @@
 package lobby
 
 import (
+	"encoding/json"
+	"fmt"
 	"time"
 
+	"github.com/abhinash-kml/nova/server/realtime"
 	"github.com/google/uuid"
 )
 
-func New(id uuid.UUID, mode LobbyMode, password string, maxplayers int, leaderid uuid.UUID) Lobby {
+func New(id uuid.UUID, mode LobbyMode, password string, maxplayers int, leaderid uuid.UUID, lm *LobbyManager) Lobby {
 	return Lobby{
 		Id:          id,
 		LobbyMode:   mode,
@@ -14,6 +17,7 @@ func New(id uuid.UUID, mode LobbyMode, password string, maxplayers int, leaderid
 		MaxMembers:  maxplayers,
 		Leader:      leaderid,
 		EventStream: make(chan LobbyEvent),
+		manager:     lm,
 	}
 }
 
@@ -50,7 +54,7 @@ func (l *Lobby) promoteLeader(player uuid.UUID) {
 }
 
 func (l *Lobby) SendEvent(event LobbyEvent) {
-
+	l.EventStream <- event
 }
 
 func (l *Lobby) ProcessEvents() {
@@ -157,4 +161,29 @@ func (l *Lobby) findPlayerWithLogestJointime() uuid.UUID {
 func (l *Lobby) fanoutEventUpdate(event LobbyEvent) {
 	// Loop throigh all the members and push update to them
 	// Skip sending update to event initiator
+	rawEventData, err := json.Marshal(event.EventData)
+	if err != nil {
+		fmt.Println("Failed to marshall lobby event data to raw json")
+		return
+	}
+
+	for key, _ := range l.Members {
+		if key == event.InitiatorId {
+			continue
+		}
+
+		message := realtime.Envelope{
+			Header: realtime.Header{
+				// Type: LobbyMessage,
+				// SourceID: ,
+				SenderID:   event.InitiatorId,
+				ReceiverID: key,
+				CreatedAt:  time.Now(),
+			},
+			Data: rawEventData,
+		}
+
+		// Send the message to the manager channel
+		l.manager.SendEventToHub(message)
+	}
 }
