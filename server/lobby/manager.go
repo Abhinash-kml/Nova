@@ -11,12 +11,11 @@ import (
 )
 
 type LobbyManager struct {
-	lobbies  map[uuid.UUID]*Lobby
-	hubChan  chan realtime.Envelope
-	incoming chan realtime.Envelope
-	ctx      context.Context
-	cancel   context.CancelFunc
-	mu       sync.RWMutex
+	lobbies map[uuid.UUID]*Lobby
+	hubChan chan realtime.Envelope
+	ctx     context.Context
+	cancel  context.CancelFunc
+	mu      sync.RWMutex
 }
 
 func NewManager(ctx context.Context, hubChan chan realtime.Envelope) *LobbyManager {
@@ -43,11 +42,14 @@ func (lm *LobbyManager) NewLobby(mode LobbyMode, password string, maxMembers int
 		Leader:      leader,
 		EventStream: make(chan LobbyEvent),
 		Members:     make(map[uuid.UUID]*LobbyPlayer, maxMembers),
+		manager:     lm,
 		ctx:         lm.ctx,
 		cancel:      lm.cancel,
 	}
 
+	lm.mu.Lock()
 	lm.lobbies[lobbyID] = lobby
+	lm.mu.Unlock()
 
 	return lobbyID
 }
@@ -77,19 +79,4 @@ func (lm *LobbyManager) SendEventToLobby(envelope realtime.Envelope) {
 
 func (lm *LobbyManager) SendEventToHub(envelope realtime.Envelope) {
 	lm.hubChan <- envelope
-}
-
-func (lm *LobbyManager) Start() {
-	go lm.processIncomingEventsFromLobbies()
-}
-
-func (lm *LobbyManager) processIncomingEventsFromLobbies() {
-	for {
-		select {
-		case <-lm.ctx.Done():
-			return
-		case envelope := <-lm.incoming:
-			lm.hubChan <- envelope
-		}
-	}
 }

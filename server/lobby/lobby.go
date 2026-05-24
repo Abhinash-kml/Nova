@@ -31,18 +31,74 @@ func (l *Lobby) GetStatus() map[string]any {
 	}
 }
 
-func (l *Lobby) Join() {
-
+func (l *Lobby) Join(player *LobbyPlayer) bool {
+	result := l.handleJoin(player)
+	return result
 }
 
-func (l *Lobby) Leave() {
+func (l *Lobby) handleJoin(player *LobbyPlayer) bool {
+	l.mu.Lock()
 
+	_, exists := l.Members[player.Id]
+	if exists {
+		return true
+	}
+
+	l.Members[player.Id] = player
+
+	l.mu.Unlock()
+
+	eventJoin := LobbyEvent{
+		LobbyId:     l.Id,
+		InitiatorId: player.Id,
+		Type:        LobbyEventJoin,
+		EventData: map[string]any{
+			"userid":   player.Id,
+			"username": player.UserName,
+		},
+	}
+
+	l.SendEvent(eventJoin)
+	return true
+}
+
+func (l *Lobby) Leave(member uuid.UUID) bool {
+	result := l.handleLeave(member)
+	return result
+}
+
+func (l *Lobby) handleLeave(member uuid.UUID) bool {
+	l.mu.Lock()
+	_, exists := l.Members[member]
+	if !exists {
+		return true
+	}
+
+	if l.Leader == member {
+		newLeader := l.findPlayerWithLogestJointime()
+		l.promoteLeader(newLeader)
+	}
+
+	delete(l.Members, member)
+	l.mu.Unlock()
+
+	leaveEvent := LobbyEvent{
+		LobbyId:     l.Id,
+		InitiatorId: member,
+		Type:        LobbyEventLeave,
+		EventData: map[string]any{
+			"userid": member,
+		},
+	}
+
+	l.SendEvent(leaveEvent)
+	return true
 }
 
 func (l *Lobby) promoteLeader(player uuid.UUID) {
 	l.Leader = player
 
-	event := LobbyEvent{
+	promoteLeaderEvent := LobbyEvent{
 		InitiatorId: uuid.Nil,
 		Type:        LobbyEventPromoteLeader,
 		EventData: map[string]any{
@@ -50,7 +106,7 @@ func (l *Lobby) promoteLeader(player uuid.UUID) {
 		},
 	}
 
-	l.handleEventPromoteLeader(event)
+	l.SendEvent(promoteLeaderEvent)
 }
 
 func (l *Lobby) SendEvent(event LobbyEvent) {
@@ -90,35 +146,10 @@ func (l *Lobby) processEvent() {
 }
 
 func (l *Lobby) handleEventJoin(event LobbyEvent) {
-	joinerId := event.InitiatorId
-	userName := event.EventData["username"].(string)
-
-	l.mu.Lock()
-	l.Members[joinerId] = &LobbyPlayer{
-		Id:       joinerId,
-		UserName: userName,
-		State:    LobbyPlayerStateReady,
-		JoinedAt: time.Now(),
-	}
-	l.mu.Unlock()
-
 	l.fanoutEventUpdate(event)
 }
 
 func (l *Lobby) handleEventLeave(event LobbyEvent) {
-	leaverId := event.InitiatorId
-
-	l.mu.Lock()
-	delete(l.Members, leaverId)
-
-	// Handle leader promotion
-	if leaverId == l.Leader {
-		// Find player with the max amount of time sunce join and promote him
-		player := l.findPlayerWithLogestJointime()
-		l.promoteLeader(player)
-	}
-	l.mu.Unlock()
-
 	l.fanoutEventUpdate(event)
 }
 
@@ -167,7 +198,7 @@ func (l *Lobby) fanoutEventUpdate(event LobbyEvent) {
 		return
 	}
 
-	for key, _ := range l.Members {
+	for key := range l.Members {
 		if key == event.InitiatorId {
 			continue
 		}
