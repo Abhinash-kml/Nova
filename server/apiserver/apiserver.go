@@ -11,16 +11,16 @@ import (
 
 type HttpServer struct {
 	internalServer   http.Server
-	beforeStartHooks []ServerHook
-	afterStartHooks  []ServerHook
-	beforeStopHooks  []ServerHook
-	afterStopHooks   []ServerHook
+	beforeStartHooks []Hook
+	afterStartHooks  []Hook
+	beforeStopHooks  []Hook
+	afterStopHooks   []Hook
 	errChan          chan error
 	ctx              context.Context
 	cancel           context.CancelFunc
 }
 
-type ServerHook func(context.Context) error
+type Hook func(context.Context) error
 
 func New(ctx context.Context, config config.HttpServerConfig, handler http.Handler) *HttpServer {
 	ctx, cancel := context.WithCancel(ctx)
@@ -86,18 +86,18 @@ func (s *HttpServer) ListenForTermination() {
 
 }
 
-func (s *HttpServer) AddBeforeStartHook(function ServerHook) {
+func (s *HttpServer) AddBeforeStartHook(function Hook) {
 	s.beforeStartHooks = append(s.beforeStartHooks, function)
 }
 
-func (s *HttpServer) AddAfterStartHook(function ServerHook) {
+func (s *HttpServer) AddAfterStartHook(function Hook) {
 	s.afterStartHooks = append(s.afterStartHooks, function)
 }
 
-func (s *HttpServer) AddBeforeStopHook(function ServerHook) {
+func (s *HttpServer) AddBeforeStopHook(function Hook) {
 	s.beforeStopHooks = append(s.beforeStopHooks, function)
 }
 
-func (s *HttpServer) AddAfterStopHook(function ServerHook) {
+func (s *HttpServer) AddAfterStopHook(function Hook) {
 	s.afterStopHooks = append(s.afterStopHooks, function)
 }
