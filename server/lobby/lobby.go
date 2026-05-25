@@ -95,6 +95,33 @@ func (l *Lobby) handleLeave(member uuid.UUID) bool {
 	return true
 }
 
+func (l *Lobby) SetState(memberid uuid.UUID, newState LobbyPlayerState) bool {
+	return l.handleStateChange(memberid, newState)
+}
+
+func (l *Lobby) handleStateChange(memberid uuid.UUID, newState LobbyPlayerState) bool {
+	member := l.GetMember(memberid)
+	if member == nil {
+		return false
+	}
+
+	member.SetState(newState)
+
+	stateChangeEvent := LobbyEvent{
+		LobbyId:     l.Id,
+		InitiatorId: memberid,
+		Type:        LobbyEventStateChange,
+		EventData: map[string]any{
+			"userid":    memberid,
+			"new_state": newState,
+		},
+	}
+
+	l.SendEvent(stateChangeEvent)
+
+	return true
+}
+
 func (l *Lobby) promoteLeader(player uuid.UUID) {
 	l.Leader = player
 
@@ -107,6 +134,10 @@ func (l *Lobby) promoteLeader(player uuid.UUID) {
 	}
 
 	l.SendEvent(promoteLeaderEvent)
+}
+
+func (l *Lobby) SendCustomEvent(event LobbyEvent) {
+	l.SendEvent(event)
 }
 
 func (l *Lobby) SendEvent(event LobbyEvent) {
@@ -132,12 +163,6 @@ func (l *Lobby) processEvent() {
 				l.handleEventPromoteLeader(event)
 			case LobbyEventStateChange:
 				l.handleEventStateChange(event)
-			case LobbyEventEmote:
-				l.handleEventEmote(event)
-			case LobbyEventNameChange:
-				l.handleEventNameChange(event)
-			case LobbyEventSkinChange:
-				l.handleEventSkinChange(event)
 			case LobbyEventCustom:
 				l.handleEventCustom(event)
 			}
@@ -158,26 +183,6 @@ func (l *Lobby) handleEventPromoteLeader(event LobbyEvent) {
 }
 
 func (l *Lobby) handleEventStateChange(event LobbyEvent) {
-	newState := event.EventData["state"].(LobbyEventType)
-
-	l.Members[event.InitiatorId].SetState(LobbyPlayerState(newState))
-
-	l.fanoutEventUpdate(event)
-}
-
-func (l *Lobby) handleEventEmote(event LobbyEvent) {
-	l.fanoutEventUpdate(event)
-}
-
-func (l *Lobby) handleEventNameChange(event LobbyEvent) {
-	newName := event.EventData["new_name"].(string)
-
-	l.Members[event.InitiatorId].SetName(newName)
-
-	l.fanoutEventUpdate(event)
-}
-
-func (l *Lobby) handleEventSkinChange(event LobbyEvent) {
 	l.fanoutEventUpdate(event)
 }
 
@@ -217,4 +222,8 @@ func (l *Lobby) fanoutEventUpdate(event LobbyEvent) {
 		// Send the message to the manager channel
 		l.manager.SendEventToHub(message)
 	}
+}
+
+func (l *Lobby) GetMember(id uuid.UUID) *LobbyPlayer {
+	return l.Members[id]
 }

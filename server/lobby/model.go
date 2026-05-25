@@ -31,9 +31,6 @@ const (
 	LobbyEventLeave
 	LobbyEventPromoteLeader
 	LobbyEventStateChange
-	LobbyEventSkinChange
-	LobbyEventEmote
-	LobbyEventNameChange
 	LobbyEventCustom
 )
 
