@@ -27,3 +27,15 @@ websocket:
   pong-wait: 5
   message-size: 512
   max-messages: 1024
+
+authentication:
+  access:
+    secret:
+    expires_in:
+    issuer:
+    audience:
+  refresh:
+    secret:
+    expires_in:
+    issuer:
+    audience:

@@ -13,6 +13,7 @@ type Config struct {
 	ObservabilityConfig ObservabilityConfig `mapstructure:"observability"`
 	RealtimeConfig      RealtimeHubConfig   `mapstructure:"realtime-hub"`
 	WebsocketConfig     WebsocketConfig     `mapstructure:"websocket"`
+	AuthTokenConfig     AuthTokenConfig     `mapstructure:"authentication"`
 }
 
 type HttpServerConfig struct {
@@ -58,4 +59,16 @@ type WebsocketConfig struct {
 	WriteWait    int `mapstructure:"write-wait"`
 	MessageSize  int `mapstructure:"message-size"`
 	MaxMessages  int `mapstructure:"max-messages"`
+}
+
+type AuthTokenConfig struct {
+	AccessToken  TokenConfig `mapstructure:"access"`
+	RefreshToken TokenConfig `mapstructure:"refresh"`
+}
+
+type TokenConfig struct {
+	Secret    string `mapstructure:"secret"`
+	ExpiresIn int64  `mapstructure:"expires_in"`
+	Issuer    string `mapstructure:"issuer"`
+	Audience  string `mapstructure:"audience"`
 }
