@@ -151,12 +151,12 @@ func (js *JwtService) ValidateAccessToken(ctx context.Context, tokenString strin
 
 		return []byte(js.config.AccessToken.Secret), nil
 	}, jwt.WithValidMethods([]string{"HS512"}),
-		jwt.WithAllAudiences(js.config.AccessToken.Audience),
 		jwt.WithIssuer(js.config.AccessToken.Issuer),
+		jwt.WithAllAudiences(js.config.AccessToken.Audience),
 		jwt.WithExpirationRequired())
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {
-			return nil, ErrTokenExpired
+			return nil, ErrExpiredToken
 		}
 		return nil, fmt.Errorf("%w: %v", ErrInvalidToken, err)
 	}
@@ -193,17 +193,87 @@ func (js *JwtService) ValidateAccessToken(ctx context.Context, tokenString strin
 }
 
 func (js *JwtService) ValidateRefreshToken(ctx context.Context, tokenString string) bool {
-
+	return true
 }
 
-func (js *JwtService) RefreshTokens(ctx context.Context, refreshTokenString, role string) (TokenPair, error) {
+// Parse token
+// Check if it exists in store, revoke if it does
+// Generate new token pair
+func (js *JwtService) RefreshTokens(ctx context.Context, refreshTokenString, role string) (*TokenPair, error) {
+	token, err := jwt.ParseWithClaims(refreshTokenString, &CustomClaims{}, func(token *jwt.Token) (any, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
 
+		return js.config.RefreshToken.Secret, nil
+	},
+		jwt.WithValidMethods([]string{"HS512"}),
+		jwt.WithIssuer(js.config.RefreshToken.Issuer),
+		jwt.WithAllAudiences(js.config.RefreshToken.Audience),
+		jwt.WithExpirationRequired())
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse refresh token %w", err)
+	}
+
+	// Assert that claims is of our custom type & valid
+	claims, ok := token.Claims.(*CustomClaims)
+	if !ok || !token.Valid {
+		return nil, ErrInvalidClaims
+	}
+
+	// Verify that token type is refresh token
+	if claims.TokenType != 2 {
+		return nil, ErrInvalidTokenType
+	}
+
+	// Check if token exists in store & not revoked
+	storedToken, err := js.store.GetRefreshToken(ctx, claims.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get refresh token from store %w", err)
+	}
+	if storedToken == nil {
+		return nil, ErrInvalidToken
+	}
+
+	if storedToken.IsRevoked {
+		// Potential token theft detected - revoke all user tokens
+		// This is a security measure: if someone tries to use an already-used refresh token,
+		// it might indicate the token was stolen
+		_ = js.store.RevokeAllUserTokens(ctx, claims.Subject)
+	}
+
+	// Revoke old refresh token
+	err = js.store.RevokeRefreshToken(ctx, claims.Subject)
+	if err != nil {
+		return nil, fmt.Errorf("failed to revoke old refresh token %w", err)
+	}
+
+	// Generate new token pair
+	return js.GenerateTokenPair(ctx, claims.Subject, claims.Role)
 }
 
-func (js *JwtService) RevokeAccessToken(ctx context.Context) error {
+// Add token to the blacklist
+func (js *JwtService) RevokeAccessToken(ctx context.Context, tokenString string) error {
+	token, _, err := jwt.NewParser().ParseUnverified(tokenString, &CustomClaims{})
+	if err != nil {
+		return fmt.Errorf("failed to parse tokne %w", err)
+	}
 
+	claims, ok := token.Claims.(*CustomClaims)
+	if !ok {
+		return fmt.Errorf("parsed token does not contain custom claims")
+	}
+
+	return js.store.BlacklistToken(ctx, claims.ID, claims.ExpiresAt.Time)
 }
 
-func (js *JwtService) RevokeAllTokens(ctx context.Context) error {
+// Revoke all tokens of the user by incrementing token version in store
+func (js *JwtService) RevokeAllTokens(ctx context.Context, userID string) error {
+	_, err := js.store.IncrementUserTokenVersion(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("failed to imcrement token version of user: %w", err)
+	}
 
+	// Revoke all refresh tokens
+	return js.store.RevokeAllUserTokens(ctx, userID)
 }
