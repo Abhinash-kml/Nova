@@ -31,6 +31,7 @@ type RefreshTokenData struct {
 	Id        string
 	UserId    string
 	Version   int
+	CreatedAt time.Time
 	ExpiresAt time.Time
 	IsRevoked bool
 }
