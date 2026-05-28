@@ -28,6 +28,18 @@ websocket:
   message-size: 512
   max-messages: 1024
 
+redis:
+  address: "localhost:6379"
+  username: 
+  password: 
+  database: 0
+
+postgres:
+  address: "localhost:5432"
+  username: "postgres"
+  password: "Abx305"
+  database: "Nova"
+  
 authentication:
   access:
     secret:

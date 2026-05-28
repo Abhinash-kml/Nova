@@ -2,8 +2,14 @@ package config
 
 import (
 	"log"
+	"sync"
 
 	"github.com/spf13/viper"
+)
+
+var (
+	instance *Config
+	once     sync.Once
 )
 
 func SetDefaults() {

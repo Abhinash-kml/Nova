@@ -1,19 +1,14 @@
 package config
 
-import "sync"
-
-var (
-	instance *Config
-	once     sync.Once
-)
-
 type Config struct {
-	AppName             string              `mapstructure:"appname"`
-	HttpServerConfig    HttpServerConfig    `mapstructure:"http"`
-	ObservabilityConfig ObservabilityConfig `mapstructure:"observability"`
-	RealtimeConfig      RealtimeHubConfig   `mapstructure:"realtime-hub"`
-	WebsocketConfig     WebsocketConfig     `mapstructure:"websocket"`
-	AuthTokenConfig     AuthTokenConfig     `mapstructure:"authentication"`
+	AppName       string              `mapstructure:"appname"`
+	HttpServer    HttpServerConfig    `mapstructure:"http"`
+	Observability ObservabilityConfig `mapstructure:"observability"`
+	Realtime      RealtimeHubConfig   `mapstructure:"realtime-hub"`
+	Websocket     WebsocketConfig     `mapstructure:"websocket"`
+	Redis         RedisConfig         `mapstructure:"redis"`
+	Postgres      PostgresConfig      `mapstructure:"postgres"`
+	AuthToken     AuthTokenConfig     `mapstructure:"authentication"`
 }
 
 type HttpServerConfig struct {
@@ -59,6 +54,20 @@ type WebsocketConfig struct {
 	WriteWait    int `mapstructure:"write-wait"`
 	MessageSize  int `mapstructure:"message-size"`
 	MaxMessages  int `mapstructure:"max-messages"`
+}
+
+type RedisConfig struct {
+	Address  string `mapstructure:"address"`
+	Username string `mapstructure:"username"`
+	Password string `mapstructure:"password"`
+	Database int    `mapstructure:"database"`
+}
+
+type PostgresConfig struct {
+	Username string `mapstructure:"username"`
+	Password string `mapstructure:"password"`
+	Address  string `mapstructure:"address"`
+	Database string `mapstructure:"database"`
 }
 
 type AuthTokenConfig struct {
