@@ -108,20 +108,30 @@ func (s *RedisAuthStore) RevokeAllUserTokens(ctx context.Context, userID string)
 
 // IsTokenBlacklisted checks if an access token has been blacklisted
 func (s *RedisAuthStore) IsTokenBlacklisted(ctx context.Context, tokenID string) (bool, error) {
-	return false, nil
+	exists, err := s.client.Exists(ctx, blacklistPrefix+tokenID).Result()
+	return exists > 0, err
 }
 
 // BlacklistToken adds an access token to the blacklist
 func (s *RedisAuthStore) BlacklistToken(ctx context.Context, tokenID string, expiresAt time.Time) error {
-	return nil
+	ttl := time.Until(expiresAt)
+	if ttl <= 0 {
+		// Token has already expired, no need to blacklist it again
+		return nil
+	}
+	return s.client.Set(ctx, blacklistPrefix+tokenID, "1", ttl).Err()
 }
 
 // GetUserTokenVersion returns the current token version for a user
 func (s *RedisAuthStore) GetUserTokenVersion(ctx context.Context, userID string) (int, error) {
-	return 0, nil
+	version, err := s.client.Get(ctx, tokenVersionPrefix+userID).Int()
+	if err == redis.Nil {
+		return 0, nil // Default version is 0
+	}
+	return version, err
 }
 
 // IncrementUserTokenVersion increments and returns the new token version
 func (s *RedisAuthStore) IncrementUserTokenVersion(ctx context.Context, userID string) (int64, error) {
-	return 0, nil
+	return s.client.Incr(ctx, tokenVersionPrefix+userID).Result()
 }
