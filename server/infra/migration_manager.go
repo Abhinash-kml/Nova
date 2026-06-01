@@ -98,7 +98,14 @@ func (mm *MigrationManager) Goto(version uint) error {
 }
 
 func (mm *MigrationManager) Version() (uint, bool, error) {
-
+	version, dirty, err := mm.migrate.Version()
+	if err != nil {
+		if errors.Is(err, migrate.ErrNilVersion) {
+			return 0, false, nil
+		}
+		return 0, false, err
+	}
+	return version, dirty, nil
 }
 
 func (mm *MigrationManager) Force(version int) error {
@@ -117,5 +124,25 @@ func (mm *MigrationManager) Close() error {
 }
 
 func (mm *MigrationManager) MigrateWithLock(ctx context.Context) error {
+	const lockId = 1245 //  TODO: Add configs for these
 
+	// Acquire advisory lock
+	var locked bool
+	err := mm.db.QueryRowContext(ctx, "SELECT pq_try_advisory_lock($1);", lockId).Scan(&locked)
+	if err != nil {
+		return fmt.Errorf("failed to acquire advisory lock: %w", err)
+	}
+
+	if !locked {
+		log.Printf("Another migration is in progress, skipping...")
+		return nil
+	}
+
+	// Ensure lock is released when done
+	defer func() {
+		mm.db.ExecContext(ctx, "SELECT pq_advisory_unlock($1);", lockId)
+	}()
+
+	// Run migrations
+	return mm.Up()
 }
