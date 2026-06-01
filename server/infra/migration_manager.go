@@ -13,9 +13,11 @@ import (
 )
 
 type MigrationManager struct {
-	db            *sql.DB
-	migrationpath string
-	migrate       *migrate.Migrate
+	db             *sql.DB
+	migrationpath  string
+	startVersion   uint
+	currentVersion uint
+	migrate        *migrate.Migrate
 }
 
 func NewMigrationManager(db *sql.DB, path string) (*MigrationManager, error) {
@@ -35,10 +37,14 @@ func NewMigrationManager(db *sql.DB, path string) (*MigrationManager, error) {
 		return nil, fmt.Errorf("failed to create migrate instance: %w", err)
 	}
 
+	version, _, _ := m.Version()
+
 	return &MigrationManager{
-		db:            db,
-		migrationpath: path,
-		migrate:       m,
+		db:             db,
+		migrationpath:  path,
+		migrate:        m,
+		startVersion:   version,
+		currentVersion: version,
 	}, nil
 }
 
@@ -145,4 +151,51 @@ func (mm *MigrationManager) MigrateWithLock(ctx context.Context) error {
 
 	// Run migrations
 	return mm.Up()
+}
+
+func (mm *MigrationManager) MigrateWithRollback() error {
+	defer mm.migrate.Close()
+
+	log.Printf("Starting migration with version %d", mm.startVersion)
+
+	var count int
+	// Apply all migrations one at a time
+	for {
+		// Apply migration
+		err := mm.migrate.Steps(1)
+		if errors.Is(err, migrate.ErrNoChange) {
+			count++
+			log.Printf("Successfully applied %d migration", count)
+			break
+		}
+
+		if err != nil {
+			log.Printf("Migration count %d failed: %w", count, err)
+			return mm.rollbackToStart()
+		}
+
+		// Update current version
+		mm.currentVersion, _, _ = mm.migrate.Version()
+		log.Printf("Successfully applied migration to version: %d, total migrations applied: %d", mm.currentVersion, count)
+	}
+
+	return nil
+}
+
+func (mm *MigrationManager) rollbackToStart() error {
+	if mm.currentVersion == mm.startVersion {
+		return fmt.Errorf("Migration failed, no rollback needed")
+	}
+
+	log.Printf("Rolling back from version %d to %d", mm.currentVersion, mm.startVersion)
+
+	// Calculate steps to rollback
+	steps := int(mm.startVersion) - int(mm.currentVersion)
+
+	if err := mm.migrate.Steps(steps); err != nil {
+		return fmt.Errorf("Rollback failed: %w (manual intervention needed)", err)
+	}
+
+	log.Printf("Successfully rolled back to version %d", mm.startVersion)
+	return errors.New("Migration failed, rolled back to previous version")
 }
