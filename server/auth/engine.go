@@ -79,5 +79,6 @@ func (s *SocialAuthEngine) CompleteAuthWithToken(ctx context.Context, providerNa
 		return nil, ErrProviderNotExist
 	}
 
+	// Validate the token and fetch user info
 	return provider.ValidateAndFetch(ctx, token)
 }
