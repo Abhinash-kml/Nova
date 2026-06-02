@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 type UsersService interface {
@@ -18,11 +19,15 @@ type UsersService interface {
 }
 
 type LocalUsersService struct {
-	repo UsersRepository
+	repo   UsersRepository
+	logger *zap.Logger
 }
 
-func NewLocalUsersService(repository UsersRepository) *LocalUsersService {
-	return &LocalUsersService{repo: repository}
+func NewLocalUsersService(repository UsersRepository, l *zap.Logger) *LocalUsersService {
+	return &LocalUsersService{
+		repo:   repository,
+		logger: l,
+	}
 }
 
 func (s *LocalUsersService) GetAll(ctx context.Context, count int) []User {

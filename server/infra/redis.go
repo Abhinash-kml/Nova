@@ -1,15 +1,14 @@
 package infra
 
 import (
-	"log"
-
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 )
 
 func NewRedis(config redis.Options) *redis.Client {
 	client := redis.NewClient(&config)
 	if client == nil {
-		log.Fatal("Failed to connect to redis")
+		zap.L().Fatal("Failed to connect to redis")
 	}
 
 	return client

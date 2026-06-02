@@ -2,10 +2,10 @@ package realtime
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 type Hub struct {
@@ -25,9 +25,11 @@ type Hub struct {
 	nodeId uuid.UUID
 
 	config config.RealtimeHubConfig
+
+	logger *zap.Logger
 }
 
-func NewHub(ctx context.Context, pubsub RealtimeBroker, store SessionStore, cfg config.RealtimeHubConfig) *Hub {
+func NewHub(ctx context.Context, pubsub RealtimeBroker, store SessionStore, cfg config.RealtimeHubConfig, l *zap.Logger) *Hub {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Hub{
 		register:   make(chan *Client, 100),
@@ -38,6 +40,7 @@ func NewHub(ctx context.Context, pubsub RealtimeBroker, store SessionStore, cfg 
 		ctx:        ctx,
 		cancel:     cancel,
 		config:     cfg,
+		logger:     l,
 	}
 }
 
@@ -46,13 +49,13 @@ func (h *Hub) Initialize() {
 }
 
 func (h *Hub) Run() {
-	fmt.Println("Starting hub...")
-	fmt.Println("Running ", h.config.Goroutine.MaxBrokerGoroutine, "for listening incoming messages from hub")
+	h.logger.Info("Starting hub...")
+	h.logger.Info("Running N goroutines for listening incoming messages from other hubs", zap.Int("N", h.config.Goroutine.MaxBrokerGoroutine))
 	for range h.config.Goroutine.MaxBrokerGoroutine {
 		go h.listenToIncomingMessageFromBroker()
 	}
 
-	fmt.Println("Running ", h.config.Goroutine.MaxBrokerGoroutine, "for listening incoming messages from different channels of hub")
+	h.logger.Info("Running N goroutines for listening incoming message from different channels of this hub", zap.Int("N", h.config.Goroutine.MaxBrokerGoroutine))
 	for range h.config.Goroutine.MaxMainGoroutine {
 		go func() {
 			for {
@@ -166,4 +169,8 @@ func (h *Hub) RouteMessages() {
 
 func (h *Hub) Shutdown() {
 	h.cancel()
+}
+
+func (h *Hub) Logger() *zap.Logger {
+	return h.logger
 }

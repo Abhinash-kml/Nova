@@ -6,11 +6,17 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 type InMemoryUsersRepository struct {
-	users []User
-	mu    sync.RWMutex
+	users  []User
+	logger *zap.Logger
+	mu     sync.RWMutex
+}
+
+func NewInMemoryUsersRepository(l *zap.Logger) *InMemoryUsersRepository {
+	return &InMemoryUsersRepository{logger: l}
 }
 
 // INFO: Not needed as its in-memory

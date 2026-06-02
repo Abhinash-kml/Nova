@@ -2,12 +2,12 @@ package realtime
 
 import (
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"go.uber.org/zap"
 )
 
 const (
@@ -97,18 +97,18 @@ func (c *Client) ProcessOutgoing() {
 
 			writer, err := c.conn.NextWriter(websocket.TextMessage)
 			if err != nil {
-				fmt.Println("Failed to get writer for writing websocket message. Skipped some messages...")
+				c.hub.Logger().Error("Failed to get writer for writing websocket message. Skipped some messages...", zap.Error(err))
 				break
 			}
 
 			encoder := json.NewEncoder(writer)
 			if encoder == nil {
-				fmt.Println("Failed to create json encoder. Websocker messages skipped")
+				c.hub.Logger().Error("Failed to create json encoder. Websocker messages skipped")
 				continue
 			}
 			err = encoder.Encode(messageEnvelope)
 			if err != nil {
-				fmt.Println("Failed to encode envelope type to json. Skipped message")
+				c.hub.Logger().Error("Failed to encode envelope type to json. Skipped message", zap.Error(err))
 				continue
 			}
 
@@ -120,21 +120,20 @@ func (c *Client) ProcessOutgoing() {
 				encoder := json.NewEncoder(writer)
 				err := encoder.Encode(message)
 				if err != nil {
-					fmt.Println("Failed to encode envelope type to json. Skipped message")
+					c.hub.Logger().Error("Failed to encode envelope type to json. Skipped message", zap.Error(err))
 					continue
 				}
 			}
 
 			if err := writer.Close(); err != nil {
-				fmt.Println("Failed to write message using websocket writer")
+				c.hub.Logger().Error("Failed to write message using websocket writer", zap.Error(err))
 				continue
 			}
 		case <-ticker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(time.Duration(c.config.WriteWait)))
 			err := c.conn.WriteMessage(websocket.PingMessage, nil)
 			if err != nil {
-				// Handle error here
-				// Log
+				c.hub.Logger().Error("Failed to send ping message to client", zap.Error(err))
 				return
 			}
 		}

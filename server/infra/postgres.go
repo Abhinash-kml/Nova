@@ -2,15 +2,15 @@ package infra
 
 import (
 	"database/sql"
-	"log"
 
 	_ "github.com/lib/pq"
+	"go.uber.org/zap"
 )
 
 func NewPostgres(dsn string) *sql.DB {
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		log.Fatal("Failed to connect to postgress. Error:", err.Error())
+		zap.L().Fatal("Failed to connect to postgress", zap.Error(err))
 	}
 
 	return db

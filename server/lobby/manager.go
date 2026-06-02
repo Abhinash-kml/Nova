@@ -3,11 +3,11 @@ package lobby
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"sync"
 
 	"github.com/abhinash-kml/nova/server/realtime"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 type LobbyManager struct {
@@ -15,22 +15,24 @@ type LobbyManager struct {
 	hubChan chan realtime.Envelope
 	ctx     context.Context
 	cancel  context.CancelFunc
+	logger  *zap.Logger
 	mu      sync.RWMutex
 }
 
-func NewManager(ctx context.Context, hubChan chan realtime.Envelope) *LobbyManager {
+func NewManager(ctx context.Context, hubChan chan realtime.Envelope, l *zap.Logger) *LobbyManager {
 	ctx, cancel := context.WithCancel(ctx)
 	return &LobbyManager{
 		hubChan: hubChan,
 		ctx:     ctx,
 		cancel:  cancel,
+		logger:  l,
 	}
 }
 
 func (lm *LobbyManager) NewLobby(mode LobbyMode, password string, maxMembers int, leader uuid.UUID) uuid.UUID {
 	lobbyID, err := uuid.NewV6()
 	if err != nil {
-		fmt.Println("Failed to create uuid v6 for new lobby. Error:", err.Error())
+		lm.logger.Error("Failed to create uuid for new lobby", zap.Error(err))
 		return uuid.Nil
 	}
 
@@ -65,7 +67,7 @@ func (lm *LobbyManager) SendEventToLobby(envelope realtime.Envelope) {
 	var event LobbyEvent
 	err := json.Unmarshal(envelope.Data, &event)
 	if err != nil {
-		fmt.Println("Failed to unmarshall json lobby event to type")
+		lm.logger.Error("Failed to unmarshall json lobby event to type", zap.Error(err))
 		return
 	}
 
@@ -79,4 +81,8 @@ func (lm *LobbyManager) SendEventToLobby(envelope realtime.Envelope) {
 
 func (lm *LobbyManager) SendEventToHub(envelope realtime.Envelope) {
 	lm.hubChan <- envelope
+}
+
+func (lm *LobbyManager) Logger() *zap.Logger {
+	return lm.logger
 }

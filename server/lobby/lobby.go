@@ -2,11 +2,11 @@ package lobby
 
 import (
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/abhinash-kml/nova/server/realtime"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 func New(id uuid.UUID, mode LobbyMode, password string, maxplayers int, leaderid uuid.UUID, lm *LobbyManager) Lobby {
@@ -199,7 +199,7 @@ func (l *Lobby) fanoutEventUpdate(event LobbyEvent) {
 	// Skip sending update to event initiator
 	rawEventData, err := json.Marshal(event.EventData)
 	if err != nil {
-		fmt.Println("Failed to marshall lobby event data to raw json")
+		l.manager.Logger().Error("Failed to marshall lobby event data to raw json", zap.Error(err))
 		return
 	}
 
