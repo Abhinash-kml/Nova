@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 type CommentsService interface {
@@ -17,11 +18,15 @@ type CommentsService interface {
 }
 
 type LocalCommentsService struct {
-	repo CommentsRepository
+	repo   CommentsRepository
+	logger *zap.Logger
 }
 
-func NewLocalCommentsService(repository CommentsRepository) *LocalCommentsService {
-	return &LocalCommentsService{repo: repository}
+func NewLocalCommentsService(repository CommentsRepository, l *zap.Logger) *LocalCommentsService {
+	return &LocalCommentsService{
+		repo:   repository,
+		logger: l,
+	}
 }
 
 func (s *LocalCommentsService) GetAll(ctx context.Context, count int) []Comment {

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 type ClansService interface {
@@ -15,11 +16,15 @@ type ClansService interface {
 }
 
 type LocalClansService struct {
-	repo ClansRepository
+	repo   ClansRepository
+	logger *zap.Logger
 }
 
-func NewLocalClansService(repo ClansRepository) *LocalClansService {
-	return &LocalClansService{repo: repo}
+func NewLocalClansService(repo ClansRepository, l *zap.Logger) *LocalClansService {
+	return &LocalClansService{
+		repo:   repo,
+		logger: l,
+	}
 }
 
 func (s *LocalClansService) Get(ctx context.Context, id uuid.UUID) (Clan, bool) {

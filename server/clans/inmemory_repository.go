@@ -6,15 +6,17 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 type InMemoryClansRepository struct {
-	clans []Clan
-	mu    sync.RWMutex
+	clans  []Clan
+	logger *zap.Logger
+	mu     sync.RWMutex
 }
 
-func NewInMemoryClanRepository() *InMemoryClansRepository {
-	return &InMemoryClansRepository{}
+func NewInMemoryClanRepository(l *zap.Logger) *InMemoryClansRepository {
+	return &InMemoryClansRepository{logger: l}
 }
 
 func (r *InMemoryClansRepository) Get(ctx context.Context, id uuid.UUID) (Clan, bool) {

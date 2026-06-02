@@ -8,9 +8,10 @@ import (
 
 	"github.com/abhinash-kml/nova/server/realtime"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
-func New(ctx context.Context, id uuid.UUID, name string, persist bool, hubChannel chan realtime.Envelope) *Channel {
+func New(ctx context.Context, id uuid.UUID, name string, persist bool, hubChannel chan realtime.Envelope, l *zap.Logger) *Channel {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Channel{
 		Id:                id,
@@ -22,6 +23,7 @@ func New(ctx context.Context, id uuid.UUID, name string, persist bool, hubChanne
 		ctx:               ctx,
 		cancel:            cancel,
 		hubChannel:        hubChannel,
+		logger:            l,
 	}
 }
 

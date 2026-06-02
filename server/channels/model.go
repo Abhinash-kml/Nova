@@ -7,6 +7,7 @@ import (
 
 	"github.com/abhinash-kml/nova/server/realtime"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 type Channel struct {
@@ -20,6 +21,7 @@ type Channel struct {
 	ctx               context.Context
 	cancel            context.CancelFunc
 	hubChannel        chan realtime.Envelope
+	logger            *zap.Logger
 	mu                sync.RWMutex
 }
 

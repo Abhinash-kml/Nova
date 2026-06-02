@@ -6,11 +6,17 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 type InMemoryCommentsRepository struct {
 	comments []Comment
+	logger   *zap.Logger
 	mu       sync.RWMutex
+}
+
+func NewInMemoryCommentsRepository(l *zap.Logger) *InMemoryCommentsRepository {
+	return &InMemoryCommentsRepository{logger: l}
 }
 
 // INFO: Not required as its in-memory

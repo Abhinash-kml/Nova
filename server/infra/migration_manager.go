@@ -5,11 +5,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"go.uber.org/zap"
 )
 
 type MigrationManager struct {
@@ -18,9 +18,10 @@ type MigrationManager struct {
 	startVersion   uint
 	currentVersion uint
 	migrate        *migrate.Migrate
+	logger         *zap.Logger
 }
 
-func NewMigrationManager(db *sql.DB, path string) (*MigrationManager, error) {
+func NewMigrationManager(db *sql.DB, path string, l *zap.Logger) (*MigrationManager, error) {
 	// Create postgres driver from existing connection
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
@@ -45,57 +46,58 @@ func NewMigrationManager(db *sql.DB, path string) (*MigrationManager, error) {
 		migrate:        m,
 		startVersion:   version,
 		currentVersion: version,
+		logger:         l,
 	}, nil
 }
 
 func (mm *MigrationManager) Up() error {
-	log.Println("Applying all migrations...")
+	mm.logger.Info("Applying all migrations...")
 
 	if err := mm.migrate.Up(); err != nil {
 		if errors.Is(err, migrate.ErrNoChange) {
-			log.Println("No pending migrations left to apply")
+			mm.logger.Info("No pending migrations left to apply")
 			return nil
 		}
 		return fmt.Errorf("migrating up failed: %w", err)
 	}
 
 	version, _, _ := mm.migrate.Version()
-	log.Println("Successfully migrated to version %i", version)
+	mm.logger.Info("Successfully migrated", zap.Uint("version", version))
 	return nil
 }
 
 func (mm *MigrationManager) UpN(n int) error {
-	log.Println("Applying next", n, "migrations...")
+	mm.logger.Sugar().Infof("Applying next", n, "migrations...")
 
 	if err := mm.migrate.Steps(n); err != nil {
 		if errors.Is(err, migrate.ErrNoChange) {
-			log.Println("No pending migrations to apply")
+			mm.logger.Info("No pending migrations to apply")
 		}
-		return fmt.Errorf("migration up %d stepts failed: %w", err)
+		return fmt.Errorf("migration up %d stepts failed: %w", n, err)
 	}
 
 	return nil
 }
 
 func (mm *MigrationManager) Down(n int) error {
-	log.Println("Reverting last", n, "migrations...")
+	mm.logger.Sugar().Infof("Reverting last", n, "migrations...")
 
 	if err := mm.migrate.Steps(-n); err != nil {
 		if errors.Is(err, migrate.ErrNoChange) {
-			log.Println("No pending migrations to revert")
+			mm.logger.Info("No pending migrations to revert")
 		}
-		return fmt.Errorf("migration down %d stepts failed: %w", err)
+		return fmt.Errorf("migration down %d stepts failed: %w", n, err)
 	}
 
 	return nil
 }
 
 func (mm *MigrationManager) Goto(version uint) error {
-	log.Println("Migrating to version", version)
+	mm.logger.Info("Migrating to version", zap.Uint("version", version))
 
 	if err := mm.migrate.Migrate(version); err != nil {
 		if errors.Is(err, migrate.ErrNoChange) {
-			log.Println("Already at version", version)
+			mm.logger.Info("Already at version", zap.Uint("version", version))
 		}
 		return fmt.Errorf("migration to version %d failed: %w", version, err)
 	}
@@ -115,7 +117,7 @@ func (mm *MigrationManager) Version() (uint, bool, error) {
 }
 
 func (mm *MigrationManager) Force(version int) error {
-	log.Printf("Forcing migration version to %d...", version)
+	mm.logger.Info("Forcing migration to version...", zap.Int("version", version))
 
 	return mm.migrate.Force(version)
 }
@@ -140,7 +142,7 @@ func (mm *MigrationManager) MigrateWithLock(ctx context.Context) error {
 	}
 
 	if !locked {
-		log.Printf("Another migration is in progress, skipping...")
+		mm.logger.Info("Another migration is in progress, skipping...")
 		return nil
 	}
 
@@ -156,7 +158,7 @@ func (mm *MigrationManager) MigrateWithLock(ctx context.Context) error {
 func (mm *MigrationManager) MigrateWithRollback() error {
 	defer mm.migrate.Close()
 
-	log.Printf("Starting migration with version %d", mm.startVersion)
+	mm.logger.Info("Starting migration with version", zap.Uint("version", mm.startVersion))
 
 	var count int
 	// Apply all migrations one at a time
@@ -165,18 +167,18 @@ func (mm *MigrationManager) MigrateWithRollback() error {
 		err := mm.migrate.Steps(1)
 		if errors.Is(err, migrate.ErrNoChange) {
 			count++
-			log.Printf("Successfully applied %d migration", count)
+			mm.logger.Info("Successfully applied migration", zap.Int("count", count))
 			break
 		}
 
 		if err != nil {
-			log.Printf("Migration count %d failed: %w", count, err)
+			mm.logger.Info("Migration failed", zap.Int("count", count), zap.Error(err))
 			return mm.rollbackToStart()
 		}
 
 		// Update current version
 		mm.currentVersion, _, _ = mm.migrate.Version()
-		log.Printf("Successfully applied migration to version: %d, total migrations applied: %d", mm.currentVersion, count)
+		mm.logger.Info("Successfully applied migrations", zap.Uint("version", mm.currentVersion), zap.Int("count", count))
 	}
 
 	return nil
@@ -187,7 +189,7 @@ func (mm *MigrationManager) rollbackToStart() error {
 		return fmt.Errorf("Migration failed, no rollback needed")
 	}
 
-	log.Printf("Rolling back from version %d to %d", mm.currentVersion, mm.startVersion)
+	mm.logger.Info("Rolling back migrations", zap.Uint("from", mm.currentVersion), zap.Uint("to", mm.startVersion))
 
 	// Calculate steps to rollback
 	steps := int(mm.startVersion) - int(mm.currentVersion)
@@ -196,6 +198,6 @@ func (mm *MigrationManager) rollbackToStart() error {
 		return fmt.Errorf("Rollback failed: %w (manual intervention needed)", err)
 	}
 
-	log.Printf("Successfully rolled back to version %d", mm.startVersion)
+	mm.logger.Info("Successfully rolled back to version", zap.Uint("version", mm.startVersion))
 	return errors.New("Migration failed, rolled back to previous version")
 }
