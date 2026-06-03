@@ -7,7 +7,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type CommentsService interface {
+type Service interface {
 	GetAll(context.Context, int) []Comment
 	GetAllByAttribute(context.Context, string) []Comment
 	GetById(context.Context, uuid.UUID) (Comment, bool)
