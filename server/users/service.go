@@ -7,7 +7,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type UsersService interface {
+type Service interface {
 	GetAll(context.Context, int) []User
 	GetAllByAttribute(context.Context, string) []User
 	GetById(context.Context, uuid.UUID) (User, bool)
