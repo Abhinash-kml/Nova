@@ -2,15 +2,17 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
+	"github.com/abhinash-kml/nova/server/apiserver"
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/abhinash-kml/nova/server/infra"
+	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -18,12 +20,8 @@ import (
 
 func main() {
 	// Listen for interrupt & kill signal
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
-
-	// Global context for passing to all services
-	globalCtx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	globalCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
 	// Perform our task
 
@@ -84,13 +82,23 @@ func main() {
 	logger := zap.New(teeCore)
 	defer logger.Sync()
 
-	logger.Info("Test")
-	logger.Error("Error", zap.Error(errors.New("Meow Meow")))
+	logger.Sugar().Infof("Current Time: %w", time.Now())
+
+	// Create gin router engine
+	globalRouter := gin.New()
+
+	// Setup global middlewares for router
+
+	// Create http api server & start it
+	server := apiserver.New(globalCtx, config.HttpServer, globalRouter, logger)
+	err = server.Start()
+	if err != nil {
+		logger.Error("Failed to start http api server", zap.Error(err))
+	}
 
 	// Block untill our signal is trigerred
-	<-signalChan
-	globalCtx.Done()
+	<-globalCtx.Done()
 
-	// Gracefully shutdown all services by calling cancel() of global context
-	cancel()
+	// Call stop() to immeaditely stop downstream services
+	stop()
 }

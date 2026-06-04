@@ -9,6 +9,7 @@ import (
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 // Common errors for JWT operations
@@ -58,6 +59,7 @@ type UnSuccessfulResponse struct {
 type JwtService struct {
 	config *config.AuthTokenConfig
 	store  TokenStore
+	logger *zap.Logger
 }
 
 func (js *JwtService) GenerateAccessToken(ctx context.Context, userid, role string) (string, error) {
