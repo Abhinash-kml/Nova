@@ -7,7 +7,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type ClansService interface {
+type Service interface {
 	Get(context.Context, uuid.UUID) (Clan, bool)
 	GetByName(context.Context, string) (Clan, bool)
 	GetAll(context.Context) []Clan
