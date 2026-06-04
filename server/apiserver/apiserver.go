@@ -2,11 +2,11 @@ package apiserver
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/abhinash-kml/nova/server/config"
+	"go.uber.org/zap"
 )
 
 type HttpServer struct {
@@ -18,11 +18,12 @@ type HttpServer struct {
 	errChan          chan error
 	ctx              context.Context
 	cancel           context.CancelFunc
+	logger           *zap.Logger
 }
 
 type Hook func(context.Context) error
 
-func New(ctx context.Context, config config.HttpServerConfig, handler http.Handler) *HttpServer {
+func New(ctx context.Context, config config.HttpServerConfig, handler http.Handler, logger *zap.Logger) *HttpServer {
 	ctx, cancel := context.WithCancel(ctx)
 	return &HttpServer{
 		internalServer: http.Server{
@@ -36,6 +37,7 @@ func New(ctx context.Context, config config.HttpServerConfig, handler http.Handl
 		errChan: make(chan error, 1),
 		ctx:     ctx,
 		cancel:  cancel,
+		logger:  logger,
 	}
 }
 
@@ -61,6 +63,7 @@ func (s *HttpServer) Start() error {
 					err := function(context.Background())
 					if err != nil {
 						// Handle in some way
+						s.logger.Error("Failed to execute after start hooks", zap.Error(err))
 					}
 				}
 			}()
@@ -69,7 +72,7 @@ func (s *HttpServer) Start() error {
 			go func() {
 				err := <-s.errChan
 				if err != nil && err != http.ErrServerClosed {
-					fmt.Println("Server crashed after start")
+					s.logger.Error("Server crashed after start", zap.Error(err))
 				}
 			}()
 		case err := <-s.errChan: // Server failed within 2 secs

@@ -1,9 +1,14 @@
 package users
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+)
 
 type Controller struct {
 	service Service
+	logger  *zap.Logger
+	// tracer otel.Tracer
 }
 
 func NewController(s Service) *Controller {
