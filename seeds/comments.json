@@ -1,0 +1,322 @@
+[
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440001",
+    "post_id": "660e8400-e29b-41d4-a716-446655440001",
+    "author_id": "550e8400-e29b-41d4-a716-446655440002",
+    "body": "Great introduction! Go generics still feel a bit abstract, but this helped a lot.",
+    "created_at": "2025-04-01T10:45:00Z",
+    "updated_at": "2025-04-01T10:45:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440002",
+    "post_id": "660e8400-e29b-41d4-a716-446655440001",
+    "author_id": "550e8400-e29b-41d4-a716-446655440003",
+    "body": "Can you share more real-world use cases for generics in backend systems?",
+    "created_at": "2025-04-01T11:10:00Z",
+    "updated_at": "2025-04-01T11:10:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440003",
+    "post_id": "660e8400-e29b-41d4-a716-446655440004",
+    "author_id": "550e8400-e29b-41d4-a716-446655440005",
+    "body": "Scaling APIs is harder than it looks. Caching strategies make a huge difference.",
+    "created_at": "2025-04-02T12:30:00Z",
+    "updated_at": "2025-04-02T12:30:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440004",
+    "post_id": "660e8400-e29b-41d4-a716-446655440006",
+    "author_id": "550e8400-e29b-41d4-a716-446655440006",
+    "body": "I switched to mechanical keyboards last year too. Never going back.",
+    "created_at": "2025-04-03T11:00:00Z",
+    "updated_at": "2025-04-03T11:00:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440005",
+    "post_id": "660e8400-e29b-41d4-a716-446655440008",
+    "author_id": "550e8400-e29b-41d4-a716-446655440007",
+    "body": "Docker networking always confused me—this explanation finally made it click.",
+    "created_at": "2025-04-04T13:10:00Z",
+    "updated_at": "2025-04-04T13:10:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440006",
+    "post_id": "660e8400-e29b-41d4-a716-446655440011",
+    "author_id": "550e8400-e29b-41d4-a716-446655440008",
+    "body": "Cloud cost optimization is something every team ignores until the bill arrives.",
+    "created_at": "2025-04-06T12:00:00Z",
+    "updated_at": "2025-04-06T12:00:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440007",
+    "post_id": "660e8400-e29b-41d4-a716-446655440014",
+    "author_id": "550e8400-e29b-41d4-a716-446655440009",
+    "body": "UI clarity really does make or break user experience.",
+    "created_at": "2025-04-07T12:10:00Z",
+    "updated_at": "2025-04-07T12:10:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440008",
+    "post_id": "660e8400-e29b-41d4-a716-446655440016",
+    "author_id": "550e8400-e29b-41d4-a716-446655440010",
+    "body": "Kubernetes still feels overwhelming, but guides like this help a lot.",
+    "created_at": "2025-04-08T12:45:00Z",
+    "updated_at": "2025-04-08T12:45:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440009",
+    "post_id": "660e8400-e29b-41d4-a716-446655440020",
+    "author_id": "550e8400-e29b-41d4-a716-446655440011",
+    "body": "Machine learning fundamentals explained simply—good refresher.",
+    "created_at": "2025-04-10T14:00:00Z",
+    "updated_at": "2025-04-10T14:00:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440010",
+    "post_id": "660e8400-e29b-41d4-a716-446655440020",
+    "author_id": "550e8400-e29b-41d4-a716-446655440012",
+    "body": "Would love a follow-up on deep learning vs traditional ML.",
+    "created_at": "2025-04-10T14:20:00Z",
+    "updated_at": "2025-04-10T14:20:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440011",
+    "post_id": "660e8400-e29b-41d4-a716-446655440021",
+    "author_id": "550e8400-e29b-41d4-a716-446655440013",
+    "body": "gRPC vs REST is always a heated debate in my team.",
+    "created_at": "2025-04-11T10:30:00Z",
+    "updated_at": "2025-04-11T10:30:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440012",
+    "post_id": "660e8400-e29b-41d4-a716-446655440023",
+    "author_id": "550e8400-e29b-41d4-a716-446655440014",
+    "body": "Event-driven architecture solved so many scaling issues for us.",
+    "created_at": "2025-04-12T10:00:00Z",
+    "updated_at": "2025-04-12T10:00:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440013",
+    "post_id": "660e8400-e29b-41d4-a716-446655440025",
+    "author_id": "550e8400-e29b-41d4-a716-446655440015",
+    "body": "PostgreSQL tuning is an art. Indexing is where everything starts.",
+    "created_at": "2025-04-13T12:00:00Z",
+    "updated_at": "2025-04-13T12:00:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440014",
+    "post_id": "660e8400-e29b-41d4-a716-446655440027",
+    "author_id": "550e8400-e29b-41d4-a716-446655440016",
+    "body": "Code reviews improved a lot when we reduced PR size.",
+    "created_at": "2025-04-14T10:30:00Z",
+    "updated_at": "2025-04-14T10:30:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440015",
+    "post_id": "660e8400-e29b-41d4-a716-446655440029",
+    "author_id": "550e8400-e29b-41d4-a716-446655440017",
+    "body": "TypeScript saved me from so many runtime bugs.",
+    "created_at": "2025-04-15T12:45:00Z",
+    "updated_at": "2025-04-15T12:45:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440016",
+    "post_id": "660e8400-e29b-41d4-a716-446655440031",
+    "author_id": "550e8400-e29b-41d4-a716-446655440018",
+    "body": "Microservices in Go is a great combo for performance systems.",
+    "created_at": "2025-04-16T12:10:00Z",
+    "updated_at": "2025-04-16T12:10:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440017",
+    "post_id": "660e8400-e29b-41d4-a716-446655440033",
+    "author_id": "550e8400-e29b-41d4-a716-446655440019",
+    "body": "Redis caching patterns are lifesavers in high traffic systems.",
+    "created_at": "2025-04-17T13:00:00Z",
+    "updated_at": "2025-04-17T13:00:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440018",
+    "post_id": "660e8400-e29b-41d4-a716-446655440035",
+    "author_id": "550e8400-e29b-41d4-a716-446655440020",
+    "body": "EV adoption is really accelerating in my city too.",
+    "created_at": "2025-04-18T11:00:00Z",
+    "updated_at": "2025-04-18T11:00:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440019",
+    "post_id": "660e8400-e29b-41d4-a716-446655440038",
+    "author_id": "550e8400-e29b-41d4-a716-446655440021",
+    "body": "React performance optimization is underrated but critical.",
+    "created_at": "2025-04-19T13:00:00Z",
+    "updated_at": "2025-04-19T13:00:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440020",
+    "post_id": "660e8400-e29b-41d4-a716-446655440040",
+    "author_id": "550e8400-e29b-41d4-a716-446655440022",
+    "body": "AI agents are the most exciting thing in software right now.",
+    "created_at": "2025-04-20T14:10:00Z",
+    "updated_at": "2025-04-20T14:10:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440021",
+    "post_id": "660e8400-e29b-41d4-a716-446655440041",
+    "author_id": "550e8400-e29b-41d4-a716-446655440023",
+    "body": "gRPC vs REST depends heavily on team size and service complexity.",
+    "created_at": "2025-04-21T11:00:00Z",
+    "updated_at": "2025-04-21T11:00:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440022",
+    "post_id": "660e8400-e29b-41d4-a716-446655440043",
+    "author_id": "550e8400-e29b-41d4-a716-446655440024",
+    "body": "Modern CSS is a game changer. Grid especially simplified so many layouts.",
+    "created_at": "2025-04-22T10:10:00Z",
+    "updated_at": "2025-04-22T10:10:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440023",
+    "post_id": "660e8400-e29b-41d4-a716-446655440044",
+    "author_id": "550e8400-e29b-41d4-a716-446655440025",
+    "body": "Cybersecurity basics should be mandatory for all developers.",
+    "created_at": "2025-04-22T12:30:00Z",
+    "updated_at": "2025-04-22T12:30:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440024",
+    "post_id": "660e8400-e29b-41d4-a716-446655440046",
+    "author_id": "550e8400-e29b-41d4-a716-446655440026",
+    "body": "Helm charts made Kubernetes deployments much more manageable.",
+    "created_at": "2025-04-23T11:30:00Z",
+    "updated_at": "2025-04-23T11:30:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440025",
+    "post_id": "660e8400-e29b-41d4-a716-446655440047",
+    "author_id": "550e8400-e29b-41d4-a716-446655440027",
+    "body": "Meditation really helps with focus during long coding sessions.",
+    "created_at": "2025-04-24T09:00:00Z",
+    "updated_at": "2025-04-24T09:00:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440026",
+    "post_id": "660e8400-e29b-41d4-a716-446655440048",
+    "author_id": "550e8400-e29b-41d4-a716-446655440028",
+    "body": "Git workflows can get messy fast without clear team guidelines.",
+    "created_at": "2025-04-24T11:30:00Z",
+    "updated_at": "2025-04-24T11:30:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440027",
+    "post_id": "660e8400-e29b-41d4-a716-446655440049",
+    "author_id": "550e8400-e29b-41d4-a716-446655440029",
+    "body": "TypeScript is now essential for large-scale frontend applications.",
+    "created_at": "2025-04-25T11:00:00Z",
+    "updated_at": "2025-04-25T11:00:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440028",
+    "post_id": "660e8400-e29b-41d4-a716-446655440051",
+    "author_id": "550e8400-e29b-41d4-a716-446655440030",
+    "body": "WebSockets make real-time apps so much easier to implement.",
+    "created_at": "2025-04-26T09:50:00Z",
+    "updated_at": "2025-04-26T09:50:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440029",
+    "post_id": "660e8400-e29b-41d4-a716-446655440053",
+    "author_id": "550e8400-e29b-41d4-a716-446655440031",
+    "body": "Blockchain is still hard to grasp without real-world examples.",
+    "created_at": "2025-04-27T10:50:00Z",
+    "updated_at": "2025-04-27T10:50:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440030",
+    "post_id": "660e8400-e29b-41d4-a716-446655440054",
+    "author_id": "550e8400-e29b-41d4-a716-446655440032",
+    "body": "Structured logging helped us debug production issues faster.",
+    "created_at": "2025-04-27T11:30:00Z",
+    "updated_at": "2025-04-27T11:30:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440031",
+    "post_id": "660e8400-e29b-41d4-a716-446655440056",
+    "author_id": "550e8400-e29b-41d4-a716-446655440033",
+    "body": "Python + Pandas is still unmatched for quick data analysis.",
+    "created_at": "2025-04-28T10:50:00Z",
+    "updated_at": "2025-04-28T10:50:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440032",
+    "post_id": "660e8400-e29b-41d4-a716-446655440058",
+    "author_id": "550e8400-e29b-41d4-a716-446655440034",
+    "body": "OAuth is confusing at first, but extremely powerful once understood.",
+    "created_at": "2025-04-29T11:45:00Z",
+    "updated_at": "2025-04-29T11:45:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440033",
+    "post_id": "660e8400-e29b-41d4-a716-446655440060",
+    "author_id": "550e8400-e29b-41d4-a716-446655440035",
+    "body": "DevOps culture really improved collaboration in our team.",
+    "created_at": "2025-04-30T13:30:00Z",
+    "updated_at": "2025-04-30T13:30:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440034",
+    "post_id": "660e8400-e29b-41d4-a716-446655440041",
+    "author_id": "550e8400-e29b-41d4-a716-446655440036",
+    "body": "gRPC feels too complex for small services, but great at scale.",
+    "created_at": "2025-04-21T12:15:00Z",
+    "updated_at": "2025-04-21T12:15:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440035",
+    "post_id": "660e8400-e29b-41d4-a716-446655440042",
+    "author_id": "550e8400-e29b-41d4-a716-446655440037",
+    "body": "NYC hidden gems are always better than tourist spots.",
+    "created_at": "2025-04-21T12:40:00Z",
+    "updated_at": "2025-04-21T12:40:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440036",
+    "post_id": "660e8400-e29b-41d4-a716-446655440043",
+    "author_id": "550e8400-e29b-41d4-a716-446655440038",
+    "body": "CSS Grid removed so much legacy layout complexity.",
+    "created_at": "2025-04-22T11:20:00Z",
+    "updated_at": "2025-04-22T11:20:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440037",
+    "post_id": "660e8400-e29b-41d4-a716-446655440044",
+    "author_id": "550e8400-e29b-41d4-a716-446655440039",
+    "body": "Security basics should be taught in every CS curriculum.",
+    "created_at": "2025-04-22T13:10:00Z",
+    "updated_at": "2025-04-22T13:10:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440038",
+    "post_id": "660e8400-e29b-41d4-a716-446655440045",
+    "author_id": "550e8400-e29b-41d4-a716-446655440040",
+    "body": "Budget travel requires discipline but is totally worth it.",
+    "created_at": "2025-04-23T08:20:00Z",
+    "updated_at": "2025-04-23T08:20:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440039",
+    "post_id": "660e8400-e29b-41d4-a716-446655440046",
+    "author_id": "550e8400-e29b-41d4-a716-446655440041",
+    "body": "Helm charts saved us hours of deployment work.",
+    "created_at": "2025-04-23T12:40:00Z",
+    "updated_at": "2025-04-23T12:40:00Z"
+  },
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440040",
+    "post_id": "660e8400-e29b-41d4-a716-446655440047",
+    "author_id": "550e8400-e29b-41d4-a716-446655440042",
+    "body": "Meditation helps reduce burnout in engineering teams.",
+    "created_at": "2025-04-24T09:40:00Z",
+    "updated_at": "2025-04-24T09:40:00Z"
+  }
+]

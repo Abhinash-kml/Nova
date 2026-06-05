@@ -2,6 +2,8 @@ package users
 
 import (
 	"context"
+	"encoding/json"
+	"os"
 	"slices"
 	"sync"
 
@@ -24,8 +26,26 @@ func (r *InMemoryUsersRepository) Initialize() bool {
 	return true
 }
 
-// TODO: Implement this
 func (r *InMemoryUsersRepository) Seed() bool {
+	file, err := os.OpenFile("./seeds/users.json", os.O_RDONLY, 0755)
+	if err != nil {
+		r.logger.Error("Failed to open users seeds file", zap.Error(err))
+		return false
+	}
+	defer file.Close()
+
+	decoder := json.NewDecoder(file)
+	if decoder == nil {
+		r.logger.Error("Failed to create json decoder. Returned nil pointer")
+		return false
+	}
+
+	err = decoder.Decode(&r.users)
+	if err != nil {
+		r.logger.Error("Failed to decode user's seeds data to repository", zap.Error(err))
+		return false
+	}
+
 	return true
 }
 

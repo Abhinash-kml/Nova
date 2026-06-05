@@ -1,0 +1,402 @@
+[
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440001",
+    "title": "Getting Started with Go Generics",
+    "body": "Go generics simplify reusable code patterns while maintaining type safety. Here are some practical examples and lessons learned from production usage.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440001",
+    "likes": 142,
+    "comments": 18,
+    "created_at": "2025-04-01T08:00:00Z",
+    "updated_at": "2025-04-01T10:30:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440002",
+    "title": "Remote Work Productivity Tips",
+    "body": "Creating boundaries, maintaining focus, and using async communication effectively can significantly improve remote work productivity.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440002",
+    "likes": 89,
+    "comments": 11,
+    "created_at": "2025-04-01T09:15:00Z",
+    "updated_at": "2025-04-01T09:45:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440003",
+    "title": "Exploring Madrid's Hidden Cafes",
+    "body": "Madrid offers countless cozy cafes tucked away from tourist hotspots. Here are a few favorites worth visiting.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440003",
+    "likes": 63,
+    "comments": 7,
+    "created_at": "2025-04-02T07:20:00Z",
+    "updated_at": "2025-04-02T08:00:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440004",
+    "title": "Building Scalable APIs",
+    "body": "Scalability starts with good architecture. This article discusses caching, load balancing, and database optimization.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440004",
+    "likes": 210,
+    "comments": 32,
+    "created_at": "2025-04-02T11:30:00Z",
+    "updated_at": "2025-04-02T12:10:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440005",
+    "title": "A Beginner's Guide to Photography",
+    "body": "Understanding exposure, composition, and lighting can dramatically improve your photography skills.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440005",
+    "likes": 75,
+    "comments": 14,
+    "created_at": "2025-04-03T06:45:00Z",
+    "updated_at": "2025-04-03T07:25:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440006",
+    "title": "Why I Switched to Mechanical Keyboards",
+    "body": "After years of using membrane keyboards, switching to mechanical switches improved both comfort and typing speed.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440006",
+    "likes": 131,
+    "comments": 29,
+    "created_at": "2025-04-03T09:10:00Z",
+    "updated_at": "2025-04-03T10:20:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440007",
+    "title": "Sydney Weekend Travel Guide",
+    "body": "A perfect weekend itinerary covering beaches, food spots, and cultural attractions across Sydney.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440007",
+    "likes": 97,
+    "comments": 10,
+    "created_at": "2025-04-04T08:00:00Z",
+    "updated_at": "2025-04-04T08:45:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440008",
+    "title": "Understanding Docker Networking",
+    "body": "Docker networking can seem confusing initially. This article breaks down bridge, host, and overlay networks.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440008",
+    "likes": 184,
+    "comments": 21,
+    "created_at": "2025-04-04T10:15:00Z",
+    "updated_at": "2025-04-04T12:00:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440009",
+    "title": "French Cooking at Home",
+    "body": "Classic French recipes become approachable when broken into simple techniques and ingredients.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440009",
+    "likes": 56,
+    "comments": 8,
+    "created_at": "2025-04-05T07:00:00Z",
+    "updated_at": "2025-04-05T07:50:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440010",
+    "title": "Learning Portuguese Online",
+    "body": "Consistency matters more than intensity. These resources helped me learn conversational Portuguese.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440010",
+    "likes": 48,
+    "comments": 5,
+    "created_at": "2025-04-05T09:25:00Z",
+    "updated_at": "2025-04-05T10:10:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440011",
+    "title": "Cloud Cost Optimization Strategies",
+    "body": "Reducing cloud costs requires visibility, automation, and a clear understanding of resource utilization.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440011",
+    "likes": 223,
+    "comments": 35,
+    "created_at": "2025-04-06T08:40:00Z",
+    "updated_at": "2025-04-06T11:15:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440012",
+    "title": "Top Hiking Trails in New Zealand",
+    "body": "From coastal walks to alpine adventures, New Zealand offers unforgettable hiking experiences.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440012",
+    "likes": 91,
+    "comments": 12,
+    "created_at": "2025-04-06T10:00:00Z",
+    "updated_at": "2025-04-06T10:50:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440013",
+    "title": "The Art of Minimalism",
+    "body": "Living with fewer possessions can create more space for meaningful experiences and priorities.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440013",
+    "likes": 117,
+    "comments": 16,
+    "created_at": "2025-04-07T06:30:00Z",
+    "updated_at": "2025-04-07T08:00:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440014",
+    "title": "Designing Better User Interfaces",
+    "body": "Good UI design focuses on clarity, consistency, and reducing cognitive load for users.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440014",
+    "likes": 168,
+    "comments": 23,
+    "created_at": "2025-04-07T09:20:00Z",
+    "updated_at": "2025-04-07T11:40:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440015",
+    "title": "Street Food Around the World",
+    "body": "Exploring street food is one of the best ways to experience local culture and traditions.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440015",
+    "likes": 105,
+    "comments": 17,
+    "created_at": "2025-04-08T07:10:00Z",
+    "updated_at": "2025-04-08T08:15:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440016",
+    "title": "Introduction to Kubernetes",
+    "body": "Kubernetes provides powerful orchestration capabilities for containerized applications at scale.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440016",
+    "likes": 276,
+    "comments": 42,
+    "created_at": "2025-04-08T10:00:00Z",
+    "updated_at": "2025-04-08T12:20:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440017",
+    "title": "Healthy Morning Routines",
+    "body": "A structured morning routine can improve energy levels, focus, and overall wellbeing.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440017",
+    "likes": 84,
+    "comments": 9,
+    "created_at": "2025-04-09T06:15:00Z",
+    "updated_at": "2025-04-09T07:30:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440018",
+    "title": "Data Modeling Best Practices",
+    "body": "Thoughtful schema design reduces complexity and improves maintainability as applications grow.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440018",
+    "likes": 159,
+    "comments": 20,
+    "created_at": "2025-04-09T08:45:00Z",
+    "updated_at": "2025-04-09T11:00:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440019",
+    "title": "Traveling Through Southeast Asia",
+    "body": "Budget-friendly destinations, amazing food, and welcoming communities make Southeast Asia unforgettable.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440019",
+    "likes": 112,
+    "comments": 18,
+    "created_at": "2025-04-10T07:00:00Z",
+    "updated_at": "2025-04-10T09:10:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440020",
+    "title": "Machine Learning Fundamentals",
+    "body": "Supervised learning, feature engineering, and evaluation metrics form the foundation of practical machine learning.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440020",
+    "likes": 312,
+    "comments": 51,
+    "created_at": "2025-04-10T10:30:00Z",
+    "updated_at": "2025-04-10T13:00:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440041",
+    "title": "Understanding gRPC vs REST",
+    "body": "gRPC offers high performance and strongly typed contracts, while REST remains simpler and more widely adopted for public APIs.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440041",
+    "likes": 203,
+    "comments": 29,
+    "created_at": "2025-04-21T08:10:00Z",
+    "updated_at": "2025-04-21T10:00:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440042",
+    "title": "Hidden Gems in New York City",
+    "body": "Beyond Times Square, NYC has countless lesser-known spots worth exploring, from quiet parks to small museums.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440041",
+    "likes": 88,
+    "comments": 13,
+    "created_at": "2025-04-21T09:30:00Z",
+    "updated_at": "2025-04-21T10:20:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440043",
+    "title": "Modern CSS Layout Techniques",
+    "body": "Flexbox and Grid have transformed how developers build responsive layouts with less complexity.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440042",
+    "likes": 176,
+    "comments": 21,
+    "created_at": "2025-04-22T07:40:00Z",
+    "updated_at": "2025-04-22T09:10:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440044",
+    "title": "Intro to Cybersecurity Basics",
+    "body": "Understanding authentication, encryption, and common attack vectors is essential for modern developers.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440043",
+    "likes": 241,
+    "comments": 38,
+    "created_at": "2025-04-22T10:00:00Z",
+    "updated_at": "2025-04-22T12:00:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440045",
+    "title": "Budget Travel in Europe",
+    "body": "With planning, you can explore Europe affordably using trains, hostels, and off-season travel.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440044",
+    "likes": 97,
+    "comments": 16,
+    "created_at": "2025-04-23T06:50:00Z",
+    "updated_at": "2025-04-23T08:00:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440046",
+    "title": "Kubernetes Helm Charts Explained",
+    "body": "Helm simplifies Kubernetes deployments by packaging resources into reusable charts.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440045",
+    "likes": 212,
+    "comments": 27,
+    "created_at": "2025-04-23T09:15:00Z",
+    "updated_at": "2025-04-23T11:10:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440047",
+    "title": "Meditation for Beginners",
+    "body": "Starting with just a few minutes of daily meditation can improve focus and reduce stress.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440046",
+    "likes": 134,
+    "comments": 19,
+    "created_at": "2025-04-24T07:10:00Z",
+    "updated_at": "2025-04-24T08:30:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440048",
+    "title": "Advanced Git Workflows",
+    "body": "Rebase, cherry-pick, and feature branching strategies help teams maintain clean Git history.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440047",
+    "likes": 188,
+    "comments": 22,
+    "created_at": "2025-04-24T09:20:00Z",
+    "updated_at": "2025-04-24T11:00:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440049",
+    "title": "Top Programming Languages in 2025",
+    "body": "Go, Python, and TypeScript continue to dominate due to performance and ecosystem maturity.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440048",
+    "likes": 320,
+    "comments": 54,
+    "created_at": "2025-04-25T08:00:00Z",
+    "updated_at": "2025-04-25T10:30:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440050",
+    "title": "Street Photography in Paris",
+    "body": "Paris offers timeless scenes for street photographers, from cafes to riverbanks.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440049",
+    "likes": 111,
+    "comments": 15,
+    "created_at": "2025-04-25T09:10:00Z",
+    "updated_at": "2025-04-25T10:00:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440051",
+    "title": "Building Real-Time Chat Apps",
+    "body": "WebSockets enable real-time communication for chat applications and live dashboards.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440050",
+    "likes": 259,
+    "comments": 33,
+    "created_at": "2025-04-26T07:30:00Z",
+    "updated_at": "2025-04-26T09:45:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440052",
+    "title": "Healthy Work-Life Balance",
+    "body": "Balancing work and personal life requires boundaries, discipline, and intentional time management.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440051",
+    "likes": 98,
+    "comments": 12,
+    "created_at": "2025-04-26T10:00:00Z",
+    "updated_at": "2025-04-26T11:15:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440053",
+    "title": "Introduction to Blockchain",
+    "body": "Blockchain enables decentralized trust through cryptographic hashing and distributed consensus.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440052",
+    "likes": 287,
+    "comments": 49,
+    "created_at": "2025-04-27T08:15:00Z",
+    "updated_at": "2025-04-27T10:40:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440054",
+    "title": "Best Practices for Logging",
+    "body": "Structured logging improves observability and makes debugging production systems easier.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440053",
+    "likes": 162,
+    "comments": 20,
+    "created_at": "2025-04-27T09:30:00Z",
+    "updated_at": "2025-04-27T11:00:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440055",
+    "title": "Exploring Istanbul",
+    "body": "Istanbul blends history and modern life with incredible food, architecture, and culture.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440054",
+    "likes": 119,
+    "comments": 18,
+    "created_at": "2025-04-28T07:00:00Z",
+    "updated_at": "2025-04-28T08:20:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440056",
+    "title": "Python Data Analysis Tips",
+    "body": "Pandas and NumPy provide powerful tools for efficient data manipulation and analysis.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440055",
+    "likes": 233,
+    "comments": 31,
+    "created_at": "2025-04-28T09:10:00Z",
+    "updated_at": "2025-04-28T10:45:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440057",
+    "title": "Top Productivity Apps",
+    "body": "Task managers, note-taking apps, and focus tools can significantly improve daily productivity.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440056",
+    "likes": 87,
+    "comments": 10,
+    "created_at": "2025-04-29T06:40:00Z",
+    "updated_at": "2025-04-29T08:00:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440058",
+    "title": "Understanding OAuth 2.0",
+    "body": "OAuth 2.0 is an authorization framework widely used for secure API access delegation.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440057",
+    "likes": 245,
+    "comments": 36,
+    "created_at": "2025-04-29T09:00:00Z",
+    "updated_at": "2025-04-29T11:30:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440059",
+    "title": "Cycling Through Amsterdam",
+    "body": "Amsterdam is one of the most bike-friendly cities in the world, offering scenic cycling routes.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440058",
+    "likes": 104,
+    "comments": 14,
+    "created_at": "2025-04-30T07:25:00Z",
+    "updated_at": "2025-04-30T09:10:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440060",
+    "title": "Introduction to DevOps Culture",
+    "body": "DevOps emphasizes collaboration between development and operations to improve deployment speed and reliability.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440059",
+    "likes": 276,
+    "comments": 40,
+    "created_at": "2025-04-30T10:30:00Z",
+    "updated_at": "2025-04-30T13:00:00Z"
+  }
+]

@@ -2,6 +2,8 @@ package posts
 
 import (
 	"context"
+	"encoding/json"
+	"os"
 	"slices"
 	"sync"
 
@@ -24,8 +26,26 @@ func (r *InMemoryPostsRepository) Initialize() bool {
 	return true
 }
 
-// TODO: Implement this
 func (r *InMemoryPostsRepository) Seed() bool {
+	file, err := os.OpenFile("./seeds/posts.json", os.O_RDONLY, 0755)
+	if err != nil {
+		r.logger.Error("Failed to open posts seeds file", zap.Error(err))
+		return false
+	}
+	defer file.Close()
+
+	decoder := json.NewDecoder(file)
+	if decoder == nil {
+		r.logger.Error("Failed to create json decoder. Returned nil pointer")
+		return false
+	}
+
+	err = decoder.Decode(&r.posts)
+	if err != nil {
+		r.logger.Error("Failed to decode post's seeds to repository", zap.Error(err))
+		return false
+	}
+
 	return true
 }
 
