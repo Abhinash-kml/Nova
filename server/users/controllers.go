@@ -3,6 +3,7 @@ package users
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/abhinash-kml/nova/server/utils"
 	"github.com/gin-gonic/gin"
@@ -25,17 +26,53 @@ func NewController(s Service, l *zap.Logger) *Controller {
 
 func (c *Controller) GetAll(ctx *gin.Context) {
 	limit := ctx.DefaultQuery("limit", "20")
+	limitNum, err := strconv.Atoi(limit)
+	if err != nil || limitNum < 10 || limitNum > 20 {
+		ctx.Header("Content-Type", "application/problem+json")
+		ctx.JSON(http.StatusBadRequest, utils.ProblemDetails{
+			Type:        "nova.com/errors/bad-request",
+			Title:       "Bad request",
+			Description: "The provided resource is of bad format",
+			StatusCode:  400,
+			Instance:    "GET /users",
+			Errors: []utils.ProblemDetailErrors{
+				{
+					Field:   "limit",
+					Message: "The provided limit is invalid. Valid range: 10 - 20",
+					Code:    "400",
+				},
+			},
+		})
+	}
 	cursor := ctx.DefaultQuery("cursor", "nil")
 
-	_, _ = limit, cursor
+	decodedCursor, err := utils.DecodeCursor(cursor)
+	if err != nil {
+		ctx.Header("Content-Type", "application/problem+json")
+		ctx.JSON(http.StatusBadRequest, utils.ProblemDetails{
+			Type:        "nova.com/errors/bad-request",
+			Title:       "Bad request",
+			Description: "The provided resource is of bad format",
+			StatusCode:  400,
+			Instance:    "GET /users",
+			Errors: []utils.ProblemDetailErrors{
+				{
+					Field:   "cursor",
+					Message: "The provided cursor is invalid",
+					Code:    "400",
+				},
+			},
+		})
+	}
 
+	users := c.service.GetAll(ctx.Request.Context(), decodedCursor, limitNum)
+	ctx.JSON(http.StatusOK, users)
 }
 
 func (c *Controller) Get(ctx *gin.Context) {
 	id := ctx.Param("id")
 	userid, err := uuid.FromBytes([]byte(id))
 	if err != nil {
-		// Log internally
 		c.logger.Error("Failed to convert provided userid from string to uuid", zap.Error(err))
 
 		ctx.Header("Content-Type", "application/problem+json")
@@ -69,22 +106,31 @@ func (c *Controller) Get(ctx *gin.Context) {
 }
 
 func (c *Controller) Create(ctx *gin.Context) {
-	var user UserCreateDTO
+	var dto UserCreateDTO
 
-	err := ctx.BindJSON(&user)
+	err := ctx.BindJSON(&dto)
 	if err != nil {
+		c.logger.Error("Failed to bind UserCReateDto", zap.Error(err))
 
-	}
-
-	err = c.service.Create(ctx.Request.Context(), user)
-	if err != nil {
-
+		ctx.Header("Content-Type", "application/problem+json")
 		ctx.JSON(http.StatusBadRequest, utils.ProblemDetails{
-			Type:        "bad request",
+			Type:        "nova.com/errors/bad-request",
 			Title:       "Bad request",
 			Description: "The provided resource is of bad format",
 			StatusCode:  400,
-			Instance:    "/users",
+			Instance:    "POST /users",
+		})
+	}
+
+	added := c.service.Add(ctx.Request.Context(), dto)
+	if !added {
+		ctx.Header("Content-Type", "application/problem+json")
+		ctx.JSON(http.StatusInternalServerError, utils.ProblemDetails{
+			Type:        "nova.com/errors/record-no-create",
+			Title:       "Record not created",
+			Description: "The provided record could not be created",
+			StatusCode:  500,
+			Instance:    "POST /users",
 		})
 	}
 
@@ -92,13 +138,91 @@ func (c *Controller) Create(ctx *gin.Context) {
 }
 
 func (c *Controller) Modify(ctx *gin.Context) {
+	var dto UserUpdateDTO
 
+	err := ctx.Bind(&dto)
+	if err != nil {
+		ctx.Header("Content-Type", "application/problem+json")
+		ctx.JSON(http.StatusBadRequest, utils.ProblemDetails{
+			Type:        "nova.com/errors/bad-request",
+			Title:       "Bad request",
+			Description: "The provided resource is of bad format",
+			StatusCode:  400,
+			Instance:    "PATCH /users",
+		})
+	}
+
+	updated := c.service.Update(ctx.Request.Context(), dto)
+	if !updated {
+		ctx.Header("Content-Type", "application/problem+json")
+		ctx.JSON(http.StatusBadRequest, utils.ProblemDetails{
+			Type:        "nova.com/errors/not-updated",
+			Title:       "Not updated",
+			Description: "The provided resource couldn't be updated",
+			StatusCode:  500,
+			Instance:    "PATCH /users",
+		})
+	}
+
+	ctx.Status(http.StatusNoContent)
 }
 
 func (c *Controller) Delete(ctx *gin.Context) {
+	var dto UserDeleteDTO
 
+	err := ctx.BindJSON(&dto)
+	if err != nil {
+		ctx.Header("Content-Type", "application/problem+json")
+		ctx.JSON(http.StatusBadRequest, utils.ProblemDetails{
+			Type:        "nova.com/errors/bad-request",
+			Title:       "Bad request",
+			Description: "The provided resource is of bad format",
+			StatusCode:  400,
+			Instance:    "DELETE /users",
+		})
+	}
+
+	deleted := c.service.Delete(ctx.Request.Context(), dto.Id)
+	if !deleted {
+		ctx.Header("Content-Type", "application/problem+json")
+		ctx.JSON(http.StatusInternalServerError, utils.ProblemDetails{
+			Type:        "nova.com/errors/no-delete",
+			Title:       "Not Deleted",
+			Description: "The provided resource couldn't be deleted",
+			StatusCode:  500,
+			Instance:    "DELETE /users",
+		})
+	}
+
+	ctx.Status(http.StatusNoContent)
 }
 
 func (c *Controller) Replace(ctx *gin.Context) {
+	var dto UserReplaceDTO
 
+	err := ctx.Bind(&dto)
+	if err != nil {
+		ctx.Header("Content-Type", "application/problem+json")
+		ctx.JSON(http.StatusBadRequest, utils.ProblemDetails{
+			Type:        "nova.com/errors/bad-request",
+			Title:       "Bad request",
+			Description: "The provided resource is of bad format",
+			StatusCode:  400,
+			Instance:    "PUT /users",
+		})
+	}
+
+	replaced := c.service.Replace(ctx.Request.Context(), dto)
+	if !replaced {
+		ctx.Header("Content-Type", "application/problem+json")
+		ctx.JSON(http.StatusBadRequest, utils.ProblemDetails{
+			Type:        "nova.com/errors/not-replaced",
+			Title:       "Not replaced",
+			Description: "The provided resource couldn't be replaced",
+			StatusCode:  500,
+			Instance:    "PUT /users",
+		})
+	}
+
+	ctx.Status(http.StatusNoContent)
 }

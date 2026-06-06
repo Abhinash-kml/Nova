@@ -1,5 +1,10 @@
 package utils
 
+import (
+	"encoding/base64"
+	"strconv"
+)
+
 type LinksContainer struct {
 	Self     string `json:"self"`
 	Previous string `json:"previous"`
@@ -32,4 +37,22 @@ type ProblemDetails struct {
 	StatusCode  int                   `json:"status_code"`
 	Instance    string                `json:"instance"`
 	Errors      []ProblemDetailErrors `json:"errors,omitempty"`
+}
+
+func DecodeCursor(c string) (int, error) {
+	bytes, err := base64.URLEncoding.DecodeString(c)
+	if err != nil {
+		return -1, err
+	}
+
+	num, err := strconv.Atoi(string(bytes))
+	if err != nil {
+		return -1, err
+	}
+
+	return num, nil
+}
+
+func EncodeToCursor(c int) string {
+	return base64.URLEncoding.EncodeToString([]byte(strconv.Itoa(c)))
 }

@@ -67,7 +67,7 @@ func (r *InMemoryUsersRepository) Add(ctx context.Context, user UserCreateDTO) b
 	return true
 }
 
-func (r *InMemoryUsersRepository) GetAll(ctx context.Context, count int) []User {
+func (r *InMemoryUsersRepository) GetAll(ctx context.Context, cursor, count int) []User {
 	r.mu.RLock()
 	defer r.mu.Unlock()
 
@@ -75,7 +75,11 @@ func (r *InMemoryUsersRepository) GetAll(ctx context.Context, count int) []User 
 		return r.users[:]
 	}
 
-	return r.users[:count]
+	first, last := cursor, cursor+count
+	if last > len(r.users) {
+		last = len(r.users)
+	}
+	return r.users[first:last]
 }
 
 // TODO: Implement this
@@ -111,7 +115,11 @@ func (r *InMemoryUsersRepository) GetByName(ctx context.Context, name string) (U
 }
 
 // TODO: Implement this
-func (r *InMemoryUsersRepository) Update(ctx context.Context, id uuid.UUID, dto UserUpdateDTO) bool {
+func (r *InMemoryUsersRepository) Update(ctx context.Context, dto UserUpdateDTO) bool {
+	return true
+}
+
+func (r *InMemoryUsersRepository) Replace(ctx context.Context, dto UserReplaceDTO) bool {
 	return true
 }
 

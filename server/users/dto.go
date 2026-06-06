@@ -30,6 +30,17 @@ type UserUpdateDTO struct {
 	Value    string    `json:"value"`
 }
 
+type UserReplaceDTO struct {
+	Id          uuid.UUID `json:"id"`
+	Username    string    `json:"username"`
+	DisplayName string    `json:"display_name"`
+	Email       string    `json:"email"`
+	Country     string    `json:"country"`
+	State       string    `json:"state"`
+	LangTag     string    `json:"lang_tag"`
+	Timezone    string    `json:"time_zone"`
+}
+
 type UserDeleteDTO struct {
 	Id   uuid.UUID `json:"id"`
 	Type string    `json:"type"` // Soft (disable) - Hard (delete)

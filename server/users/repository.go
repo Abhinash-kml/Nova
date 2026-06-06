@@ -12,12 +12,13 @@ type UsersRepository interface {
 
 	Add(context.Context, UserCreateDTO) bool
 
-	GetAll(context.Context, int) []User
+	GetAll(context.Context, int, int) []User
 	GetAllByAttribute(context.Context, string) []User
 	GetById(context.Context, uuid.UUID) (User, bool)
 	GetByName(context.Context, string) (User, bool)
 
-	Update(context.Context, uuid.UUID, UserUpdateDTO) bool
+	Update(context.Context, UserUpdateDTO) bool
+	Replace(context.Context, UserReplaceDTO) bool
 
 	Delete(context.Context, uuid.UUID) bool
 }
