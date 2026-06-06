@@ -9,6 +9,7 @@ type UserCreateDTO struct {
 	Country     string `json:"country"`
 	State       string `json:"state"`
 	LangTag     string `json:"lang_tag"`
+	Timezone    string `json:"time_zone"`
 }
 
 func NewUserCreateDTO(user *User) UserCreateDTO {

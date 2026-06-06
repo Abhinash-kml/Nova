@@ -10,6 +10,8 @@ type UsersRepository interface {
 	Initialize() bool
 	Seed() bool
 
+	Add(context.Context, UserCreateDTO) bool
+
 	GetAll(context.Context, int) []User
 	GetAllByAttribute(context.Context, string) []User
 	GetById(context.Context, uuid.UUID) (User, bool)

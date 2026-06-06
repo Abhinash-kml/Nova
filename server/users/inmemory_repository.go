@@ -49,6 +49,24 @@ func (r *InMemoryUsersRepository) Seed() bool {
 	return true
 }
 
+func (r *InMemoryUsersRepository) Add(ctx context.Context, user UserCreateDTO) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	r.users = append(r.users, User{
+		Id:        uuid.New(),
+		Username:  user.DisplayName,
+		Email:     user.Email,
+		Country:   user.Country,
+		State:     user.State,
+		AvatarURL: "-",
+		LangTag:   user.LangTag,
+		Timezone:  user.Timezone,
+	})
+
+	return true
+}
+
 func (r *InMemoryUsersRepository) GetAll(ctx context.Context, count int) []User {
 	r.mu.RLock()
 	defer r.mu.Unlock()

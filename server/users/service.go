@@ -8,6 +8,7 @@ import (
 )
 
 type Service interface {
+	Add(context.Context, UserCreateDTO) bool
 	GetAll(context.Context, int) []User
 	GetAllByAttribute(context.Context, string) []User
 	GetById(context.Context, uuid.UUID) (User, bool)
@@ -28,6 +29,10 @@ func NewLocalUsersService(repository UsersRepository, l *zap.Logger) *LocalUsers
 		repo:   repository,
 		logger: l,
 	}
+}
+
+func (s *LocalUsersService) Add(ctx context.Context, user UserCreateDTO) bool {
+	return s.repo.Add(ctx, user)
 }
 
 func (s *LocalUsersService) GetAll(ctx context.Context, count int) []User {
