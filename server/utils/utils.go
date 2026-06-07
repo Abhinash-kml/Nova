@@ -58,3 +58,13 @@ func DecodeCursor(c string) (int, error) {
 func EncodeToCursor(c int) string {
 	return base64.URLEncoding.EncodeToString([]byte(strconv.Itoa(c)))
 }
+
+func Paginate[T any](data []T) PaginatedResponse[T] {
+	response := PaginatedResponse[T]{
+		Data:  data,
+		Links: LinksContainer{},
+		Meta:  MetaContainer{},
+	}
+
+	return response
+}

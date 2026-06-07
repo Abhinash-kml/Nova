@@ -9,7 +9,7 @@ import (
 
 type Service interface {
 	Add(context.Context, PostCreateDTO) bool
-	GetAll(context.Context, int) []Post
+	GetAll(context.Context, int, int) []Post
 	GetAllByAttribute(context.Context, string) []Post
 	GetById(context.Context, uuid.UUID) (Post, bool)
 	GetByName(context.Context, string) (Post, bool)
@@ -32,8 +32,8 @@ func NewLocalPostsService(repository PostsRepository, l *zap.Logger) *LocalPosts
 	}
 }
 
-func (s *LocalPostsService) GetAll(ctx context.Context, count int) []Post {
-	return s.repo.GetAll(ctx, count)
+func (s *LocalPostsService) GetAll(ctx context.Context, cursor, count int) []Post {
+	return s.repo.GetAll(ctx, cursor, count)
 }
 
 func (s *LocalPostsService) GetAllByAttribute(ctx context.Context, attribute string) []Post {

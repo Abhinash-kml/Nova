@@ -49,7 +49,7 @@ func (r *InMemoryPostsRepository) Seed() bool {
 	return true
 }
 
-func (r *InMemoryPostsRepository) GetAll(ctx context.Context, count int) []Post {
+func (r *InMemoryPostsRepository) GetAll(ctx context.Context, cursor, count int) []Post {
 	r.mu.RLock()
 	defer r.mu.Unlock()
 
@@ -57,7 +57,11 @@ func (r *InMemoryPostsRepository) GetAll(ctx context.Context, count int) []Post 
 		return r.posts[:]
 	}
 
-	return r.posts[:count]
+	first, last := cursor, cursor+count
+	if last > len(r.posts) {
+		last = len(r.posts)
+	}
+	return r.posts[first:last]
 }
 
 // TODO: Impelement this

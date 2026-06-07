@@ -12,7 +12,7 @@ type PostsRepository interface {
 
 	Add(context.Context, PostCreateDTO) bool
 
-	GetAll(context.Context, int) []Post
+	GetAll(context.Context, int, int) []Post
 	GetAllByAttribute(context.Context, string) []Post
 	GetById(context.Context, uuid.UUID) (Post, bool)
 	GetByName(context.Context, string) (Post, bool)

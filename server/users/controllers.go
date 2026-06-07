@@ -30,9 +30,9 @@ func (c *Controller) GetAll(ctx *gin.Context) {
 	if err != nil || limitNum < 10 || limitNum > 20 {
 		ctx.Header("Content-Type", "application/problem+json")
 		ctx.JSON(http.StatusBadRequest, utils.ProblemDetails{
-			Type:        "nova.com/errors/bad-request",
-			Title:       "Bad request",
-			Description: "The provided resource is of bad format",
+			Type:        "nova.com/errors/validation-error",
+			Title:       "Validation Error",
+			Description: "The provided resource contains validation error",
 			StatusCode:  400,
 			Instance:    "GET /users",
 			Errors: []utils.ProblemDetailErrors{
@@ -50,9 +50,9 @@ func (c *Controller) GetAll(ctx *gin.Context) {
 	if err != nil {
 		ctx.Header("Content-Type", "application/problem+json")
 		ctx.JSON(http.StatusBadRequest, utils.ProblemDetails{
-			Type:        "nova.com/errors/bad-request",
+			Type:        "nova.com/errors/validation-error",
 			Title:       "Bad request",
-			Description: "The provided resource is of bad format",
+			Description: "The provided resource contains validation errors",
 			StatusCode:  400,
 			Instance:    "GET /users",
 			Errors: []utils.ProblemDetailErrors{
@@ -77,10 +77,10 @@ func (c *Controller) Get(ctx *gin.Context) {
 
 		ctx.Header("Content-Type", "application/problem+json")
 		ctx.JSON(http.StatusBadRequest, utils.ProblemDetails{
-			Type:        "invalid field",
-			Title:       "Invalid field",
+			Type:        "nova.com/validation-error",
+			Title:       "Validation Error",
 			Description: "The provided field is invalid",
-			Instance:    fmt.Sprintf("/users/%s", id),
+			Instance:    fmt.Sprintf("GET /users/%s", id),
 			Errors: []utils.ProblemDetailErrors{
 				{
 					Field:   "id",
@@ -94,11 +94,11 @@ func (c *Controller) Get(ctx *gin.Context) {
 	user, found := c.service.GetById(ctx.Request.Context(), userid)
 	if !found {
 		ctx.JSON(http.StatusNotFound, utils.ProblemDetails{
-			Type:        "not found",
+			Type:        "nova.com/not-found",
 			Title:       "Not found",
 			Description: "The requested resource is not found",
 			StatusCode:  404,
-			Instance:    fmt.Sprintf("/users/%s", id),
+			Instance:    fmt.Sprintf("GET /users/%s", id),
 		})
 	}
 
