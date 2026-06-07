@@ -44,8 +44,8 @@ func (c *Controller) GetAll(ctx *gin.Context) {
 			},
 		})
 	}
-	cursor := ctx.DefaultQuery("cursor", "nil")
 
+	cursor := ctx.DefaultQuery("cursor", "nil")
 	decodedCursor, err := utils.DecodeCursor(cursor)
 	if err != nil {
 		ctx.Header("Content-Type", "application/problem+json")

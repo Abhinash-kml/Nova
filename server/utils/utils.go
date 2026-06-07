@@ -40,11 +40,13 @@ type ProblemDetails struct {
 }
 
 func DecodeCursor(c string) (int, error) {
+	if c == "nil" {
+		return -1, nil
+	}
 	bytes, err := base64.URLEncoding.DecodeString(c)
 	if err != nil {
 		return -1, err
 	}
-
 	num, err := strconv.Atoi(string(bytes))
 	if err != nil {
 		return -1, err

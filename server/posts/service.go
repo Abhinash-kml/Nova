@@ -8,12 +8,14 @@ import (
 )
 
 type Service interface {
+	Add(context.Context, PostCreateDTO) bool
 	GetAll(context.Context, int) []Post
 	GetAllByAttribute(context.Context, string) []Post
 	GetById(context.Context, uuid.UUID) (Post, bool)
 	GetByName(context.Context, string) (Post, bool)
 
-	Update(context.Context, uuid.UUID, PostUpdateDTO) bool
+	Update(context.Context, PostUpdateDTO) bool
+	Replace(context.Context, PostReplaceDTO) bool
 
 	Delete(context.Context, uuid.UUID) bool
 }
@@ -46,8 +48,12 @@ func (s *LocalPostsService) GetByName(ctx context.Context, name string) (Post, b
 	return s.repo.GetByName(ctx, name)
 }
 
-func (s *LocalPostsService) Update(ctx context.Context, id uuid.UUID, dto PostUpdateDTO) bool {
-	return s.repo.Update(ctx, id, dto)
+func (s *LocalPostsService) Update(ctx context.Context, dto PostUpdateDTO) bool {
+	return s.repo.Update(ctx, dto)
+}
+
+func (s *LocalPostsService) Replace(ctx context.Context, dto PostReplaceDTO) bool {
+	return s.repo.Replace(ctx, dto)
 }
 
 func (s *LocalPostsService) Delete(ctx context.Context, id uuid.UUID) bool {

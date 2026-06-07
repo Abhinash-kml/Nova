@@ -92,7 +92,11 @@ func (r *InMemoryPostsRepository) GetByName(ctx context.Context, name string) (P
 }
 
 // TODO: Implement this
-func (r *InMemoryPostsRepository) Update(ctx context.Context, id uuid.UUID, dto PostUpdateDTO) bool {
+func (r *InMemoryPostsRepository) Update(ctx context.Context, dto PostUpdateDTO) bool {
+	return true
+}
+
+func (r *InMemoryPostsRepository) Replace(ctx context.Context, dto PostReplaceDTO) bool {
 	return true
 }
 

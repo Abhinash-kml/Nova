@@ -19,6 +19,12 @@ type PostUpdateDTO struct {
 	Value    string    `json:"value"`
 }
 
+type PostReplaceDTO struct {
+	Id    uuid.UUID `json:"id"`
+	Title string    `json:"title"`
+	Body  string    `json:"body"`
+}
+
 type PostDeleteDTO struct {
 	Id   uuid.UUID `json:"id"`
 	Type string    `json:"type"` // Soft (disable) - Hard (delete)
