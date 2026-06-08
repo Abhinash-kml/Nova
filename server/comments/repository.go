@@ -10,11 +10,14 @@ type CommentsRepository interface {
 	Initialize() bool
 	Seed() bool
 
-	GetAll(context.Context, int) []Comment
+	Add(context.Context, CommentCreateDTO) bool
+
+	GetAll(context.Context, int, int) []Comment
 	GetAllByAttribute(context.Context, string) []Comment
 	GetById(context.Context, uuid.UUID) (Comment, bool)
 
-	Update(context.Context, uuid.UUID, CommentUpdateDTO) bool
+	Update(context.Context, CommentUpdateDTO) bool
+	Replace(context.Context, CommentReplaceDTO) bool
 
 	Delete(context.Context, uuid.UUID) bool
 }

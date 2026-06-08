@@ -6,6 +6,7 @@ import (
 	"os"
 	"slices"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -45,6 +46,25 @@ func (r *InMemoryPostsRepository) Seed() bool {
 		r.logger.Error("Failed to decode post's seeds to repository", zap.Error(err))
 		return false
 	}
+
+	return true
+}
+func (r *InMemoryPostsRepository) Add(ctx context.Context, dto PostCreateDTO) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	now := time.Now()
+
+	r.posts = append(r.posts, Post{
+		Id:        uuid.New(),
+		Title:     dto.Title,
+		Body:      dto.Body,
+		AuthorId:  dto.AuthorId,
+		Likes:     0,
+		Comments:  0,
+		CreatedAt: now,
+		UpdatedAt: now,
+	})
 
 	return true
 }

@@ -6,6 +6,7 @@ import (
 	"os"
 	"slices"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -50,15 +51,37 @@ func (r *InMemoryCommentsRepository) Seed() bool {
 	return true
 }
 
-func (r *InMemoryCommentsRepository) GetAll(ctx context.Context, count int) []Comment {
+func (r *InMemoryCommentsRepository) Add(ctx context.Context, dto CommentCreateDTO) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	now := time.Now()
+
+	r.comments = append(r.comments, Comment{
+		Id:        uuid.New(),
+		PostId:    dto.PostId,
+		AuthorId:  dto.AuthorId,
+		Body:      dto.Body,
+		CreatedAt: now,
+		UpdatedAt: now,
+	})
+
+	return true
+}
+
+func (r *InMemoryCommentsRepository) GetAll(ctx context.Context, cursor, count int) []Comment {
 	r.mu.RLock()
 	defer r.mu.Unlock()
 
 	if count == -1 {
 		return r.comments[:]
 	}
+	first, last := cursor, cursor+count
+	if last > len(r.comments) {
+		last = len(r.comments)
+	}
 
-	return r.comments[:count]
+	return r.comments[first:last]
 }
 
 // TODO: Implement this
@@ -80,7 +103,11 @@ func (r *InMemoryCommentsRepository) GetById(ctx context.Context, id uuid.UUID) 
 }
 
 // TODO: Implement this
-func (r *InMemoryCommentsRepository) Update(ctx context.Context, id uuid.UUID, dto CommentUpdateDTO) bool {
+func (r *InMemoryCommentsRepository) Update(ctx context.Context, dto CommentUpdateDTO) bool {
+	return true
+}
+
+func (r *InMemoryCommentsRepository) Replace(ctx context.Context, dto CommentReplaceDTO) bool {
 	return true
 }
 

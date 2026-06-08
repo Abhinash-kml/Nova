@@ -6,6 +6,7 @@ import (
 	"os"
 	"slices"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -53,15 +54,20 @@ func (r *InMemoryUsersRepository) Add(ctx context.Context, user UserCreateDTO) b
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	now := time.Now()
+
 	r.users = append(r.users, User{
-		Id:        uuid.New(),
-		Username:  user.DisplayName,
-		Email:     user.Email,
-		Country:   user.Country,
-		State:     user.State,
-		AvatarURL: "-",
-		LangTag:   user.LangTag,
-		Timezone:  user.Timezone,
+		Id:         uuid.New(),
+		Username:   user.DisplayName,
+		Email:      user.Email,
+		Country:    user.Country,
+		State:      user.State,
+		AvatarURL:  "-",
+		LangTag:    user.LangTag,
+		Timezone:   user.Timezone,
+		CreatedAt:  now,
+		UpdatedAt:  now,
+		VerifiedAt: now,
 	})
 
 	return true
