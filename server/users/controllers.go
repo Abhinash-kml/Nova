@@ -110,7 +110,7 @@ func (c *Controller) Create(ctx *gin.Context) {
 
 	err := ctx.BindJSON(&dto)
 	if err != nil {
-		c.logger.Error("Failed to bind UserCReateDto", zap.Error(err))
+		c.logger.Error("Failed to bind UserCreateDTO", zap.Error(err))
 
 		ctx.Header("Content-Type", "application/problem+json")
 		ctx.JSON(http.StatusBadRequest, utils.ProblemDetails{
@@ -134,7 +134,7 @@ func (c *Controller) Create(ctx *gin.Context) {
 		})
 	}
 
-	ctx.JSON(http.StatusCreated, "OK")
+	ctx.Status(http.StatusCreated)
 }
 
 func (c *Controller) Modify(ctx *gin.Context) {
@@ -142,6 +142,8 @@ func (c *Controller) Modify(ctx *gin.Context) {
 
 	err := ctx.Bind(&dto)
 	if err != nil {
+		c.logger.Error("Failed to bind UserUpdateDTO", zap.Error(err))
+
 		ctx.Header("Content-Type", "application/problem+json")
 		ctx.JSON(http.StatusBadRequest, utils.ProblemDetails{
 			Type:        "nova.com/errors/bad-request",
@@ -172,6 +174,8 @@ func (c *Controller) Delete(ctx *gin.Context) {
 
 	err := ctx.BindJSON(&dto)
 	if err != nil {
+		c.logger.Error("Failed to bind UserDeleteDTO", zap.Error(err))
+
 		ctx.Header("Content-Type", "application/problem+json")
 		ctx.JSON(http.StatusBadRequest, utils.ProblemDetails{
 			Type:        "nova.com/errors/bad-request",
@@ -202,6 +206,8 @@ func (c *Controller) Replace(ctx *gin.Context) {
 
 	err := ctx.Bind(&dto)
 	if err != nil {
+		c.logger.Error("Failed to bind UserReplaceDTO", zap.Error(err))
+
 		ctx.Header("Content-Type", "application/problem+json")
 		ctx.JSON(http.StatusBadRequest, utils.ProblemDetails{
 			Type:        "nova.com/errors/bad-request",
