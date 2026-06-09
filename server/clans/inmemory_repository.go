@@ -52,11 +52,23 @@ func (r *InMemoryClansRepository) GetAll(ctx context.Context) []Clan {
 	return r.clans
 }
 
-func (r *InMemoryClansRepository) Add(ctx context.Context, clan Clan) bool {
+func (r *InMemoryClansRepository) Add(ctx context.Context, dto CreateDTO) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.clans = append(r.clans, clan)
+	r.clans = append(r.clans, Clan{
+		Id:          uuid.New(),
+		Name:        dto.Name,
+		Tag:         dto.Tag,
+		Description: dto.Description,
+		LeaderId:    dto.LeaderId,
+		ColeaderId:  dto.ColeaderId,
+		EliteId:     dto.EliteId,
+		Level:       dto.Level,
+		Members:     dto.Members,
+		MaxMembers:  dto.MaxMembers,
+		IsLocked:    dto.IsLocked,
+	})
 
 	return true
 }

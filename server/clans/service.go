@@ -8,11 +8,12 @@ import (
 )
 
 type Service interface {
+	Add(context.Context, CreateDTO) bool
 	Get(context.Context, uuid.UUID) (Clan, bool)
 	GetByName(context.Context, string) (Clan, bool)
 	GetAll(context.Context) []Clan
-	Add(context.Context, Clan) bool
-	Delete(context.Context, uuid.UUID) bool
+	Update(context.Context, UpdateDTO) bool
+	Delete(context.Context, DeleteDTO) bool
 }
 
 type LocalClansService struct {
@@ -35,14 +36,18 @@ func (s *LocalClansService) GetByName(ctx context.Context, name string) (Clan, b
 	return s.repo.GetByName(ctx, name)
 }
 
-func (s *LocalClansService) GetAll(ctx context.Context) []Clan {
-	return s.repo.GetAll(ctx)
+func (s *LocalClansService) GetAll(ctx context.Context, cursor, limit int) []Clan {
+	return s.repo.GetAll(ctx, cursor, limit)
 }
 
-func (s *LocalClansService) Add(ctx context.Context, clan Clan) bool {
-	return s.repo.Add(ctx, clan)
+func (s *LocalClansService) Add(ctx context.Context, dto CreateDTO) bool {
+	return s.repo.Add(ctx, dto)
 }
 
-func (s *LocalClansService) Delete(ctx context.Context, id uuid.UUID) bool {
-	return s.repo.Delete(ctx, id)
+func (s *LocalClansService) Delete(ctx context.Context, dto DeleteDTO) bool {
+	return s.repo.Delete(ctx, dto)
+}
+
+func (s *LocalClansService) Update(ctx context.Context, dto UpdateDTO) bool {
+	return s.repo.Update(ctx, dto)
 }
