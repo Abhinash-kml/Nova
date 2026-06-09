@@ -9,9 +9,9 @@ import (
 
 type Service interface {
 	Add(context.Context, CreateDTO) bool
-	Get(context.Context, uuid.UUID) (Clan, bool)
+	GetById(context.Context, uuid.UUID) (Clan, bool)
 	GetByName(context.Context, string) (Clan, bool)
-	GetAll(context.Context) []Clan
+	GetAll(context.Context, int, int) []Clan
 	Update(context.Context, UpdateDTO) bool
 	Delete(context.Context, DeleteDTO) bool
 }
@@ -28,8 +28,8 @@ func NewLocalClansService(repo ClansRepository, l *zap.Logger) *LocalClansServic
 	}
 }
 
-func (s *LocalClansService) Get(ctx context.Context, id uuid.UUID) (Clan, bool) {
-	return s.repo.Get(ctx, id)
+func (s *LocalClansService) GetById(ctx context.Context, id uuid.UUID) (Clan, bool) {
+	return s.repo.GetById(ctx, id)
 }
 
 func (s *LocalClansService) GetByName(ctx context.Context, name string) (Clan, bool) {

@@ -12,7 +12,7 @@ type ClansRepository interface {
 
 	Add(context.Context, CreateDTO) bool
 
-	Get(context.Context, uuid.UUID) (Clan, bool)
+	GetById(context.Context, uuid.UUID) (Clan, bool)
 	GetByName(context.Context, string) (Clan, bool)
 	GetAll(context.Context, int, int) []Clan
 

@@ -19,7 +19,7 @@ func NewInMemoryClanRepository(l *zap.Logger) *InMemoryClansRepository {
 	return &InMemoryClansRepository{logger: l}
 }
 
-func (r *InMemoryClansRepository) Get(ctx context.Context, id uuid.UUID) (Clan, bool) {
+func (r *InMemoryClansRepository) GetById(ctx context.Context, id uuid.UUID) (Clan, bool) {
 	r.mu.RLock()
 	defer r.mu.Unlock()
 
@@ -45,11 +45,16 @@ func (r *InMemoryClansRepository) GetByName(ctx context.Context, name string) (C
 	return Clan{}, false
 }
 
-func (r *InMemoryClansRepository) GetAll(ctx context.Context) []Clan {
+func (r *InMemoryClansRepository) GetAll(ctx context.Context, cursor, limit int) []Clan {
 	r.mu.RLock()
 	defer r.mu.Unlock()
 
-	return r.clans
+	start, end := cursor, cursor+limit
+	if end > len(r.clans) {
+		end = len(r.clans)
+	}
+
+	return r.clans[start:end]
 }
 
 func (r *InMemoryClansRepository) Add(ctx context.Context, dto CreateDTO) bool {

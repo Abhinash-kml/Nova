@@ -7,7 +7,7 @@ func SetupRoutes(router *gin.Engine, c *Controller) {
 	{
 		group.GET("/", c.GetAll)
 		group.GET("/:id", c.Get)
-		group.POST("/:id", c.Create)
+		group.POST("/", c.Create)
 		group.PATCH("/:id", c.Modify)
 		group.PUT("/:id", c.Replace)
 		group.DELETE("/:id", c.Delete)
