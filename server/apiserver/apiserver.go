@@ -75,18 +75,23 @@ func (s *HttpServer) Start() error {
 					s.logger.Error("Server crashed after start", zap.Error(err))
 				}
 			}()
+
+			// Start listening for termination
+			go s.listenForTermination()
 		case err := <-s.errChan: // Server failed within 2 secs
 			return err
 		}
 	}
 }
 
-func (s *HttpServer) Stop() {
-	s.errChan <- s.internalServer.Shutdown(context.Background())
+func (s *HttpServer) Stop(ctx context.Context) {
+	s.errChan <- s.internalServer.Shutdown(ctx)
 }
 
-func (s *HttpServer) ListenForTermination() {
-
+func (s *HttpServer) listenForTermination() {
+	<-s.ctx.Done() // This will block untill context is done
+	s.logger.Info("Server terminated as a result of context completion")
+	s.Stop(context.Background())
 }
 
 func (s *HttpServer) AddBeforeStartHook(function Hook) {
