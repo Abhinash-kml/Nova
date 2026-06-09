@@ -8,8 +8,8 @@ func SetupRoutes(router *gin.Engine, c *Controller) {
 		group.GET("/", c.GetAll)
 		group.GET("/:id", c.Get)
 		group.POST("/", c.Create)
-		group.PATCH("/", c.Modify)
-		group.PUT("/", c.Replace)
-		group.DELETE("/", c.Delete)
+		group.PATCH("/:id", c.Modify)
+		group.PUT("/:id", c.Replace)
+		group.DELETE("/:id", c.Delete)
 	}
 }
