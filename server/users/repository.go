@@ -7,18 +7,18 @@ import (
 )
 
 type UsersRepository interface {
-	Initialize() bool
-	Seed() bool
+	Initialize() error
+	Seed() error
 
-	Add(context.Context, UserCreateDTO) bool
+	Add(ctx context.Context, dto CreateDTO) error
 
-	GetAll(context.Context, int, int) []User
-	GetAllByAttribute(context.Context, string) []User
-	GetById(context.Context, uuid.UUID) (User, bool)
-	GetByName(context.Context, string) (User, bool)
+	GetAll(ctx context.Context, cursor int, limit int) ([]User, error)
+	GetAllByAttribute(ctx context.Context, attribute string) ([]User, error)
+	GetById(ctx context.Context, id uuid.UUID) (User, error)
+	GetByName(ctx context.Context, name string) (User, error)
 
-	Update(context.Context, UserUpdateDTO) bool
-	Replace(context.Context, UserReplaceDTO) bool
+	Update(ctx context.Context, dto UpdateDTO) error
+	Replace(ctx context.Context, dto ReplaceDTO) error
 
-	Delete(context.Context, uuid.UUID) bool
+	Delete(ctx context.Context, dto DeleteDTO) error
 }

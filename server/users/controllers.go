@@ -1,12 +1,11 @@
 package users
 
 import (
-	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/abhinash-kml/nova/server/utils"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -25,209 +24,135 @@ func NewController(s Service, l *zap.Logger) *Controller {
 }
 
 func (c *Controller) GetAll(ctx *gin.Context) {
-	limit := ctx.DefaultQuery("limit", "20")
-	limitNum, err := strconv.Atoi(limit)
-	if err != nil || limitNum < 10 || limitNum > 20 {
-		ctx.Header("Content-Type", "application/problem+json")
-		ctx.JSON(http.StatusBadRequest, utils.ProblemDetails{
-			Type:        "nova.com/errors/validation-error",
-			Title:       "Validation Error",
-			Description: "The provided resource contains validation error",
-			StatusCode:  400,
-			Instance:    "GET /users",
-			Errors: []utils.ProblemDetailErrors{
-				{
-					Field:   "limit",
-					Message: "The provided limit is invalid. Valid range: 10 - 20",
-					Code:    "400",
-				},
-			},
-		})
+	var data GetAllDTO
+
+	if err := ctx.ShouldBindQuery(&data); err != nil {
+		utils.SendProblemDetails(ctx, err)
+		return
 	}
 
-	cursor := ctx.DefaultQuery("cursor", "nil")
-	decodedCursor, err := utils.DecodeCursor(cursor)
+	decodedCursor, err := utils.DecodeCursor(data.Cursor)
 	if err != nil {
-		ctx.Header("Content-Type", "application/problem+json")
-		ctx.JSON(http.StatusBadRequest, utils.ProblemDetails{
-			Type:        "nova.com/errors/validation-error",
-			Title:       "Bad request",
-			Description: "The provided resource contains validation errors",
-			StatusCode:  400,
-			Instance:    "GET /users",
-			Errors: []utils.ProblemDetailErrors{
-				{
-					Field:   "cursor",
-					Message: "The provided cursor is invalid",
-					Code:    "400",
-				},
-			},
-		})
+		utils.SendProblemDetails(ctx, err)
+		return
 	}
 
-	users := c.service.GetAll(ctx.Request.Context(), decodedCursor, limitNum)
-	ctx.JSON(http.StatusOK, users)
+	users, err := c.service.GetAll(ctx.Request.Context(), decodedCursor, data.Limit)
+	if err != nil {
+		utils.SendProblemDetails(ctx, err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, utils.Paginate(users))
 }
 
 func (c *Controller) Get(ctx *gin.Context) {
-	id := ctx.Param("id")
-	userid, err := uuid.FromBytes([]byte(id))
-	if err != nil {
-		c.logger.Error("Failed to convert provided userid from string to uuid", zap.Error(err))
+	var data GetDTO
 
-		ctx.Header("Content-Type", "application/problem+json")
-		ctx.JSON(http.StatusBadRequest, utils.ProblemDetails{
-			Type:        "nova.com/validation-error",
-			Title:       "Validation Error",
-			Description: "The provided field is invalid",
-			Instance:    fmt.Sprintf("GET /users/%s", id),
-			Errors: []utils.ProblemDetailErrors{
-				{
-					Field:   "id",
-					Message: "invalid uuid",
-					Code:    "100",
-				},
-			},
-		})
+	if err := ctx.ShouldBindUri(&data); err != nil {
+		utils.SendProblemDetails(ctx, err)
+		return
 	}
 
-	user, found := c.service.GetById(ctx.Request.Context(), userid)
-	if !found {
-		ctx.JSON(http.StatusNotFound, utils.ProblemDetails{
-			Type:        "nova.com/not-found",
-			Title:       "Not found",
-			Description: "The requested resource is not found",
-			StatusCode:  404,
-			Instance:    fmt.Sprintf("GET /users/%s", id),
-		})
+	parsedId, _ := uuid.Parse(data.Id)
+
+	user, err := c.service.GetById(ctx.Request.Context(), parsedId)
+	if err != nil {
+		utils.SendProblemDetails(ctx, err)
+		return
 	}
 
 	ctx.JSON(http.StatusOK, user)
 }
 
 func (c *Controller) Create(ctx *gin.Context) {
-	var dto UserCreateDTO
+	var dto CreateDTO
 
-	err := ctx.BindJSON(&dto)
-	if err != nil {
+	if err := ctx.BindJSON(&dto); err != nil {
 		c.logger.Error("Failed to bind UserCreateDTO", zap.Error(err))
-
-		ctx.Header("Content-Type", "application/problem+json")
-		ctx.JSON(http.StatusBadRequest, utils.ProblemDetails{
-			Type:        "nova.com/errors/bad-request",
-			Title:       "Bad request",
-			Description: "The provided resource is of bad format",
-			StatusCode:  400,
-			Instance:    "POST /users",
-		})
+		utils.SendProblemDetails(ctx, err)
+		return
 	}
 
-	added := c.service.Add(ctx.Request.Context(), dto)
-	if !added {
-		ctx.Header("Content-Type", "application/problem+json")
-		ctx.JSON(http.StatusInternalServerError, utils.ProblemDetails{
-			Type:        "nova.com/errors/record-no-create",
-			Title:       "Record not created",
-			Description: "The provided record could not be created",
-			StatusCode:  500,
-			Instance:    "POST /users",
-		})
+	err := c.service.Add(ctx.Request.Context(), dto)
+	if err != nil {
+		utils.SendProblemDetails(ctx, err)
+		return
 	}
 
 	ctx.Status(http.StatusCreated)
 }
 
 func (c *Controller) Modify(ctx *gin.Context) {
-	var dto UserUpdateDTO
+	var dto UpdateDTO
 
-	err := ctx.Bind(&dto)
-	if err != nil {
+	if err := ctx.ShouldBindUri(&dto); err != nil {
 		c.logger.Error("Failed to bind UserUpdateDTO", zap.Error(err))
-
-		ctx.Header("Content-Type", "application/problem+json")
-		ctx.JSON(http.StatusBadRequest, utils.ProblemDetails{
-			Type:        "nova.com/errors/bad-request",
-			Title:       "Bad request",
-			Description: "The provided resource is of bad format",
-			StatusCode:  400,
-			Instance:    "PATCH /users",
-		})
+		utils.SendProblemDetails(ctx, err)
+		return
 	}
 
-	updated := c.service.Update(ctx.Request.Context(), dto)
-	if !updated {
-		ctx.Header("Content-Type", "application/problem+json")
-		ctx.JSON(http.StatusBadRequest, utils.ProblemDetails{
-			Type:        "nova.com/errors/not-updated",
-			Title:       "Not updated",
-			Description: "The provided resource couldn't be updated",
-			StatusCode:  500,
-			Instance:    "PATCH /users",
-		})
+	if err := ctx.ShouldBindBodyWithJSON(&dto); err != nil {
+		c.logger.Error("Failed to bind UserUpdateDTO", zap.Error(err))
+		utils.SendProblemDetails(ctx, err)
+		return
+	}
+
+	err := c.service.Update(ctx.Request.Context(), dto)
+	if err != nil {
+		c.logger.Error("Failed to update user", zap.Error(err))
+		utils.SendProblemDetails(ctx, err)
+		return
 	}
 
 	ctx.Status(http.StatusNoContent)
 }
 
 func (c *Controller) Delete(ctx *gin.Context) {
-	var dto UserDeleteDTO
+	var dto DeleteDTO
 
-	err := ctx.BindJSON(&dto)
-	if err != nil {
-		c.logger.Error("Failed to bind UserDeleteDTO", zap.Error(err))
-
-		ctx.Header("Content-Type", "application/problem+json")
-		ctx.JSON(http.StatusBadRequest, utils.ProblemDetails{
-			Type:        "nova.com/errors/bad-request",
-			Title:       "Bad request",
-			Description: "The provided resource is of bad format",
-			StatusCode:  400,
-			Instance:    "DELETE /users",
-		})
+	if err := ctx.ShouldBindUri(&dto); err != nil {
+		c.logger.Error("Failed to bind UserUpdateDTO", zap.Error(err))
+		utils.SendProblemDetails(ctx, err)
+		return
 	}
 
-	deleted := c.service.Delete(ctx.Request.Context(), dto.Id)
-	if !deleted {
-		ctx.Header("Content-Type", "application/problem+json")
-		ctx.JSON(http.StatusInternalServerError, utils.ProblemDetails{
-			Type:        "nova.com/errors/no-delete",
-			Title:       "Not Deleted",
-			Description: "The provided resource couldn't be deleted",
-			StatusCode:  500,
-			Instance:    "DELETE /users",
-		})
+	if err := ctx.ShouldBindQuery(&dto); err != nil {
+		c.logger.Error("Failed to bind UserUpdateDTO", zap.Error(err))
+		utils.SendProblemDetails(ctx, err)
+		return
+	}
+
+	err := c.service.Delete(ctx.Request.Context(), dto)
+	if err != nil {
+		c.logger.Error("Failed to delete user", zap.Error(err))
+		utils.SendProblemDetails(ctx, err)
+		return
 	}
 
 	ctx.Status(http.StatusNoContent)
 }
 
 func (c *Controller) Replace(ctx *gin.Context) {
-	var dto UserReplaceDTO
+	var dto ReplaceDTO
 
-	err := ctx.Bind(&dto)
-	if err != nil {
-		c.logger.Error("Failed to bind UserReplaceDTO", zap.Error(err))
-
-		ctx.Header("Content-Type", "application/problem+json")
-		ctx.JSON(http.StatusBadRequest, utils.ProblemDetails{
-			Type:        "nova.com/errors/bad-request",
-			Title:       "Bad request",
-			Description: "The provided resource is of bad format",
-			StatusCode:  400,
-			Instance:    "PUT /users",
-		})
+	if err := ctx.ShouldBindUri(&dto); err != nil {
+		c.logger.Error("Failed to bind UserUpdateDTO", zap.Error(err))
+		utils.SendProblemDetails(ctx, err)
+		return
 	}
 
-	replaced := c.service.Replace(ctx.Request.Context(), dto)
-	if !replaced {
-		ctx.Header("Content-Type", "application/problem+json")
-		ctx.JSON(http.StatusBadRequest, utils.ProblemDetails{
-			Type:        "nova.com/errors/not-replaced",
-			Title:       "Not replaced",
-			Description: "The provided resource couldn't be replaced",
-			StatusCode:  500,
-			Instance:    "PUT /users",
-		})
+	if err := ctx.ShouldBindWith(&dto, binding.JSON); err != nil {
+		c.logger.Error("Failed to bind UserReplaceDTO", zap.Error(err))
+		utils.SendProblemDetails(ctx, err)
+		return
+	}
+
+	err := c.service.Replace(ctx.Request.Context(), dto)
+	if err != nil {
+		c.logger.Error("Failed to replace user", zap.Error(err))
+		utils.SendProblemDetails(ctx, err)
+		return
 	}
 
 	ctx.Status(http.StatusNoContent)

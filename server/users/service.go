@@ -8,16 +8,16 @@ import (
 )
 
 type Service interface {
-	Add(context.Context, UserCreateDTO) bool
-	GetAll(context.Context, int, int) []User
-	GetAllByAttribute(context.Context, string) []User
-	GetById(context.Context, uuid.UUID) (User, bool)
-	GetByName(context.Context, string) (User, bool)
+	Add(ctx context.Context, dto CreateDTO) error
+	GetAll(ctx context.Context, cursor int, limit int) ([]User, error)
+	GetAllByAttribute(ctx context.Context, attribute string) ([]User, error)
+	GetById(ctx context.Context, id uuid.UUID) (User, error)
+	GetByName(ctx context.Context, name string) (User, error)
 
-	Update(context.Context, UserUpdateDTO) bool
-	Replace(context.Context, UserReplaceDTO) bool
+	Update(ctx context.Context, dto UpdateDTO) error
+	Replace(ctx context.Context, dto ReplaceDTO) error
 
-	Delete(context.Context, uuid.UUID) bool
+	Delete(ctx context.Context, dto DeleteDTO) error
 }
 
 type LocalUsersService struct {
@@ -32,34 +32,34 @@ func NewLocalUsersService(repository UsersRepository, l *zap.Logger) *LocalUsers
 	}
 }
 
-func (s *LocalUsersService) Add(ctx context.Context, user UserCreateDTO) bool {
+func (s *LocalUsersService) Add(ctx context.Context, user CreateDTO) error {
 	return s.repo.Add(ctx, user)
 }
 
-func (s *LocalUsersService) GetAll(ctx context.Context, cursor, count int) []User {
+func (s *LocalUsersService) GetAll(ctx context.Context, cursor, count int) ([]User, error) {
 	return s.repo.GetAll(ctx, cursor, count)
 }
 
-func (s *LocalUsersService) GetAllByAttribute(ctx context.Context, attribute string) []User {
+func (s *LocalUsersService) GetAllByAttribute(ctx context.Context, attribute string) ([]User, error) {
 	return s.repo.GetAllByAttribute(ctx, attribute)
 }
 
-func (s *LocalUsersService) GetById(ctx context.Context, id uuid.UUID) (User, bool) {
+func (s *LocalUsersService) GetById(ctx context.Context, id uuid.UUID) (User, error) {
 	return s.repo.GetById(ctx, id)
 }
 
-func (s *LocalUsersService) GetByName(ctx context.Context, name string) (User, bool) {
+func (s *LocalUsersService) GetByName(ctx context.Context, name string) (User, error) {
 	return s.repo.GetByName(ctx, name)
 }
 
-func (s *LocalUsersService) Update(ctx context.Context, dto UserUpdateDTO) bool {
+func (s *LocalUsersService) Update(ctx context.Context, dto UpdateDTO) error {
 	return s.repo.Update(ctx, dto)
 }
 
-func (s *LocalUsersService) Replace(ctx context.Context, dto UserReplaceDTO) bool {
+func (s *LocalUsersService) Replace(ctx context.Context, dto ReplaceDTO) error {
 	return s.repo.Replace(ctx, dto)
 }
 
-func (s *LocalUsersService) Delete(ctx context.Context, id uuid.UUID) bool {
-	return s.repo.Delete(ctx, id)
+func (s *LocalUsersService) Delete(ctx context.Context, dto DeleteDTO) error {
+	return s.repo.Delete(ctx, dto)
 }

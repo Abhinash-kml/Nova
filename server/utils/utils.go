@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -76,10 +77,13 @@ func Paginate[T any](data []T) PaginatedResponse[T] {
 	return response
 }
 
-func SendProblemDetails(c *gin.Context, defaultStatus int, err error) {
+func SendProblemDetails(c *gin.Context, err error) {
 	problem := ProblemDetails{
-		StatusCode: defaultStatus,
+		Instance: fmt.Sprintf("%s %s", c.Request.Method, c.Request.RequestURI),
 	}
+
+	// Set response mime type as per the RFC
+	c.Header("Content-Type", "application/problem+json")
 
 	// 1. Check for validation errors
 	var validationErrors validator.ValidationErrors
@@ -87,6 +91,7 @@ func SendProblemDetails(c *gin.Context, defaultStatus int, err error) {
 		problem.Type = "nova.com/validation-error"
 		problem.Title = "Request Field Validation Failed"
 		problem.Description = "One or more parameters in your request violated structural constrainsts."
+		problem.StatusCode = http.StatusBadRequest
 
 		for _, fe := range validationErrors {
 			fieldName := strings.ToLower(fe.Field())
@@ -102,7 +107,6 @@ func SendProblemDetails(c *gin.Context, defaultStatus int, err error) {
 			})
 		}
 
-		c.Header("Content-Type", "application/problem+json")
 		c.JSON(problem.StatusCode, problem)
 		return
 	}
@@ -120,8 +124,8 @@ func SendProblemDetails(c *gin.Context, defaultStatus int, err error) {
 		problem.Title = "Malformed Parameter Data Type"
 		problem.Description = fmt.Sprintf("The field %q couldn't be parsed. Expected a valid value matching data type %q",
 			strings.ToLower(typeError.Field()), typeError.Type())
+		problem.StatusCode = http.StatusBadRequest
 
-		c.Header("Content-Type", "application/problem+json")
 		c.JSON(problem.StatusCode, problem)
 		return
 	}
@@ -133,8 +137,8 @@ func SendProblemDetails(c *gin.Context, defaultStatus int, err error) {
 		problem.Type = "nova.com/no-resource"
 		problem.Title = "Resource Not Found"
 		problem.Description = "The requested resource cannot be found"
+		problem.StatusCode = http.StatusNotFound
 
-		c.Header("Content-Type", "application/problem+json")
 		c.JSON(problem.StatusCode, problem)
 		return
 	}
@@ -144,8 +148,8 @@ func SendProblemDetails(c *gin.Context, defaultStatus int, err error) {
 		problem.Type = "nova.com/already-exists"
 		problem.Title = "Resource Exists"
 		problem.Description = "The requested resource already exists"
+		problem.StatusCode = http.StatusConflict
 
-		c.Header("Content-Type", "application/problem+json")
 		c.JSON(problem.StatusCode, problem)
 		return
 	}
