@@ -3,6 +3,7 @@ package common
 import "errors"
 
 var (
-	ErrRecordAlreadyExists = errors.New("The record already exists")
-	ErrRecordNotFound      = errors.New("The record is not found")
+	ErrResourceExists   = errors.New("The resource already exists")
+	ErrResourceNotFound = errors.New("The resource is not found")
+	ErrResourceNotAdded = errors.New("The resource cannot be added")
 )
