@@ -7,17 +7,17 @@ import (
 )
 
 type CommentsRepository interface {
-	Initialize() bool
-	Seed() bool
+	Initialize() error
+	Seed() error
 
-	Add(context.Context, CommentCreateDTO) bool
+	Add(ctx context.Context, dto CreateDTO) error
 
-	GetAll(context.Context, int, int) []Comment
-	GetAllByAttribute(context.Context, string) []Comment
-	GetById(context.Context, uuid.UUID) (Comment, bool)
+	GetAll(ctx context.Context, cursor int, limit int) ([]Comment, error)
+	GetAllByAttribute(ctx context.Context, attribute string) ([]Comment, error)
+	GetById(ctx context.Context, id uuid.UUID) (Comment, error)
 
-	Update(context.Context, CommentUpdateDTO) bool
-	Replace(context.Context, CommentReplaceDTO) bool
+	Update(ctx context.Context, dto UpdateDTO) error
+	Replace(ctx context.Context, dto ReplaceDTO) error
 
-	Delete(context.Context, uuid.UUID) bool
+	Delete(ctx context.Context, dto DeleteDTO) error
 }

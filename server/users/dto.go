@@ -1,7 +1,5 @@
 package users
 
-import "github.com/google/uuid"
-
 type GetDTO struct {
 	Id string `uri:"id" binding:"required,uuid"`
 }
@@ -33,21 +31,21 @@ func NewUserCreateDTO(user *User) CreateDTO {
 }
 
 type UpdateDTO struct {
-	Id       uuid.UUID `uri:"id" binding:"required"`
-	Field    string    `json:"field" binding:"required"`
-	DataType string    `json:"datatype" binding:"required"`
-	Value    string    `json:"value" binding:"required"`
+	Id       string `uri:"id" binding:"required,uuid"`
+	Field    string `json:"field" binding:"required"`
+	DataType string `json:"datatype" binding:"required"`
+	Value    string `json:"value" binding:"required"`
 }
 
 type ReplaceDTO struct {
-	Id          uuid.UUID `uri:"id" binding:"required"`
-	Username    string    `json:"username" binding:"required,gte=5,lte=20"`
-	DisplayName string    `json:"display_name" binding:"required,gte=5,lte=10"`
-	Email       string    `json:"email" binding:"required,email"`
-	Country     string    `json:"country" binding:"required"`
-	State       string    `json:"state" binding:"required"`
-	LangTag     string    `json:"lang_tag" binding:"required"`
-	Timezone    string    `json:"time_zone" binding:"required"`
+	Id          string `uri:"id" binding:"required,uuid"`
+	Username    string `json:"username" binding:"required,gte=5,lte=20"`
+	DisplayName string `json:"display_name" binding:"required,gte=5,lte=10"`
+	Email       string `json:"email" binding:"required,email"`
+	Country     string `json:"country" binding:"required"`
+	State       string `json:"state" binding:"required"`
+	LangTag     string `json:"lang_tag" binding:"required"`
+	Timezone    string `json:"time_zone" binding:"required"`
 }
 
 type DeleteDTO struct {

@@ -18,19 +18,19 @@ type CreateDTO struct {
 }
 
 type UpdateDTO struct {
-	Id       string `uri:"id" binding:"required"`
+	Id       string `uri:"id" binding:"required,uuid"`
 	Field    string `json:"field" binding:"required"`
 	DataType string `json:"datatype" binding:"required"`
 	Value    string `json:"value" binding:"required"`
 }
 
 type ReplaceDTO struct {
-	Id    uuid.UUID `uri:"id" binding:"required"`
-	Title string    `json:"title" binding:"required"`
-	Body  string    `json:"body" binding:"required"`
+	Id    string `uri:"id" binding:"required,uuid"`
+	Title string `json:"title" binding:"required"`
+	Body  string `json:"body" binding:"required"`
 }
 
 type DeleteDTO struct {
-	Id   uuid.UUID `uri:"id" binding:"required"`
-	Type string    `form:"type" binding:"required,oneof=soft hard"` // Soft (disable) - Hard (delete)
+	Id   string `uri:"id" binding:"required,uuid"`
+	Type string `form:"type" binding:"required,oneof=soft hard"` // Soft (disable) - Hard (delete)
 }

@@ -2,27 +2,32 @@ package comments
 
 import "github.com/google/uuid"
 
-type CommentCreateDTO struct {
-	PostId   uuid.UUID `json:"post_id"`
-	AuthorId uuid.UUID `json:"author_id"`
-	Body     string    `json:"body"`
+type GetDTO struct {
+	Id string `uri:"id" binding:"required,uuid"`
 }
 
-func NewCommentcreateDTO() CommentCreateDTO {
-	return CommentCreateDTO{}
+type GetAllDTO struct {
+	Cursor string `form:"cursor" binding:"required"`
+	Limit  int    `form:"limit" binding:"required,gte=10,lte=20"`
 }
 
-type CommentUpdateDTO struct {
-	Id   uuid.UUID `json:"id"`
-	Body string    `json:"body"`
+type CreateDTO struct {
+	PostId   uuid.UUID `json:"post_id" binding:"required"`
+	AuthorId uuid.UUID `json:"author_id" binding:"required"`
+	Body     string    `json:"body" binding:"required"`
 }
 
-type CommentReplaceDTO struct {
-	Id   uuid.UUID `json:"id"`
-	Body string    `json:"body"`
+type UpdateDTO struct {
+	Id   string `uri:"id" binding:"required,uuid"`
+	Body string `json:"body" binding:"required"`
 }
 
-type CommentDeleteDTO struct {
-	Id   uuid.UUID `json:"id"`
-	Type string    `json:"type"` // Soft (disable) - Hard (delete)
+type ReplaceDTO struct {
+	Id   string `uri:"id" binding:"required,uuid"`
+	Body string `json:"body" binding:"required"`
+}
+
+type DeleteDTO struct {
+	Id   string `uri:"id" binding:"required,uuid"`
+	Type string `form:"type" binding:"required,oneof=soft hard"` // Soft (disable) - Hard (delete)
 }

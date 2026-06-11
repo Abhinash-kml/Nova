@@ -3,11 +3,13 @@ package comments
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"slices"
 	"sync"
 	"time"
 
+	"github.com/abhinash-kml/nova/server/common"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -23,35 +25,35 @@ func NewInMemoryCommentsRepository(l *zap.Logger) *InMemoryCommentsRepository {
 }
 
 // INFO: Not required as its in-memory
-func (r *InMemoryCommentsRepository) Initialize() bool {
-	return true
+func (r *InMemoryCommentsRepository) Initialize() error {
+	return nil
 }
 
 // TODO: Implement this
-func (r *InMemoryCommentsRepository) Seed() bool {
+func (r *InMemoryCommentsRepository) Seed() error {
 	file, err := os.OpenFile("./seeds/comments.json", os.O_RDONLY, 0755)
 	if err != nil {
 		r.logger.Error("Failed to open comments seeds file", zap.Error(err))
-		return false
+		return fmt.Errorf("Failed to open comments seeds file. Error: %w", err)
 	}
 	defer file.Close()
 
 	decoder := json.NewDecoder(file)
 	if decoder == nil {
 		r.logger.Error("Failed to create json decoder. Returned nil pointer")
-		return false
+		return fmt.Errorf("Failed to create json decoder. Returned nil pointer")
 	}
 
 	err = decoder.Decode(&r.comments)
 	if err != nil {
-		r.logger.Error("Failed to decode user's seeds data to repository", zap.Error(err))
-		return false
+		r.logger.Error("Failed to decode comment's seeds data to repository", zap.Error(err))
+		return fmt.Errorf("Failed to decode comment's seeds data to repository. Error: %w", err)
 	}
 
-	return true
+	return nil
 }
 
-func (r *InMemoryCommentsRepository) Add(ctx context.Context, dto CommentCreateDTO) bool {
+func (r *InMemoryCommentsRepository) Add(ctx context.Context, dto CreateDTO) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -66,57 +68,60 @@ func (r *InMemoryCommentsRepository) Add(ctx context.Context, dto CommentCreateD
 		UpdatedAt: now,
 	})
 
-	return true
+	return nil
 }
 
-func (r *InMemoryCommentsRepository) GetAll(ctx context.Context, cursor, count int) []Comment {
+func (r *InMemoryCommentsRepository) GetAll(ctx context.Context, cursor, count int) ([]Comment, error) {
 	r.mu.RLock()
 	defer r.mu.Unlock()
 
 	if count == -1 {
-		return r.comments[:]
+		return r.comments[:], nil
 	}
 	first, last := cursor, cursor+count
 	if last > len(r.comments) {
 		last = len(r.comments)
 	}
 
-	return r.comments[first:last]
+	return r.comments[first:last], nil
 }
 
 // TODO: Implement this
-func (r *InMemoryCommentsRepository) GetAllByAttribute(ctx context.Context, attribute string) []Comment {
-	return nil
+func (r *InMemoryCommentsRepository) GetAllByAttribute(ctx context.Context, attribute string) ([]Comment, error) {
+	// Filter by attribute logic goes here
+
+	return nil, nil
 }
 
-func (r *InMemoryCommentsRepository) GetById(ctx context.Context, id uuid.UUID) (Comment, bool) {
+func (r *InMemoryCommentsRepository) GetById(ctx context.Context, id uuid.UUID) (Comment, error) {
 	r.mu.RLock()
 	defer r.mu.Unlock()
 
 	for index := range r.comments {
 		if r.comments[index].Id == id {
-			return r.comments[index], true
+			return r.comments[index], nil
 		}
 	}
 
-	return Comment{}, false
+	return Comment{}, common.ErrResourceNotFound
 }
 
 // TODO: Implement this
-func (r *InMemoryCommentsRepository) Update(ctx context.Context, dto CommentUpdateDTO) bool {
-	return true
+func (r *InMemoryCommentsRepository) Update(ctx context.Context, dto UpdateDTO) error {
+	return nil
 }
 
-func (r *InMemoryCommentsRepository) Replace(ctx context.Context, dto CommentReplaceDTO) bool {
-	return true
+func (r *InMemoryCommentsRepository) Replace(ctx context.Context, dto ReplaceDTO) error {
+	return nil
 }
 
-func (r *InMemoryCommentsRepository) Delete(ctx context.Context, id uuid.UUID) bool {
+func (r *InMemoryCommentsRepository) Delete(ctx context.Context, dto DeleteDTO) error {
 	oldLen := len(r.comments)
 
 	r.mu.Lock()
+	parsedId, _ := uuid.Parse(dto.Id)
 	r.comments = slices.DeleteFunc(r.comments, func(c Comment) bool {
-		if c.Id == id {
+		if c.Id == parsedId {
 			return true
 		}
 
@@ -126,8 +131,8 @@ func (r *InMemoryCommentsRepository) Delete(ctx context.Context, id uuid.UUID) b
 
 	newLen := len(r.comments)
 	if oldLen != newLen {
-		return true
+		return nil
 	}
 
-	return false
+	return common.ErrResourceCannotBeDeleted
 }

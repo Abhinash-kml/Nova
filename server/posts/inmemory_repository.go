@@ -133,8 +133,9 @@ func (r *InMemoryPostsRepository) Delete(ctx context.Context, dto DeleteDTO) err
 	oldLen := len(r.posts)
 
 	r.mu.Lock()
+	parsedId, _ := uuid.Parse(dto.Id)
 	r.posts = slices.DeleteFunc(r.posts, func(p Post) bool {
-		if p.Id == dto.Id {
+		if p.Id == parsedId {
 			return true
 		}
 

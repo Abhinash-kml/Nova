@@ -8,16 +8,16 @@ import (
 )
 
 type Service interface {
-	Add(context.Context, CommentCreateDTO) bool
+	Add(ctx context.Context, dto CreateDTO) error
 
-	GetAll(context.Context, int) []Comment
-	GetAllByAttribute(context.Context, string) []Comment
-	GetById(context.Context, uuid.UUID) (Comment, bool)
+	GetAll(ctx context.Context, cursor int, limit int) ([]Comment, error)
+	GetAllByAttribute(ctx context.Context, attribute string) ([]Comment, error)
+	GetById(ctx context.Context, id uuid.UUID) (Comment, error)
 
-	Update(context.Context, CommentUpdateDTO) bool
-	Replace(context.Context, CommentReplaceDTO) bool
+	Update(ctx context.Context, dto UpdateDTO) error
+	Replace(ctx context.Context, dto ReplaceDTO) error
 
-	Delete(context.Context, uuid.UUID) bool
+	Delete(ctx context.Context, dto DeleteDTO) error
 }
 
 type LocalCommentsService struct {
@@ -32,30 +32,30 @@ func NewLocalCommentsService(repository CommentsRepository, l *zap.Logger) *Loca
 	}
 }
 
-func (s *LocalCommentsService) Add(ctx context.Context, dto CommentCreateDTO) bool {
+func (s *LocalCommentsService) Add(ctx context.Context, dto CreateDTO) error {
 	return s.repo.Add(ctx, dto)
 }
 
-func (s *LocalCommentsService) GetAll(ctx context.Context, cursor, count int) []Comment {
+func (s *LocalCommentsService) GetAll(ctx context.Context, cursor, count int) ([]Comment, error) {
 	return s.repo.GetAll(ctx, cursor, count)
 }
 
-func (s *LocalCommentsService) GetAllByAttribute(ctx context.Context, attribute string) []Comment {
+func (s *LocalCommentsService) GetAllByAttribute(ctx context.Context, attribute string) ([]Comment, error) {
 	return s.repo.GetAllByAttribute(ctx, attribute)
 }
 
-func (s *LocalCommentsService) GetById(ctx context.Context, id uuid.UUID) (Comment, bool) {
+func (s *LocalCommentsService) GetById(ctx context.Context, id uuid.UUID) (Comment, error) {
 	return s.repo.GetById(ctx, id)
 }
 
-func (s *LocalCommentsService) Update(ctx context.Context, dto CommentUpdateDTO) bool {
+func (s *LocalCommentsService) Update(ctx context.Context, dto UpdateDTO) error {
 	return s.repo.Update(ctx, dto)
 }
 
-func (s *LocalCommentsService) Replace(ctx context.Context, dto CommentReplaceDTO) bool {
+func (s *LocalCommentsService) Replace(ctx context.Context, dto ReplaceDTO) error {
 	return s.repo.Replace(ctx, dto)
 }
 
-func (s *LocalCommentsService) Delete(ctx context.Context, id uuid.UUID) bool {
-	return s.repo.Delete(ctx, id)
+func (s *LocalCommentsService) Delete(ctx context.Context, dto DeleteDTO) error {
+	return s.repo.Delete(ctx, dto)
 }
