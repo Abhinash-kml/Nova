@@ -8,12 +8,12 @@ import (
 )
 
 type Service interface {
-	Add(context.Context, CreateDTO) bool
-	GetById(context.Context, uuid.UUID) (Clan, bool)
-	GetByName(context.Context, string) (Clan, bool)
-	GetAll(context.Context, int, int) []Clan
-	Update(context.Context, UpdateDTO) bool
-	Delete(context.Context, DeleteDTO) bool
+	Add(ctx context.Context, dto CreateDTO) error
+	GetById(ctx context.Context, id uuid.UUID) (Clan, error)
+	GetByName(ctx context.Context, name string) (Clan, error)
+	GetAll(ctx context.Context, cursor int, limit int) ([]Clan, error)
+	Update(ctx context.Context, dto UpdateDTO) error
+	Delete(ctx context.Context, dto DeleteDTO) error
 }
 
 type LocalClansService struct {
@@ -28,26 +28,26 @@ func NewLocalClansService(repo ClansRepository, l *zap.Logger) *LocalClansServic
 	}
 }
 
-func (s *LocalClansService) GetById(ctx context.Context, id uuid.UUID) (Clan, bool) {
+func (s *LocalClansService) GetById(ctx context.Context, id uuid.UUID) (Clan, error) {
 	return s.repo.GetById(ctx, id)
 }
 
-func (s *LocalClansService) GetByName(ctx context.Context, name string) (Clan, bool) {
+func (s *LocalClansService) GetByName(ctx context.Context, name string) (Clan, error) {
 	return s.repo.GetByName(ctx, name)
 }
 
-func (s *LocalClansService) GetAll(ctx context.Context, cursor, limit int) []Clan {
+func (s *LocalClansService) GetAll(ctx context.Context, cursor, limit int) ([]Clan, error) {
 	return s.repo.GetAll(ctx, cursor, limit)
 }
 
-func (s *LocalClansService) Add(ctx context.Context, dto CreateDTO) bool {
+func (s *LocalClansService) Add(ctx context.Context, dto CreateDTO) error {
 	return s.repo.Add(ctx, dto)
 }
 
-func (s *LocalClansService) Delete(ctx context.Context, dto DeleteDTO) bool {
+func (s *LocalClansService) Delete(ctx context.Context, dto DeleteDTO) error {
 	return s.repo.Delete(ctx, dto)
 }
 
-func (s *LocalClansService) Update(ctx context.Context, dto UpdateDTO) bool {
+func (s *LocalClansService) Update(ctx context.Context, dto UpdateDTO) error {
 	return s.repo.Update(ctx, dto)
 }

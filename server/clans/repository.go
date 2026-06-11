@@ -7,15 +7,15 @@ import (
 )
 
 type ClansRepository interface {
-	Initialize() bool
-	Seed() bool
+	Initialize() error
+	Seed() error
 
-	Add(context.Context, CreateDTO) bool
+	Add(ctx context.Context, dto CreateDTO) error
 
-	GetById(context.Context, uuid.UUID) (Clan, bool)
-	GetByName(context.Context, string) (Clan, bool)
-	GetAll(context.Context, int, int) []Clan
+	GetById(ctx context.Context, id uuid.UUID) (Clan, error)
+	GetByName(ctx context.Context, name string) (Clan, error)
+	GetAll(ctx context.Context, cursor int, limit int) ([]Clan, error)
 
-	Update(context.Context, UpdateDTO) bool
-	Delete(context.Context, DeleteDTO) bool
+	Update(ctx context.Context, dto UpdateDTO) error
+	Delete(ctx context.Context, dto DeleteDTO) error
 }

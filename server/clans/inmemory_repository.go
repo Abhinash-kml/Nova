@@ -5,6 +5,7 @@ import (
 	"slices"
 	"sync"
 
+	"github.com/abhinash-kml/nova/server/common"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -19,33 +20,33 @@ func NewInMemoryClanRepository(l *zap.Logger) *InMemoryClansRepository {
 	return &InMemoryClansRepository{logger: l}
 }
 
-func (r *InMemoryClansRepository) GetById(ctx context.Context, id uuid.UUID) (Clan, bool) {
+func (r *InMemoryClansRepository) GetById(ctx context.Context, id uuid.UUID) (Clan, error) {
 	r.mu.RLock()
 	defer r.mu.Unlock()
 
 	for index := range r.clans {
 		if r.clans[index].Id == id {
-			return r.clans[index], true
+			return r.clans[index], nil
 		}
 	}
 
-	return Clan{}, false
+	return Clan{}, common.ErrResourceNotFound
 }
 
-func (r *InMemoryClansRepository) GetByName(ctx context.Context, name string) (Clan, bool) {
+func (r *InMemoryClansRepository) GetByName(ctx context.Context, name string) (Clan, error) {
 	r.mu.RLock()
 	defer r.mu.Unlock()
 
 	for index := range r.clans {
 		if r.clans[index].Name == name {
-			return r.clans[index], true
+			return r.clans[index], nil
 		}
 	}
 
-	return Clan{}, false
+	return Clan{}, common.ErrResourceNotFound
 }
 
-func (r *InMemoryClansRepository) GetAll(ctx context.Context, cursor, limit int) []Clan {
+func (r *InMemoryClansRepository) GetAll(ctx context.Context, cursor, limit int) ([]Clan, error) {
 	r.mu.RLock()
 	defer r.mu.Unlock()
 
@@ -54,10 +55,10 @@ func (r *InMemoryClansRepository) GetAll(ctx context.Context, cursor, limit int)
 		end = len(r.clans)
 	}
 
-	return r.clans[start:end]
+	return r.clans[start:end], nil
 }
 
-func (r *InMemoryClansRepository) Add(ctx context.Context, dto CreateDTO) bool {
+func (r *InMemoryClansRepository) Add(ctx context.Context, dto CreateDTO) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -75,15 +76,16 @@ func (r *InMemoryClansRepository) Add(ctx context.Context, dto CreateDTO) bool {
 		IsLocked:    dto.IsLocked,
 	})
 
-	return true
+	return nil
 }
 
-func (r *InMemoryClansRepository) Delete(ctx context.Context, id uuid.UUID) bool {
+func (r *InMemoryClansRepository) Delete(ctx context.Context, dto DeleteDTO) error {
 	beforeLen := len(r.clans)
+	parsedId, _ := uuid.Parse(dto.Id)
 
 	r.mu.Lock()
 	r.clans = slices.DeleteFunc(r.clans, func(c Clan) bool {
-		if c.Id == id {
+		if c.Id == parsedId {
 			return true
 		}
 
@@ -94,8 +96,8 @@ func (r *InMemoryClansRepository) Delete(ctx context.Context, id uuid.UUID) bool
 	afterLen := len(r.clans)
 
 	if afterLen != beforeLen {
-		return true
+		return nil
 	}
 
-	return false
+	return common.ErrResourceCannotBeDeleted
 }
