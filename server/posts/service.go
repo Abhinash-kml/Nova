@@ -8,16 +8,16 @@ import (
 )
 
 type Service interface {
-	Add(context.Context, PostCreateDTO) bool
-	GetAll(context.Context, int, int) []Post
-	GetAllByAttribute(context.Context, string) []Post
-	GetById(context.Context, uuid.UUID) (Post, bool)
-	GetByName(context.Context, string) (Post, bool)
+	Add(ctx context.Context, dto CreateDTO) error
+	GetAll(ctx context.Context, cursor int, limit int) ([]Post, error)
+	GetAllByAttribute(ctx context.Context, attribute string) ([]Post, error)
+	GetById(ctx context.Context, id uuid.UUID) (Post, error)
+	GetByName(ctx context.Context, name string) (Post, error)
 
-	Update(context.Context, PostUpdateDTO) bool
-	Replace(context.Context, PostReplaceDTO) bool
+	Update(ctx context.Context, dto UpdateDTO) error
+	Replace(ctx context.Context, dto ReplaceDTO) error
 
-	Delete(context.Context, uuid.UUID) bool
+	Delete(ctx context.Context, dto DeleteDTO) error
 }
 
 type LocalPostsService struct {
@@ -32,30 +32,30 @@ func NewLocalPostsService(repository PostsRepository, l *zap.Logger) *LocalPosts
 	}
 }
 
-func (s *LocalPostsService) GetAll(ctx context.Context, cursor, count int) []Post {
+func (s *LocalPostsService) GetAll(ctx context.Context, cursor, count int) ([]Post, error) {
 	return s.repo.GetAll(ctx, cursor, count)
 }
 
-func (s *LocalPostsService) GetAllByAttribute(ctx context.Context, attribute string) []Post {
+func (s *LocalPostsService) GetAllByAttribute(ctx context.Context, attribute string) ([]Post, error) {
 	return s.repo.GetAllByAttribute(ctx, attribute)
 }
 
-func (s *LocalPostsService) GetById(ctx context.Context, id uuid.UUID) (Post, bool) {
+func (s *LocalPostsService) GetById(ctx context.Context, id uuid.UUID) (Post, error) {
 	return s.repo.GetById(ctx, id)
 }
 
-func (s *LocalPostsService) GetByName(ctx context.Context, name string) (Post, bool) {
+func (s *LocalPostsService) GetByName(ctx context.Context, name string) (Post, error) {
 	return s.repo.GetByName(ctx, name)
 }
 
-func (s *LocalPostsService) Update(ctx context.Context, dto PostUpdateDTO) bool {
+func (s *LocalPostsService) Update(ctx context.Context, dto UpdateDTO) error {
 	return s.repo.Update(ctx, dto)
 }
 
-func (s *LocalPostsService) Replace(ctx context.Context, dto PostReplaceDTO) bool {
+func (s *LocalPostsService) Replace(ctx context.Context, dto ReplaceDTO) error {
 	return s.repo.Replace(ctx, dto)
 }
 
-func (s *LocalPostsService) Delete(ctx context.Context, id uuid.UUID) bool {
-	return s.repo.Delete(ctx, id)
+func (s *LocalPostsService) Delete(ctx context.Context, dto DeleteDTO) error {
+	return s.repo.Delete(ctx, dto)
 }

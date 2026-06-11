@@ -7,18 +7,18 @@ import (
 )
 
 type PostsRepository interface {
-	Initialize() bool
-	Seed() bool
+	Initialize() error
+	Seed() error
 
-	Add(context.Context, PostCreateDTO) bool
+	Add(ctx context.Context, dto CreateDTO) error
 
-	GetAll(context.Context, int, int) []Post
-	GetAllByAttribute(context.Context, string) []Post
-	GetById(context.Context, uuid.UUID) (Post, bool)
-	GetByName(context.Context, string) (Post, bool)
+	GetAll(ctx context.Context, cursor int, limit int) ([]Post, error)
+	GetAllByAttribute(ctx context.Context, attribute string) ([]Post, error)
+	GetById(ctx context.Context, id uuid.UUID) (Post, error)
+	GetByName(ctx context.Context, name string) (Post, error)
 
-	Update(context.Context, PostUpdateDTO) bool
-	Replace(context.Context, PostReplaceDTO) bool
+	Update(ctx context.Context, dto UpdateDTO) error
+	Replace(ctx context.Context, dto ReplaceDTO) error
 
-	Delete(context.Context, uuid.UUID) bool
+	Delete(ctx context.Context, dto DeleteDTO) error
 }

@@ -69,7 +69,6 @@ func (c *Controller) Create(ctx *gin.Context) {
 	var dto CreateDTO
 
 	if err := ctx.BindJSON(&dto); err != nil {
-		c.logger.Error("Failed to bind UserCreateDTO", zap.Error(err))
 		utils.SendProblemDetails(ctx, err)
 		return
 	}
@@ -87,20 +86,17 @@ func (c *Controller) Modify(ctx *gin.Context) {
 	var dto UpdateDTO
 
 	if err := ctx.ShouldBindUri(&dto); err != nil {
-		c.logger.Error("Failed to bind UserUpdateDTO", zap.Error(err))
 		utils.SendProblemDetails(ctx, err)
 		return
 	}
 
 	if err := ctx.ShouldBindBodyWithJSON(&dto); err != nil {
-		c.logger.Error("Failed to bind UserUpdateDTO", zap.Error(err))
 		utils.SendProblemDetails(ctx, err)
 		return
 	}
 
 	err := c.service.Update(ctx.Request.Context(), dto)
 	if err != nil {
-		c.logger.Error("Failed to update user", zap.Error(err))
 		utils.SendProblemDetails(ctx, err)
 		return
 	}
@@ -112,20 +108,17 @@ func (c *Controller) Delete(ctx *gin.Context) {
 	var dto DeleteDTO
 
 	if err := ctx.ShouldBindUri(&dto); err != nil {
-		c.logger.Error("Failed to bind UserUpdateDTO", zap.Error(err))
 		utils.SendProblemDetails(ctx, err)
 		return
 	}
 
 	if err := ctx.ShouldBindQuery(&dto); err != nil {
-		c.logger.Error("Failed to bind UserUpdateDTO", zap.Error(err))
 		utils.SendProblemDetails(ctx, err)
 		return
 	}
 
 	err := c.service.Delete(ctx.Request.Context(), dto)
 	if err != nil {
-		c.logger.Error("Failed to delete user", zap.Error(err))
 		utils.SendProblemDetails(ctx, err)
 		return
 	}
@@ -137,20 +130,17 @@ func (c *Controller) Replace(ctx *gin.Context) {
 	var dto ReplaceDTO
 
 	if err := ctx.ShouldBindUri(&dto); err != nil {
-		c.logger.Error("Failed to bind UserUpdateDTO", zap.Error(err))
 		utils.SendProblemDetails(ctx, err)
 		return
 	}
 
 	if err := ctx.ShouldBindWith(&dto, binding.JSON); err != nil {
-		c.logger.Error("Failed to bind UserReplaceDTO", zap.Error(err))
 		utils.SendProblemDetails(ctx, err)
 		return
 	}
 
 	err := c.service.Replace(ctx.Request.Context(), dto)
 	if err != nil {
-		c.logger.Error("Failed to replace user", zap.Error(err))
 		utils.SendProblemDetails(ctx, err)
 		return
 	}

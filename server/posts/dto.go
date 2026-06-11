@@ -2,30 +2,35 @@ package posts
 
 import "github.com/google/uuid"
 
-type PostCreateDTO struct {
-	Title    string    `json:"title"`
-	Body     string    `json:"body"`
-	AuthorId uuid.UUID `json:"author_id"`
+type GetDTO struct {
+	Id string `uri:"id" binding:"required,uuid"`
 }
 
-func NewPostCreateDTO() PostCreateDTO {
-	return PostCreateDTO{}
+type GetAllDTO struct {
+	Cursor string `form:"cursor" binding:"required"`
+	Limit  int    `form:"limit" binding:"required,gte=10,lte=20"`
 }
 
-type PostUpdateDTO struct {
-	Id       uuid.UUID `json:"id"`
-	Field    string    `json:"field"`
-	DataType string    `json:"datatype"`
-	Value    string    `json:"value"`
+type CreateDTO struct {
+	Title    string    `json:"title" binding:"required,min=5,max=20"`
+	Body     string    `json:"body" binding:"required,min=5,max=200"`
+	AuthorId uuid.UUID `json:"author_id" binding:"required,uuid"`
 }
 
-type PostReplaceDTO struct {
-	Id    uuid.UUID `json:"id"`
-	Title string    `json:"title"`
-	Body  string    `json:"body"`
+type UpdateDTO struct {
+	Id       string `uri:"id" binding:"required"`
+	Field    string `json:"field" binding:"required"`
+	DataType string `json:"datatype" binding:"required"`
+	Value    string `json:"value" binding:"required"`
 }
 
-type PostDeleteDTO struct {
-	Id   uuid.UUID `json:"id"`
-	Type string    `json:"type"` // Soft (disable) - Hard (delete)
+type ReplaceDTO struct {
+	Id    uuid.UUID `uri:"id" binding:"required"`
+	Title string    `json:"title" binding:"required"`
+	Body  string    `json:"body" binding:"required"`
+}
+
+type DeleteDTO struct {
+	Id   uuid.UUID `uri:"id" binding:"required"`
+	Type string    `form:"type" binding:"required,oneof=soft hard"` // Soft (disable) - Hard (delete)
 }
