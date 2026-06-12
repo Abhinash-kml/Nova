@@ -4,12 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
+)
+
+var (
+	instance *JwtService
+	once     sync.Once
 )
 
 // Common errors for JWT operations
@@ -279,4 +285,14 @@ func (js *JwtService) RevokeAllTokens(ctx context.Context, userID string) error 
 
 	// Revoke all refresh tokens
 	return js.store.RevokeAllUserTokens(ctx, userID)
+}
+
+func GetJwtService() *JwtService {
+	once.Do(func() {
+		if instance == nil {
+			SetupJwtService()
+		}
+	})
+
+	return instance
 }

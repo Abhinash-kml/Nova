@@ -1,5 +1,7 @@
 package users
 
+import "github.com/google/uuid"
+
 type GetDTO struct {
 	Id string `uri:"id" binding:"required,uuid"`
 }
@@ -30,11 +32,15 @@ func NewUserCreateDTO(user *User) CreateDTO {
 	}
 }
 
-type UpdateDTO struct {
-	Id       string `uri:"id" binding:"required,uuid"`
+type FieldUpdates struct {
 	Field    string `json:"field" binding:"required"`
 	DataType string `json:"datatype" binding:"required"`
 	Value    string `json:"value" binding:"required"`
+}
+
+type UpdateDTO struct {
+	Id      string         `uri:"id" binding:"required,uuid"`
+	Updates []FieldUpdates `json:"updates" binding:"required"`
 }
 
 type ReplaceDTO struct {
@@ -51,4 +57,16 @@ type ReplaceDTO struct {
 type DeleteDTO struct {
 	Id   string `uri:"id" binding:"required,uuid"`
 	Type string `form:"type" binding:"required,oneof=soft hard"` // Soft (disable) - Hard (delete)
+}
+
+type BulkCreateDTO struct {
+	Users []CreateDTO `json:"users" binding:"required"`
+}
+
+type BulkModifyDTO struct {
+	Updates []UpdateDTO `json:"updates" binding:"required"`
+}
+
+type BulkDeleteDTO struct {
+	Users []uuid.UUID `json:"users" binding:"required"`
 }

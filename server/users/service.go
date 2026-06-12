@@ -18,6 +18,11 @@ type Service interface {
 	Replace(ctx context.Context, dto ReplaceDTO) error
 
 	Delete(ctx context.Context, dto DeleteDTO) error
+
+	// Bulk operations
+	BulkAdd(ctx context.Context, dto BulkCreateDTO) error
+	BulkModify(ctx context.Context, dto BulkModifyDTO) error
+	BulkDelete(ctx context.Context, dto BulkDeleteDTO) error
 }
 
 type LocalUsersService struct {
@@ -62,4 +67,16 @@ func (s *LocalUsersService) Replace(ctx context.Context, dto ReplaceDTO) error {
 
 func (s *LocalUsersService) Delete(ctx context.Context, dto DeleteDTO) error {
 	return s.repo.Delete(ctx, dto)
+}
+
+func (s *LocalUsersService) BulkCreate(ctx context.Context, dto BulkCreateDTO) error {
+	return s.repo.BulkCreate(ctx, dto)
+}
+
+func (s *LocalUsersService) BulkModify(ctx context.Context, dto BulkModifyDTO) error {
+	return s.repo.BulkModify(ctx, dto)
+}
+
+func (s *LocalUsersService) BulkDelete(ctx context.Context, dto BulkDeleteDTO) error {
+	return s.repo.BulkDelete(ctx, dto)
 }

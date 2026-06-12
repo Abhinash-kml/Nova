@@ -147,3 +147,23 @@ func (c *Controller) Replace(ctx *gin.Context) {
 
 	ctx.Status(http.StatusNoContent)
 }
+
+func (c *Controller) BulkAdd(ctx *gin.Context) {
+
+}
+
+func (c *Controller) BulkModify(ctx *gin.Context) {
+
+}
+
+func (c *Controller) BulkDelete(ctx *gin.Context) {
+
+}
+
+func (c *Controller) Login(ctx *gin.Context) {
+
+}
+
+func (c *Controller) Refresh(ctx *gin.Context) {
+
+}

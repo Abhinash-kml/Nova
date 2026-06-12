@@ -153,4 +153,17 @@ func SendProblemDetails(c *gin.Context, err error) {
 		c.JSON(problem.StatusCode, problem)
 		return
 	}
+
+	// Cursor
+	if errors.Is(err, common.ErrCursorDecodeFailed) {
+		problem.Type = "nova.com/validation-error"
+		problem.Title = "Request Field Validation Failed"
+		problem.Description = "One or more parameters in your request violated structural constrainsts."
+		problem.StatusCode = http.StatusBadRequest
+		problem.Errors = append(problem.Errors, ProblemDetailErrors{
+			Field:   "cursor",
+			Message: "The provided cursor cannot be decoded to internal representation",
+			Code:    "400",
+		})
+	}
 }

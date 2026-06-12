@@ -158,3 +158,37 @@ func (r *InMemoryUsersRepository) Delete(ctx context.Context, dto DeleteDTO) err
 
 	return common.ErrResourceCannotBeDeleted
 }
+
+func (r *InMemoryUsersRepository) BulkCreate(ctx context.Context, dto BulkCreateDTO) error {
+	for index := range dto.Users {
+		err := r.Add(ctx, dto.Users[index])
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *InMemoryUsersRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) error {
+	for index := range dto.Updates {
+		err := r.Update(ctx, dto.Updates[index])
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *InMemoryUsersRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) error {
+	for index := range dto.Users {
+		id := dto.Users[index].String()
+		err := r.Delete(ctx, DeleteDTO{Id: id})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
