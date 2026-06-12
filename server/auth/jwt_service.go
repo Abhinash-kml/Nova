@@ -287,12 +287,18 @@ func (js *JwtService) RevokeAllTokens(ctx context.Context, userID string) error 
 	return js.store.RevokeAllUserTokens(ctx, userID)
 }
 
-func GetJwtService() *JwtService {
+func SetupJwtService(c *config.AuthTokenConfig, s TokenStore, l *zap.Logger) {
 	once.Do(func() {
 		if instance == nil {
-			SetupJwtService()
+			instance = &JwtService{
+				config: c,
+				store:  s,
+				logger: l,
+			}
 		}
 	})
+}
 
+func GetJwtService() *JwtService {
 	return instance
 }
