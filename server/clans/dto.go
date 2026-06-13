@@ -50,3 +50,15 @@ type InviteDTO struct {
 	ClanID    uuid.UUID `json:"clan_id"`
 	InviterId uuid.UUID `json:"inviter_id"`
 }
+
+type BulkCreateDTO struct {
+	Clans []CreateDTO `json:"clans" binding:"required"`
+}
+
+type BulkModifyDTO struct {
+	Updates []UpdateDTO `json:"updates" binding:"required"`
+}
+
+type BulkDeleteDTO struct {
+	Clans []uuid.UUID `json:"clans" binding:"required"`
+}

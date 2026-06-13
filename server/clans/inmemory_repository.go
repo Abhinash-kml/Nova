@@ -101,3 +101,42 @@ func (r *InMemoryClansRepository) Delete(ctx context.Context, dto DeleteDTO) err
 
 	return common.ErrResourceCannotBeDeleted
 }
+
+// TODO: Implement this
+func (r *InMemoryClansRepository) Update(ctx context.Context, dto UpdateDTO) error {
+	return nil
+}
+
+func (r *InMemoryClansRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) error {
+	for index := range dto.Clans {
+		err := r.Add(ctx, dto.Clans[index])
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *InMemoryClansRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) error {
+	for index := range dto.Updates {
+		err := r.Update(ctx, dto.Updates[index])
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *InMemoryClansRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) error {
+	for index := range dto.Clans {
+		id := dto.Clans[index].String()
+		err := r.Delete(ctx, DeleteDTO{Id: id})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

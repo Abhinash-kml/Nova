@@ -11,11 +11,13 @@ type ClansRepository interface {
 	Seed() error
 
 	Add(ctx context.Context, dto CreateDTO) error
-
 	GetById(ctx context.Context, id uuid.UUID) (Clan, error)
 	GetByName(ctx context.Context, name string) (Clan, error)
 	GetAll(ctx context.Context, cursor int, limit int) ([]Clan, error)
-
 	Update(ctx context.Context, dto UpdateDTO) error
 	Delete(ctx context.Context, dto DeleteDTO) error
+
+	BulkAdd(ctx context.Context, dto BulkCreateDTO) error
+	BulkModify(ctx context.Context, dto BulkModifyDTO) error
+	BulkDelete(ctx context.Context, dto BulkDeleteDTO) error
 }

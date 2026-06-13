@@ -33,7 +33,7 @@ type DeleteDTO struct {
 }
 
 type BulkCreateDTO struct {
-	Comments []CreateDTO `json:"users" binding:"required"`
+	Comments []CreateDTO `json:"comments" binding:"required"`
 }
 
 type BulkModifyDTO struct {
@@ -41,5 +41,5 @@ type BulkModifyDTO struct {
 }
 
 type BulkDeleteDTO struct {
-	Comments []uuid.UUID `json:"users" binding:"required"`
+	Comments []uuid.UUID `json:"comments" binding:"required"`
 }

@@ -14,6 +14,10 @@ type Service interface {
 	GetAll(ctx context.Context, cursor int, limit int) ([]Clan, error)
 	Update(ctx context.Context, dto UpdateDTO) error
 	Delete(ctx context.Context, dto DeleteDTO) error
+
+	BulkAdd(ctx context.Context, dto BulkCreateDTO) error
+	BulkModify(ctx context.Context, dto BulkModifyDTO) error
+	BulkDelete(ctx context.Context, dto BulkDeleteDTO) error
 }
 
 type LocalClansService struct {
@@ -50,4 +54,16 @@ func (s *LocalClansService) Delete(ctx context.Context, dto DeleteDTO) error {
 
 func (s *LocalClansService) Update(ctx context.Context, dto UpdateDTO) error {
 	return s.repo.Update(ctx, dto)
+}
+
+func (s *LocalClansService) BulkAdd(ctx context.Context, dto BulkCreateDTO) error {
+	return s.repo.BulkAdd(ctx, dto)
+}
+
+func (s *LocalClansService) BulkModify(ctx context.Context, dto BulkModifyDTO) error {
+	return s.repo.BulkModify(ctx, dto)
+}
+
+func (s *LocalClansService) BulkDelete(ctx context.Context, dto BulkDeleteDTO) error {
+	return s.repo.BulkDelete(ctx, dto)
 }

@@ -129,3 +129,54 @@ func (c *Controller) Delete(ctx *gin.Context) {
 func (c *Controller) Replace(ctx *gin.Context) {
 	ctx.Status(http.StatusNoContent)
 }
+
+func (c *Controller) BulkAdd(ctx *gin.Context) {
+	var dto BulkCreateDTO
+
+	if err := ctx.ShouldBindWith(&dto, binding.JSON); err != nil {
+		utils.SendProblemDetails(ctx, err)
+		return
+	}
+
+	err := c.service.BulkAdd(ctx.Request.Context(), dto)
+	if err != nil {
+		utils.SendProblemDetails(ctx, err)
+		return
+	}
+
+	ctx.Status(http.StatusCreated)
+}
+
+func (c *Controller) BulkModify(ctx *gin.Context) {
+	var dto BulkModifyDTO
+
+	if err := ctx.ShouldBindWith(&dto, binding.JSON); err != nil {
+		utils.SendProblemDetails(ctx, err)
+		return
+	}
+
+	err := c.service.BulkModify(ctx.Request.Context(), dto)
+	if err != nil {
+		utils.SendProblemDetails(ctx, err)
+		return
+	}
+
+	ctx.Status(http.StatusNoContent)
+}
+
+func (c *Controller) BulkDelete(ctx *gin.Context) {
+	var dto BulkDeleteDTO
+
+	if err := ctx.ShouldBindWith(&dto, binding.JSON); err != nil {
+		utils.SendProblemDetails(ctx, err)
+		return
+	}
+
+	err := c.service.BulkDelete(ctx.Request.Context(), dto)
+	if err != nil {
+		utils.SendProblemDetails(ctx, err)
+		return
+	}
+
+	ctx.Status(http.StatusNoContent)
+}
