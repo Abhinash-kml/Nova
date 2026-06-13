@@ -31,3 +31,15 @@ type DeleteDTO struct {
 	Id   string `uri:"id" binding:"required,uuid"`
 	Type string `form:"type" binding:"required,oneof=soft hard"` // Soft (disable) - Hard (delete)
 }
+
+type BulkCreateDTO struct {
+	Comments []CreateDTO `json:"users" binding:"required"`
+}
+
+type BulkModifyDTO struct {
+	Updates []UpdateDTO `json:"updates" binding:"required"`
+}
+
+type BulkDeleteDTO struct {
+	Comments []uuid.UUID `json:"users" binding:"required"`
+}

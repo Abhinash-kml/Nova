@@ -20,4 +20,8 @@ type CommentsRepository interface {
 	Replace(ctx context.Context, dto ReplaceDTO) error
 
 	Delete(ctx context.Context, dto DeleteDTO) error
+
+	BulkAdd(ctx context.Context, dto BulkCreateDTO) error
+	BulkModify(ctx context.Context, dto BulkModifyDTO) error
+	BulkDelete(ctx context.Context, dto BulkDeleteDTO) error
 }

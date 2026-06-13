@@ -11,5 +11,9 @@ func SetupRoutes(router *gin.Engine, c *Controller) {
 		group.PATCH("/:id", c.Modify)
 		group.PUT("/:id", c.Replace)
 		group.DELETE("/:id", c.Delete)
+
+		group.POST("/bulk", c.BulkAdd)
+		group.PATCH("/bulk", c.BulkModify)
+		group.DELETE("/bulk", c.BulkDelete)
 	}
 }

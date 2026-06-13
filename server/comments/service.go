@@ -18,6 +18,10 @@ type Service interface {
 	Replace(ctx context.Context, dto ReplaceDTO) error
 
 	Delete(ctx context.Context, dto DeleteDTO) error
+
+	BulkAdd(ctx context.Context, dto BulkCreateDTO) error
+	BulkModify(ctx context.Context, dto BulkModifyDTO) error
+	BulkDelete(ctx context.Context, dto BulkDeleteDTO) error
 }
 
 type LocalCommentsService struct {
@@ -58,4 +62,16 @@ func (s *LocalCommentsService) Replace(ctx context.Context, dto ReplaceDTO) erro
 
 func (s *LocalCommentsService) Delete(ctx context.Context, dto DeleteDTO) error {
 	return s.repo.Delete(ctx, dto)
+}
+
+func (s *LocalCommentsService) BulkAdd(ctx context.Context, dto BulkCreateDTO) error {
+	return s.repo.BulkAdd(ctx, dto)
+}
+
+func (s *LocalCommentsService) BulkModify(ctx context.Context, dto BulkModifyDTO) error {
+	return s.repo.BulkModify(ctx, dto)
+}
+
+func (s *LocalCommentsService) BulkDelete(ctx context.Context, dto BulkDeleteDTO) error {
+	return s.repo.BulkDelete(ctx, dto)
 }
