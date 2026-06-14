@@ -10,8 +10,11 @@ import (
 	"time"
 
 	"github.com/abhinash-kml/nova/server/apiserver"
+	"github.com/abhinash-kml/nova/server/auth"
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/abhinash-kml/nova/server/infra"
+	"github.com/gin-contrib/cors"
+	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
@@ -86,6 +89,27 @@ func main() {
 
 	// Create gin router engine
 	globalRouter := gin.New()
+
+	// Setup cors middleware
+	globalRouter.Use(cors.New(cors.Config{
+		AllowAllOrigins: true,
+		// AllowOrigins: []string{""}, // Only in production
+		AllowMethods:     []string{"GET", "POST", "PATCH", "PUT", "DELETE"},
+		AllowHeaders:     []string{"Origin"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		AllowWebSockets:  true,
+		MaxAge:           time.Hour * 12,
+		// AllowOriginFunc: func(origin string) bool {
+		// return origin == ""
+		// },
+	}))
+
+	// Setup logging middleware
+	globalRouter.Use(ginzap.Ginzap(logger, time.RFC3339, true))
+
+	// Setup Auth middleware
+	globalRouter.Use(auth.Token())
 
 	// Setup global middlewares for router
 
