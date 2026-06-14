@@ -39,3 +39,15 @@ type ChannelDTO struct {
 	Subscribers     map[uuid.UUID]bool `json:"subscribers"`
 	ProcessInterval time.Duration      `json:"process_interval"`
 }
+
+type BulkCreateDTO struct {
+	Channels []CreateDTO `json:"channels" binding:"required"`
+}
+
+type BulkModifyDTO struct {
+	Updates []UpdateDTO `json:"updates" binding:"required"`
+}
+
+type BulkDeleteDTO struct {
+	Channels []uuid.UUID `json:"channels" binding:"required"`
+}

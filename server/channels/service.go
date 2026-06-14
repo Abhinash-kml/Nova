@@ -8,11 +8,17 @@ import (
 )
 
 type Service interface {
-	GetAll(ctx context.Context, cursor int, limit int) ([]Channel, error)
+	// General operations
+	GetAll(ctx context.Context, cursor int, limit int) ([]ChannelDTO, error)
 	GetById(ctx context.Context, id uuid.UUID) (ChannelDTO, error)
 	Add(ctx context.Context, dto CreateDTO) error
 	Modify(ctx context.Context, dto UpdateDTO) error
 	Delete(ctx context.Context, dto DeleteDTO) error
+
+	// Bulk operations
+	BulkAdd(ctx context.Context, dto BulkCreateDTO) error
+	BulkModify(ctx context.Context, dto BulkModifyDTO) error
+	BulkDelete(ctx context.Context, dto BulkDeleteDTO) error
 }
 
 type LocalChannelsService struct {
@@ -27,7 +33,7 @@ func NewLcoalChannelService(r Repository, l *zap.Logger) *LocalChannelsService {
 	}
 }
 
-func (s *LocalChannelsService) GetAll(ctx context.Context, cursor int, limit int) ([]Channel, error) {
+func (s *LocalChannelsService) GetAll(ctx context.Context, cursor int, limit int) ([]ChannelDTO, error) {
 	return s.repo.GetAll(ctx, cursor, limit)
 }
 
@@ -45,4 +51,16 @@ func (s *LocalChannelsService) Modify(ctx context.Context, dto UpdateDTO) error 
 
 func (s *LocalChannelsService) Delete(ctx context.Context, dto DeleteDTO) error {
 	return s.repo.Delete(ctx, dto)
+}
+
+func (s *LocalChannelsService) BulkAdd(ctx context.Context, dto BulkCreateDTO) error {
+	return s.repo.BulkAdd(ctx, dto)
+}
+
+func (s *LocalChannelsService) BulkModify(ctx context.Context, dto BulkModifyDTO) error {
+	return s.repo.BulkModify(ctx, dto)
+}
+
+func (s *LocalChannelsService) BulkDelete(ctx context.Context, dto BulkDeleteDTO) error {
+	return s.repo.BulkDelete(ctx, dto)
 }
