@@ -68,8 +68,8 @@ func (s *LocalUsersService) Delete(ctx context.Context, dto DeleteDTO) error {
 	return s.repo.Delete(ctx, dto)
 }
 
-func (s *LocalUsersService) BulkCreate(ctx context.Context, dto BulkCreateDTO) error {
-	return s.repo.BulkCreate(ctx, dto)
+func (s *LocalUsersService) BulkAdd(ctx context.Context, dto BulkCreateDTO) error {
+	return s.repo.BulkAdd(ctx, dto)
 }
 
 func (s *LocalUsersService) BulkModify(ctx context.Context, dto BulkModifyDTO) error {

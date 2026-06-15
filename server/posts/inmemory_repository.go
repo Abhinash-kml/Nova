@@ -49,6 +49,8 @@ func (r *InMemoryPostsRepository) Seed() error {
 		return fmt.Errorf("Failed to decode post's seeds to repository. Error: %w", err)
 	}
 
+	r.logger.Info("Added posts from seeds", zap.Int("Count", len(r.posts)))
+
 	return nil
 }
 
@@ -74,7 +76,7 @@ func (r *InMemoryPostsRepository) Add(ctx context.Context, dto CreateDTO) error 
 
 func (r *InMemoryPostsRepository) GetAll(ctx context.Context, cursor, count int) ([]Post, error) {
 	r.mu.RLock()
-	defer r.mu.Unlock()
+	defer r.mu.RUnlock()
 
 	if count == -1 {
 		return r.posts[:], nil
@@ -96,7 +98,7 @@ func (r *InMemoryPostsRepository) GetAllByAttribute(ctx context.Context, attribu
 
 func (r *InMemoryPostsRepository) GetById(ctx context.Context, id uuid.UUID) (Post, error) {
 	r.mu.RLock()
-	defer r.mu.Unlock()
+	defer r.mu.RUnlock()
 
 	for index := range r.posts {
 		if r.posts[index].Id == id {
@@ -109,7 +111,7 @@ func (r *InMemoryPostsRepository) GetById(ctx context.Context, id uuid.UUID) (Po
 
 func (r *InMemoryPostsRepository) GetByName(ctx context.Context, name string) (Post, error) {
 	r.mu.RLock()
-	defer r.mu.Unlock()
+	defer r.mu.RUnlock()
 
 	for index := range r.posts {
 		if r.posts[index].Title == name {

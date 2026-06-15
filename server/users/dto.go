@@ -7,7 +7,7 @@ type GetDTO struct {
 }
 
 type GetAllDTO struct {
-	Cursor string `form:"cursor" binding:"required,int"`
+	Cursor string `form:"cursor" binding:"required"`
 	Limit  int    `form:"limit" binding:"required,gte=10,lte=20"`
 }
 
@@ -57,6 +57,14 @@ type ReplaceDTO struct {
 type DeleteDTO struct {
 	Id   string `uri:"id" binding:"required,uuid"`
 	Type string `form:"type" binding:"required,oneof=soft hard"` // Soft (disable) - Hard (delete)
+}
+
+type UserId struct {
+	Id string `uri:"id" binding:"required,uuid"`
+}
+
+type DeleteType struct {
+	Type string `form:"type" binding:"required,oneof=soft hard"`
 }
 
 type BulkCreateDTO struct {

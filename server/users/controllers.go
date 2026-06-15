@@ -1,6 +1,7 @@
 package users
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/abhinash-kml/nova/server/utils"
@@ -106,19 +107,27 @@ func (c *Controller) Modify(ctx *gin.Context) {
 
 func (c *Controller) Delete(ctx *gin.Context) {
 	var dto DeleteDTO
+	var userid UserId
+	var dtype DeleteType
 
-	if err := ctx.ShouldBindUri(&dto); err != nil {
+	if err := ctx.ShouldBindUri(&userid); err != nil {
+		fmt.Println("Ding 1")
 		utils.SendProblemDetails(ctx, err)
 		return
 	}
 
-	if err := ctx.ShouldBindQuery(&dto); err != nil {
+	if err := ctx.ShouldBindQuery(&dtype); err != nil {
+		fmt.Println("Ding 2")
 		utils.SendProblemDetails(ctx, err)
 		return
 	}
+
+	dto.Id = userid.Id
+	dto.Type = dtype.Type
 
 	err := c.service.Delete(ctx.Request.Context(), dto)
 	if err != nil {
+		fmt.Println("Ding 3")
 		utils.SendProblemDetails(ctx, err)
 		return
 	}

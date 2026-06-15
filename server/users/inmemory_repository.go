@@ -49,6 +49,8 @@ func (r *InMemoryUsersRepository) Seed() error {
 		return fmt.Errorf("Failed to decode user's seeds data to repository. Error: %w", err)
 	}
 
+	r.logger.Info("Added users from seeds", zap.Int("Count", len(r.users)))
+
 	return nil
 }
 
@@ -77,7 +79,7 @@ func (r *InMemoryUsersRepository) Add(ctx context.Context, user CreateDTO) error
 
 func (r *InMemoryUsersRepository) GetAll(ctx context.Context, cursor, count int) ([]User, error) {
 	r.mu.RLock()
-	defer r.mu.Unlock()
+	defer r.mu.RUnlock()
 
 	if count == -1 {
 		return r.users[:], nil
@@ -104,7 +106,7 @@ func (r *InMemoryUsersRepository) GetAllByAttribute(ctx context.Context, attribu
 // TODO: Improve this
 func (r *InMemoryUsersRepository) GetById(ctx context.Context, id uuid.UUID) (User, error) {
 	r.mu.RLock()
-	defer r.mu.Unlock()
+	defer r.mu.RUnlock()
 
 	for index := range r.users {
 		if r.users[index].Id == id {
@@ -117,7 +119,7 @@ func (r *InMemoryUsersRepository) GetById(ctx context.Context, id uuid.UUID) (Us
 
 func (r *InMemoryUsersRepository) GetByName(ctx context.Context, name string) (User, error) {
 	r.mu.RLock()
-	defer r.mu.Unlock()
+	defer r.mu.RUnlock()
 
 	for index := range r.users {
 		if r.users[index].Username == name {
@@ -159,7 +161,7 @@ func (r *InMemoryUsersRepository) Delete(ctx context.Context, dto DeleteDTO) err
 	return common.ErrResourceCannotBeDeleted
 }
 
-func (r *InMemoryUsersRepository) BulkCreate(ctx context.Context, dto BulkCreateDTO) error {
+func (r *InMemoryUsersRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) error {
 	for index := range dto.Users {
 		err := r.Add(ctx, dto.Users[index])
 		if err != nil {

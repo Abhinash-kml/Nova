@@ -50,6 +50,8 @@ func (r *InMemoryCommentsRepository) Seed() error {
 		return fmt.Errorf("Failed to decode comment's seeds data to repository. Error: %w", err)
 	}
 
+	r.logger.Info("Added comments from seeds", zap.Int("Count", len(r.comments)))
+
 	return nil
 }
 
@@ -73,7 +75,7 @@ func (r *InMemoryCommentsRepository) Add(ctx context.Context, dto CreateDTO) err
 
 func (r *InMemoryCommentsRepository) GetAll(ctx context.Context, cursor, count int) ([]Comment, error) {
 	r.mu.RLock()
-	defer r.mu.Unlock()
+	defer r.mu.RUnlock()
 
 	if count == -1 {
 		return r.comments[:], nil
@@ -95,7 +97,7 @@ func (r *InMemoryCommentsRepository) GetAllByAttribute(ctx context.Context, attr
 
 func (r *InMemoryCommentsRepository) GetById(ctx context.Context, id uuid.UUID) (Comment, error) {
 	r.mu.RLock()
-	defer r.mu.Unlock()
+	defer r.mu.RUnlock()
 
 	for index := range r.comments {
 		if r.comments[index].Id == id {

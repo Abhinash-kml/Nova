@@ -10,9 +10,11 @@ import (
 	"time"
 
 	"github.com/abhinash-kml/nova/server/apiserver"
-	"github.com/abhinash-kml/nova/server/auth"
+	"github.com/abhinash-kml/nova/server/comments"
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/abhinash-kml/nova/server/infra"
+	"github.com/abhinash-kml/nova/server/posts"
+	"github.com/abhinash-kml/nova/server/users"
 	"github.com/gin-contrib/cors"
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
@@ -109,9 +111,30 @@ func main() {
 	globalRouter.Use(ginzap.Ginzap(logger, time.RFC3339, true))
 
 	// Setup Auth middleware
-	globalRouter.Use(auth.Token())
+	//globalRouter.Use(auth.Token())
 
-	// Setup global middlewares for router
+	// Setup domains of interests
+
+	// Setup users module
+	usersRepository := users.NewInMemoryUsersRepository(logger)
+	usersRepository.Seed()
+	usersService := users.NewLocalUsersService(usersRepository, logger)
+	usersController := users.NewController(usersService, logger)
+	users.SetupRoutes(globalRouter, usersController)
+
+	// Setup posts module
+	postsRepository := posts.NewInMemoryPostsRepository(logger)
+	postsRepository.Seed()
+	postsService := posts.NewLocalPostsService(postsRepository, logger)
+	postsController := posts.NewController(postsService, logger)
+	posts.SetupRoutes(globalRouter, postsController)
+
+	// Setup comments module
+	commentsRepository := comments.NewInMemoryCommentsRepository(logger)
+	commentsRepository.Seed()
+	commentsService := comments.NewLocalCommentsService(commentsRepository, logger)
+	commentsController := comments.NewController(commentsService, logger)
+	comments.SetupRoutes(globalRouter, commentsController)
 
 	// Create http api server & start it
 	server := apiserver.New(globalCtx, config.HttpServer, globalRouter, logger)

@@ -22,7 +22,7 @@ func NewInMemoryClanRepository(l *zap.Logger) *InMemoryClansRepository {
 
 func (r *InMemoryClansRepository) GetById(ctx context.Context, id uuid.UUID) (Clan, error) {
 	r.mu.RLock()
-	defer r.mu.Unlock()
+	defer r.mu.RUnlock()
 
 	for index := range r.clans {
 		if r.clans[index].Id == id {
@@ -35,7 +35,7 @@ func (r *InMemoryClansRepository) GetById(ctx context.Context, id uuid.UUID) (Cl
 
 func (r *InMemoryClansRepository) GetByName(ctx context.Context, name string) (Clan, error) {
 	r.mu.RLock()
-	defer r.mu.Unlock()
+	defer r.mu.RUnlock()
 
 	for index := range r.clans {
 		if r.clans[index].Name == name {
@@ -48,7 +48,7 @@ func (r *InMemoryClansRepository) GetByName(ctx context.Context, name string) (C
 
 func (r *InMemoryClansRepository) GetAll(ctx context.Context, cursor, limit int) ([]Clan, error) {
 	r.mu.RLock()
-	defer r.mu.Unlock()
+	defer r.mu.RUnlock()
 
 	start, end := cursor, cursor+limit
 	if end > len(r.clans) {

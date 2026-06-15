@@ -21,7 +21,7 @@ type UsersRepository interface {
 	Delete(ctx context.Context, dto DeleteDTO) error
 
 	// Bulk operations
-	BulkCreate(ctx context.Context, dto BulkCreateDTO) error
+	BulkAdd(ctx context.Context, dto BulkCreateDTO) error
 	BulkModify(ctx context.Context, dto BulkModifyDTO) error
 	BulkDelete(ctx context.Context, dto BulkDeleteDTO) error
 }

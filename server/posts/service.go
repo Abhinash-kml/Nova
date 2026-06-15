@@ -36,6 +36,10 @@ func NewLocalPostsService(repository PostsRepository, l *zap.Logger) *LocalPosts
 	}
 }
 
+func (s *LocalPostsService) Add(ctx context.Context, dto CreateDTO) error {
+	return s.repo.Add(ctx, dto)
+}
+
 func (s *LocalPostsService) GetAll(ctx context.Context, cursor, count int) ([]Post, error) {
 	return s.repo.GetAll(ctx, cursor, count)
 }

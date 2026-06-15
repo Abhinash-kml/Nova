@@ -154,6 +154,16 @@ func SendProblemDetails(c *gin.Context, err error) {
 		return
 	}
 
+	if errors.Is(err, common.ErrResourceCannotBeDeleted) {
+		problem.Type = "nova.com/resource-cannot-delete"
+		problem.Title = "Resource Not Deleted"
+		problem.Description = "The requested resource cannot be deleted"
+		problem.StatusCode = http.StatusConflict
+
+		c.JSON(problem.StatusCode, problem)
+		return
+	}
+
 	// Cursor
 	if errors.Is(err, common.ErrCursorDecodeFailed) {
 		problem.Type = "nova.com/validation-error"
@@ -165,5 +175,8 @@ func SendProblemDetails(c *gin.Context, err error) {
 			Message: "The provided cursor cannot be decoded to internal representation",
 			Code:    "400",
 		})
+
+		c.JSON(problem.StatusCode, problem)
+		return
 	}
 }

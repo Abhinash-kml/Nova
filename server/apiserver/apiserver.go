@@ -28,9 +28,9 @@ func New(ctx context.Context, config config.HttpServerConfig, handler http.Handl
 	return &HttpServer{
 		internalServer: http.Server{
 			Addr:           config.Address,
-			ReadTimeout:    time.Duration(config.ReadTimeout),
-			WriteTimeout:   time.Duration(config.WriteTimeout),
-			IdleTimeout:    time.Duration(config.IdleTimeout),
+			ReadTimeout:    time.Duration(config.ReadTimeout * int(time.Second)),
+			WriteTimeout:   time.Duration(config.WriteTimeout * int(time.Second)),
+			IdleTimeout:    time.Duration(config.IdleTimeout * int(time.Second)),
 			MaxHeaderBytes: config.MaxHeaderBytes,
 			Handler:        handler,
 		},

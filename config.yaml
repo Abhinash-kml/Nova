@@ -1,10 +1,10 @@
 app_name: "nova backend"
 
 http:
-  readtimeout: 2
+  readtimeout: 10
   writetimeout: 2
-  idletimeout: 2
-  readheadertimeout: 2
+  idletimeout: 10
+  readheadertimeout: 4
   maxheaderbytes: 1024
 
 observability:
