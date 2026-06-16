@@ -85,12 +85,12 @@ func (c *Controller) Create(ctx *gin.Context) {
 func (c *Controller) Modify(ctx *gin.Context) {
 	var dto UpdateDTO
 
-	if err := ctx.ShouldBindUri(&dto); err != nil {
+	if err := ctx.ShouldBindUri(&dto.UserId); err != nil {
 		utils.SendProblemDetails(ctx, err)
 		return
 	}
 
-	if err := ctx.ShouldBindBodyWithJSON(&dto); err != nil {
+	if err := ctx.ShouldBindWith(&dto.FieldUpdates, binding.JSON); err != nil {
 		utils.SendProblemDetails(ctx, err)
 		return
 	}

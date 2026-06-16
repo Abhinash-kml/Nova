@@ -178,7 +178,7 @@ func (r *InMemoryPostsRepository) BulkModify(ctx context.Context, dto BulkModify
 func (r *InMemoryPostsRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) error {
 	for index := range dto.Posts {
 		id := dto.Posts[index].String()
-		err := r.Delete(ctx, DeleteDTO{Id: id})
+		err := r.Delete(ctx, DeleteDTO{PostId: PostId{Id: id}})
 		if err != nil {
 			return err
 		}

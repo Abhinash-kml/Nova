@@ -17,22 +17,42 @@ type CreateDTO struct {
 	AuthorId uuid.UUID `json:"author_id" binding:"required,uuid"`
 }
 
-type UpdateDTO struct {
-	Id       string `uri:"id" binding:"required,uuid"`
+type PostId struct {
+	Id string `uri:"id" binding:"required,uuid"`
+}
+
+type FieldUpdate struct {
 	Field    string `json:"field" binding:"required"`
 	DataType string `json:"datatype" binding:"required"`
 	Value    string `json:"value" binding:"required"`
 }
 
-type ReplaceDTO struct {
-	Id    string `uri:"id" binding:"required,uuid"`
+type FieldUpdates struct {
+	Updates []FieldUpdate `json:"updates" binding:"required"`
+}
+
+type UpdateDTO struct {
+	PostId
+	FieldUpdates
+}
+
+type ReplacementData struct {
 	Title string `json:"title" binding:"required"`
 	Body  string `json:"body" binding:"required"`
 }
 
+type ReplaceDTO struct {
+	PostId
+	ReplacementData
+}
+
+type DeleteType struct {
+	Type string `form:"type" binding:"required,oneof=soft hard"`
+}
+
 type DeleteDTO struct {
-	Id   string `uri:"id" binding:"required,uuid"`
-	Type string `form:"type" binding:"required,oneof=soft hard"` // Soft (disable) - Hard (delete)
+	PostId
+	DeleteType
 }
 
 type BulkCreateDTO struct {

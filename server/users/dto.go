@@ -36,7 +36,7 @@ type FieldUpdate struct {
 }
 
 type FieldUpdates struct {
-	Updates []FieldUpdates `json:"updates" binding:"required"`
+	Updates []FieldUpdate `json:"updates" binding:"required"`
 }
 
 type UpdateDTO struct {
