@@ -46,13 +46,13 @@ type ReplaceDTO struct {
 	ReplacementData
 }
 
-type DeleteType struct {
+type DeleteOptions struct {
 	Type string `form:"type" binding:"required,oneof=soft hard"`
 }
 
 type DeleteDTO struct {
 	PostId
-	DeleteType
+	DeleteOptions
 }
 
 type BulkCreateDTO struct {

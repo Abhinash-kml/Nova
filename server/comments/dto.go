@@ -17,19 +17,35 @@ type CreateDTO struct {
 	Body     string    `json:"body" binding:"required"`
 }
 
-type UpdateDTO struct {
-	Id   string `uri:"id" binding:"required,uuid"`
+type CommentId struct {
+	Id string `uri:"id" binding:"required,uuid"`
+}
+
+type CommentBody struct {
 	Body string `json:"body" binding:"required"`
+}
+
+type Body struct {
+	Body string `json:"body" binding:"required"`
+}
+
+type UpdateDTO struct {
+	CommentId
+	Body
 }
 
 type ReplaceDTO struct {
-	Id   string `uri:"id" binding:"required,uuid"`
-	Body string `json:"body" binding:"required"`
+	CommentId
+	Body
+}
+
+type DeleteOptions struct {
+	Type string `form:"type" binding:"required,oneof=soft hard"` // Soft (disable) - Hard (delete)
 }
 
 type DeleteDTO struct {
-	Id   string `uri:"id" binding:"required,uuid"`
-	Type string `form:"type" binding:"required,oneof=soft hard"` // Soft (disable) - Hard (delete)
+	CommentId
+	DeleteOptions
 }
 
 type BulkCreateDTO struct {

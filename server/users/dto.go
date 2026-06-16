@@ -6,7 +6,7 @@ type UserId struct {
 	Id string `uri:"id" binding:"required,uuid"`
 }
 
-type DeleteType struct {
+type DeleteOptions struct {
 	Type string `form:"type" binding:"required,oneof=soft hard"`
 }
 
@@ -61,7 +61,7 @@ type ReplaceDTO struct {
 
 type DeleteDTO struct {
 	UserId
-	DeleteType
+	DeleteOptions
 }
 
 type BulkCreateDTO struct {

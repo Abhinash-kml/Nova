@@ -112,7 +112,7 @@ func (c *Controller) Delete(ctx *gin.Context) {
 		return
 	}
 
-	if err := ctx.ShouldBindQuery(&dto.DeleteType); err != nil {
+	if err := ctx.ShouldBindQuery(&dto.DeleteOptions); err != nil {
 		utils.SendProblemDetails(ctx, err)
 		return
 	}
