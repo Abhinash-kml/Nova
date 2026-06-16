@@ -186,7 +186,7 @@ func (r *InMemoryUsersRepository) BulkModify(ctx context.Context, dto BulkModify
 func (r *InMemoryUsersRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) error {
 	for index := range dto.Users {
 		id := dto.Users[index].String()
-		err := r.Delete(ctx, DeleteDTO{Id: id})
+		err := r.Delete(ctx, DeleteDTO{UserId: UserId{Id: id}})
 		if err != nil {
 			return err
 		}

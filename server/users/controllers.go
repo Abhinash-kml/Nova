@@ -1,7 +1,6 @@
 package users
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/abhinash-kml/nova/server/utils"
@@ -25,20 +24,20 @@ func NewController(s Service, l *zap.Logger) *Controller {
 }
 
 func (c *Controller) GetAll(ctx *gin.Context) {
-	var data GetAllDTO
+	var dto GetAllDTO
 
-	if err := ctx.ShouldBindQuery(&data); err != nil {
+	if err := ctx.ShouldBindQuery(&dto); err != nil {
 		utils.SendProblemDetails(ctx, err)
 		return
 	}
 
-	decodedCursor, err := utils.DecodeCursor(data.Cursor)
+	decodedCursor, err := utils.DecodeCursor(dto.Cursor)
 	if err != nil {
 		utils.SendProblemDetails(ctx, err)
 		return
 	}
 
-	users, err := c.service.GetAll(ctx.Request.Context(), decodedCursor, data.Limit)
+	users, err := c.service.GetAll(ctx.Request.Context(), decodedCursor, dto.Limit)
 	if err != nil {
 		utils.SendProblemDetails(ctx, err)
 		return
@@ -107,27 +106,19 @@ func (c *Controller) Modify(ctx *gin.Context) {
 
 func (c *Controller) Delete(ctx *gin.Context) {
 	var dto DeleteDTO
-	var userid UserId
-	var dtype DeleteType
 
-	if err := ctx.ShouldBindUri(&userid); err != nil {
-		fmt.Println("Ding 1")
+	if err := ctx.ShouldBindUri(&dto.UserId); err != nil {
 		utils.SendProblemDetails(ctx, err)
 		return
 	}
 
-	if err := ctx.ShouldBindQuery(&dtype); err != nil {
-		fmt.Println("Ding 2")
+	if err := ctx.ShouldBindQuery(&dto.DeleteType); err != nil {
 		utils.SendProblemDetails(ctx, err)
 		return
 	}
-
-	dto.Id = userid.Id
-	dto.Type = dtype.Type
 
 	err := c.service.Delete(ctx.Request.Context(), dto)
 	if err != nil {
-		fmt.Println("Ding 3")
 		utils.SendProblemDetails(ctx, err)
 		return
 	}
@@ -138,12 +129,12 @@ func (c *Controller) Delete(ctx *gin.Context) {
 func (c *Controller) Replace(ctx *gin.Context) {
 	var dto ReplaceDTO
 
-	if err := ctx.ShouldBindUri(&dto); err != nil {
+	if err := ctx.ShouldBindUri(&dto.Id); err != nil {
 		utils.SendProblemDetails(ctx, err)
 		return
 	}
 
-	if err := ctx.ShouldBindWith(&dto, binding.JSON); err != nil {
+	if err := ctx.ShouldBindWith(&dto.ReplacementData, binding.JSON); err != nil {
 		utils.SendProblemDetails(ctx, err)
 		return
 	}

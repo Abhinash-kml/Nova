@@ -2,8 +2,16 @@ package users
 
 import "github.com/google/uuid"
 
-type GetDTO struct {
+type UserId struct {
 	Id string `uri:"id" binding:"required,uuid"`
+}
+
+type DeleteType struct {
+	Type string `form:"type" binding:"required,oneof=soft hard"`
+}
+
+type GetDTO struct {
+	UserId
 }
 
 type GetAllDTO struct {
@@ -21,30 +29,22 @@ type CreateDTO struct {
 	Timezone    string `json:"time_zone" binding:"required"`
 }
 
-func NewUserCreateDTO(user *User) CreateDTO {
-	return CreateDTO{
-		Username:    user.Username,
-		DisplayName: user.DisplayName,
-		Email:       user.Email,
-		Country:     user.Country,
-		State:       user.State,
-		LangTag:     user.LangTag,
-	}
-}
-
-type FieldUpdates struct {
+type FieldUpdate struct {
 	Field    string `json:"field" binding:"required"`
 	DataType string `json:"datatype" binding:"required"`
 	Value    string `json:"value" binding:"required"`
 }
 
-type UpdateDTO struct {
-	Id      string         `uri:"id" binding:"required,uuid"`
+type FieldUpdates struct {
 	Updates []FieldUpdates `json:"updates" binding:"required"`
 }
 
-type ReplaceDTO struct {
-	Id          string `uri:"id" binding:"required,uuid"`
+type UpdateDTO struct {
+	UserId
+	FieldUpdates
+}
+
+type ReplacementData struct {
 	Username    string `json:"username" binding:"required,gte=5,lte=20"`
 	DisplayName string `json:"display_name" binding:"required,gte=5,lte=10"`
 	Email       string `json:"email" binding:"required,email"`
@@ -54,17 +54,14 @@ type ReplaceDTO struct {
 	Timezone    string `json:"time_zone" binding:"required"`
 }
 
+type ReplaceDTO struct {
+	UserId
+	ReplacementData
+}
+
 type DeleteDTO struct {
-	Id   string `uri:"id" binding:"required,uuid"`
-	Type string `form:"type" binding:"required,oneof=soft hard"` // Soft (disable) - Hard (delete)
-}
-
-type UserId struct {
-	Id string `uri:"id" binding:"required,uuid"`
-}
-
-type DeleteType struct {
-	Type string `form:"type" binding:"required,oneof=soft hard"`
+	UserId
+	DeleteType
 }
 
 type BulkCreateDTO struct {
