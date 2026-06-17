@@ -2,6 +2,9 @@ package clans
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"os"
 	"slices"
 	"sync"
 
@@ -18,6 +21,35 @@ type InMemoryClansRepository struct {
 
 func NewInMemoryClanRepository(l *zap.Logger) *InMemoryClansRepository {
 	return &InMemoryClansRepository{logger: l}
+}
+
+func (r *InMemoryClansRepository) Initialize() error {
+	return nil
+}
+
+func (r *InMemoryClansRepository) Seed() error {
+	file, err := os.OpenFile("./seeds/clans.json", os.O_RDONLY, 0755)
+	if err != nil {
+		r.logger.Error("Failed to open clans seeds file", zap.Error(err))
+		return fmt.Errorf("Failed to open clans seeds file. Error: %w", err)
+	}
+	defer file.Close()
+
+	decoder := json.NewDecoder(file)
+	if decoder == nil {
+		r.logger.Error("Failed to create json decoder. Returned nil pointer")
+		return fmt.Errorf("Failed to create json decoder. Returned nil pointer")
+	}
+
+	err = decoder.Decode(&r.clans)
+	if err != nil {
+		r.logger.Error("Failed to decode clans's seeds data to repository", zap.Error(err))
+		return fmt.Errorf("Failed to decode clans's seeds data to repository. Error: %w", err)
+	}
+
+	r.logger.Info("Added clans from seeds", zap.Int("Count", len(r.clans)))
+
+	return nil
 }
 
 func (r *InMemoryClansRepository) GetById(ctx context.Context, id uuid.UUID) (Clan, error) {
@@ -132,7 +164,7 @@ func (r *InMemoryClansRepository) BulkModify(ctx context.Context, dto BulkModify
 func (r *InMemoryClansRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) error {
 	for index := range dto.Clans {
 		id := dto.Clans[index].String()
-		err := r.Delete(ctx, DeleteDTO{Id: id})
+		err := r.Delete(ctx, DeleteDTO{ClanId: ClanId{Id: id}})
 		if err != nil {
 			return err
 		}

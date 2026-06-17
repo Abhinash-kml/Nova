@@ -24,16 +24,32 @@ type CreateDTO struct {
 	IsLocked    bool        `json:"is_locked" binding:"required"`
 }
 
+type FieldUpdate struct {
+	Field    string `json:"field" binding:"required"`
+	DataType string `json:"datatype" binding:"required"`
+	Value    string `json:"value" binding:"required"`
+}
+
+type FieldUpdates struct {
+	Updates []FieldUpdate `json:"updates" binding:"required"`
+}
+
+type ClanId struct {
+	Id string `uri:"id" binding:"required,uuid"`
+}
+
 type UpdateDTO struct {
-	Id                string `uri:"id" binding:"required,uuid"`
-	Attribute         string `json:"attribute" binding:"required"`
-	AttributeDataType string `json:"attribute_type" binding:"required"`
-	Value             string `json:"value" binding:"required"`
+	ClanId
+	FieldUpdates
+}
+
+type DeleteOptions struct {
+	Type string `form:"delete_type" binding:"required,oneof=soft hard"` // 1 - Soft, 2 - Hard
 }
 
 type DeleteDTO struct {
-	Id   string `uri:"id" binding:"required,uuid"`
-	Type string `form:"delete_type" binding:"required,oneof=soft hard"` // 1 - Soft, 2 - Hard
+	ClanId
+	DeleteOptions
 }
 
 type JoinRequestDTO struct {
