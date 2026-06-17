@@ -1,0 +1,369 @@
+[
+  {
+    "id": "d62e70f4-7c11-46e3-91f7-6f0f4b4c7c9d",
+    "name": "Shadow Wolves",
+    "tag": "SWLF",
+    "description": "An elite guild focused on PvP and coordinated battles.",
+    "leader_id": "0b0e8c51-3a6b-47d3-bf45-fb5f1dcae8c7",
+    "coleader_ids": [
+      "91dfb7e2-ef52-438d-b55c-1c5d9363a36b",
+      "fd34a63d-7d0e-4ef0-b5dd-572be6e93d52"
+    ],
+    "elite_ids": [
+      "cc72fc9a-03c4-46e4-a9f6-dcb9e4db56ab",
+      "ed06c87b-80a8-43dc-a8c5-8b99fd95d1cf"
+    ],
+    "level": 18,
+    "members": [
+      "6d487d03-cba3-44af-9d2e-d79070eb6b3f",
+      "0b9b4d0c-7b8e-4f8c-bb9b-c2c0fd40b947",
+      "1f5b0bb6-2d3f-4b6f-a8e4-3b915c77bdb5"
+    ],
+    "max_members": 50,
+    "is_locked": false
+  },
+  {
+    "id": "64d4c0c5-8e4f-4e9d-a785-f8b3a7d1f92c",
+    "name": "Iron Titans",
+    "tag": "IRON",
+    "description": "Veteran warriors with years of experience.",
+    "leader_id": "57f7cb75-dbc6-4d16-bd48-945cb88961db",
+    "coleader_ids": [],
+    "elite_ids": [],
+    "level": 25,
+    "members": [
+      "f84dd77b-0a16-48b3-8f62-93f46b66ec92",
+      "2b6cfb5b-6ef5-4b18-a0b5-6dcb76b0b364"
+    ],
+    "max_members": 40,
+    "is_locked": true
+  },
+  {
+    "id": "b68b37d2-53fc-4c79-9859-14d34f22a4c1",
+    "name": "Crystal Dawn",
+    "tag": "DAWN",
+    "description": "A welcoming community for casual adventurers.",
+    "leader_id": "43fd12b7-35b3-4466-ae7b-64c08c4377d5",
+    "coleader_ids": [
+      "be22e7f4-7ec4-48dd-b72f-c42d1ff9e6f5"
+    ],
+    "elite_ids": [
+      "adcbfa69-87d3-4cf0-b2f3-3eb5aebd0e2c"
+    ],
+    "level": 9,
+    "members": [
+      "5d22bc73-7e7b-4870-ae76-f58b91bc51dc",
+      "ed62c4dd-94b8-48d5-b638-f32cbdbd6a84",
+      "69fc5f8f-2b34-4dbd-a90e-848dc43c27b4"
+    ],
+    "max_members": 30,
+    "is_locked": false
+  },
+  {
+    "id": "42b67759-6dc7-4dc8-8cf8-ec46bcbeb9b7",
+    "name": "Night Ravens",
+    "tag": "RAVN",
+    "description": "Stealth, precision, and teamwork above all.",
+    "leader_id": "f13f17c2-8dbb-48a7-9db5-f7b1e5cb9e74",
+    "coleader_ids": [],
+    "elite_ids": [],
+    "level": 14,
+    "members": [
+      "9efea4cb-2c3d-4d9b-a6b0-653de7b5a0d8"
+    ],
+    "max_members": 25,
+    "is_locked": false
+  },
+  {
+    "id": "efb5c30d-2fd7-41fb-a8b4-5f5d0d1b84cb",
+    "name": "Phoenix Order",
+    "tag": "PHNX",
+    "description": "Always rising stronger after every defeat.",
+    "leader_id": "4dc18b9d-2a8b-494a-b35d-04dc6d6298d4",
+    "coleader_ids": [
+      "af0d4d7e-42dd-4f91-b0a6-637edfb6467b"
+    ],
+    "elite_ids": [
+      "48d71b8c-3982-472b-b7ec-6c21c984e9de",
+      "95f91c2f-4562-4300-9a0d-99d7e34d9f83"
+    ],
+    "level": 21,
+    "members": [
+      "e9fd5c83-352e-44b2-bd31-82cb6fd9b2f7",
+      "0cf83a48-cd90-45fc-b63b-fbdb96efc27d"
+    ],
+    "max_members": 60,
+    "is_locked": true
+  },
+  {
+    "id": "8dc50c4b-6c80-47cb-8d7c-0b8fdc88c2a7",
+    "name": "Storm Bringers",
+    "tag": "STRM",
+    "description": "Masters of large-scale raids and sieges.",
+    "leader_id": "d32d7b14-c7c3-42cb-ae8d-04d96cb73f82",
+    "coleader_ids": [],
+    "elite_ids": [],
+    "level": 6,
+    "members": [],
+    "max_members": 20,
+    "is_locked": false
+  },
+  {
+    "id": "e2d8b47f-f5de-40dc-80fc-c2db58dc43d6",
+    "name": "Emerald Guard",
+    "tag": "EMRD",
+    "description": "Protectors of the realm and loyal allies.",
+    "leader_id": "f2bc60f5-71e6-4d76-b3d6-ef8cb33bce2b",
+    "coleader_ids": [
+      "bdc97b2b-93bb-42ec-93b3-b0b5c0f2bdb2"
+    ],
+    "elite_ids": [],
+    "level": 13,
+    "members": [
+      "cf7d4a7b-c52f-4f9e-a2a7-f2cf5d2b6c0d",
+      "2b9fd91b-5e4c-46b8-a2b2-65c2b6f92dcb",
+      "0d1fba1b-fd6d-4454-bb3f-c3db34a4bfb2"
+    ],
+    "max_members": 35,
+    "is_locked": true
+  },
+  {
+    "id": "72b3c0b4-53fd-45fd-b14b-34fd8d0d2bcb",
+    "name": "Void Seekers",
+    "tag": "VOID",
+    "description": "Explorers of forgotten lands and ancient ruins.",
+    "leader_id": "2df93b8f-bf6f-4e6b-93f7-d6dbb4f08d43",
+    "coleader_ids": [],
+    "elite_ids": [
+      "ca73b6df-4e92-4708-8a97-81c3db0cb5d2"
+    ],
+    "level": 11,
+    "members": [
+      "3a8cbf3f-5b9d-472b-94b8-65e7bcd1f09d"
+    ],
+    "max_members": 28,
+    "is_locked": false
+  },
+  {
+    "id": "f03b2df9-59e5-4ef2-b5b5-6cfbd5fd7c89",
+    "name": "Golden Legion",
+    "tag": "GOLD",
+    "description": "Prestigious clan of top-ranked champions.",
+    "leader_id": "f4dcbf7e-cfc2-4d7d-a9bc-0b9d31dfd5b5",
+    "coleader_ids": [
+      "cdb84d57-efb5-48d5-9a65-34d80ef3e0db",
+      "96e5d9cb-5a89-41d8-a3fd-0cb6f7dcf59d"
+    ],
+    "elite_ids": [
+      "c7b9f1b2-d5e8-4d92-a6f3-9db61d34e6a8"
+    ],
+    "level": 30,
+    "members": [
+      "3b6dc3b6-d4fc-44c4-b0c2-dafec9d08cb6",
+      "c4dc0a6c-66c5-4673-9d77-b5df9e44a85b",
+      "bc4a8f79-d0d7-49ce-8d89-0ef3b56d86d8"
+    ],
+    "max_members": 100,
+    "is_locked": true
+  },
+  {
+    "id": "95e8fd63-7bc4-4e8d-b2cb-83a7d0c95c5b",
+    "name": "Azure Blades",
+    "tag": "AZUR",
+    "description": "A fast-growing clan welcoming new recruits.",
+    "leader_id": "cb6d85f7-d4a6-46a8-bcb3-81e4b5b68fd2",
+    "coleader_ids": [],
+    "elite_ids": [],
+    "level": 4,
+    "members": [
+      "4dcb7b59-2b65-46ef-b1e3-6cb2c5d8c1f3",
+      "87b0f84e-95f8-4d43-b37e-2cfd7d90dce4"
+    ],
+    "max_members": 15,
+    "is_locked": false
+  },
+  {
+    "id": "1f5db4d9-4c68-43ef-93c6-3d5c72c42d17",
+    "name": "Crimson Vanguard",
+    "tag": "CRVN",
+    "description": "Elite frontline fighters known for overwhelming assaults.",
+    "leader_id": "cf8d8f3e-0f37-46d4-bef8-ec2a5baf7d64",
+    "coleader_ids": [
+      "5e9d6bc2-1f58-4d8d-9e4c-fb2d1cfa4b73"
+    ],
+    "elite_ids": [
+      "3b5fd8a6-81b3-4e7b-93d5-a17d0fc58c2a",
+      "f6cb9d15-6b5a-4fd9-b8f1-8b43ef0a2d94"
+    ],
+    "level": 23,
+    "members": [
+      "e87a5d14-3d1c-44d6-b7cf-7c91d4a2fb35",
+      "98c7d2b0-5d49-4875-a84d-c8e3a5b6d1f2",
+      "ad51cf8e-7c8f-498e-9d2e-9d73bcf0b4c8"
+    ],
+    "max_members": 60,
+    "is_locked": true
+  },
+  {
+    "id": "0a1d4e97-7f66-46b4-b15f-60dc4db22f7a",
+    "name": "Frozen Eclipse",
+    "tag": "FRZN",
+    "description": "Strategists who excel in defensive warfare.",
+    "leader_id": "43e4a1d9-fd8c-45c2-a9c3-3b1c5fd86e47",
+    "coleader_ids": [],
+    "elite_ids": [],
+    "level": 12,
+    "members": [
+      "9b4d73ef-8fc6-4428-8d45-7eafcb35f1d9"
+    ],
+    "max_members": 30,
+    "is_locked": false
+  },
+  {
+    "id": "82d54e71-7e95-4db3-a81d-3c9fd7f3cb58",
+    "name": "Tempest Reign",
+    "tag": "TMST",
+    "description": "Fast-paced raiders dominating seasonal events.",
+    "leader_id": "e4a5bc9d-4d67-4bdb-9d2b-4ef81c57d92b",
+    "coleader_ids": [
+      "5a6c91fd-6db1-4d5e-9e48-c3df0d5a71e2",
+      "b97a0c48-f5d3-4741-bf37-d18e3fc92d46"
+    ],
+    "elite_ids": [
+      "0d3a8b92-6f6d-44fd-bb0f-1a47d8b9fc15"
+    ],
+    "level": 27,
+    "members": [
+      "17f0d6cb-f95c-4d2e-98d8-4cbe5d8af712",
+      "84e5f0b3-37c1-4d99-bab7-0df3c41f2e86"
+    ],
+    "max_members": 75,
+    "is_locked": true
+  },
+  {
+    "id": "3cb9d6f8-3b4d-43c1-a87b-7fc8d2a1b7d4",
+    "name": "Silent Arrows",
+    "tag": "SILT",
+    "description": "Precision and patience define every victory.",
+    "leader_id": "6f47b2d3-a0e9-4ef0-b8d1-9d84c1a75f28",
+    "coleader_ids": [],
+    "elite_ids": [
+      "2d4fc95b-90a7-42f9-ae56-53bc7d1e4a28"
+    ],
+    "level": 15,
+    "members": [
+      "1f0a8b4d-3ec7-41f5-bfb9-85dc3b7ef8d5",
+      "fc82d9e1-72b6-4a98-b4f1-3d7bce90f451"
+    ],
+    "max_members": 40,
+    "is_locked": false
+  },
+  {
+    "id": "d5f92cb7-84fd-43a7-8f52-2c0e74db8a61",
+    "name": "Radiant Knights",
+    "tag": "LITE",
+    "description": "Honor, courage, and teamwork above all else.",
+    "leader_id": "8b0d5f91-71c5-4e93-8c7b-5d0a9ef42b63",
+    "coleader_ids": [
+      "7d1fcb62-c4b5-4f8d-bc36-9af5d2e70a91"
+    ],
+    "elite_ids": [],
+    "level": 19,
+    "members": [
+      "9dcb5e37-8a4d-4b0f-92de-f8d7c2e5ab13",
+      "42efbc15-60f2-4a79-8dbe-15c6b8d73fa0",
+      "d1c8f7b0-ae6d-4f34-a2d5-c0b57efc9a81"
+    ],
+    "max_members": 50,
+    "is_locked": false
+  },
+  {
+    "id": "fb9d8c63-45f8-4c5d-8be7-4d61af2b0ce9",
+    "name": "Dark Horizon",
+    "tag": "DARK",
+    "description": "Competitive players with a relentless mindset.",
+    "leader_id": "bd1c8e79-0b7e-4c6d-9d43-fc7a6e2db185",
+    "coleader_ids": [],
+    "elite_ids": [
+      "c3d7b1e9-f2d5-4b8e-a57d-94bc1e62fda7"
+    ],
+    "level": 16,
+    "members": [
+      "72fdb5a4-e0a6-4fcb-8d2b-bc3e57f1a469"
+    ],
+    "max_members": 35,
+    "is_locked": true
+  },
+  {
+    "id": "5c0d7af2-f7e8-47a1-b9e0-82df4bc13d75",
+    "name": "Skyforge Union",
+    "tag": "SKYF",
+    "description": "Builders, crafters, and fearless explorers.",
+    "leader_id": "d7c81b59-6a43-4fb5-ae87-8d3b5c1f24d6",
+    "coleader_ids": [
+      "e9b73a10-58d2-40fd-8bc3-4b6e1c7df92b"
+    ],
+    "elite_ids": [],
+    "level": 8,
+    "members": [
+      "5f6a3b1e-9d84-4ef5-8cb2-70d8f91a5e4c",
+      "18a5fcb2-64d3-4b9a-94e1-9b5df3a62fc8"
+    ],
+    "max_members": 25,
+    "is_locked": false
+  },
+  {
+    "id": "ab48fd27-1f59-432e-bdb7-c91f84d2a5b9",
+    "name": "Mythic Forge",
+    "tag": "MYTH",
+    "description": "Forging legends through teamwork and persistence.",
+    "leader_id": "fc95d2e1-b8a0-4f91-b63c-0d9a75bc4f8d",
+    "coleader_ids": [],
+    "elite_ids": [
+      "2f8a4d1e-53cb-4a0b-86e9-b7d14fc93e60",
+      "b9d8e7c2-17af-4d62-a4bc-ef50c6a9d381"
+    ],
+    "level": 20,
+    "members": [
+      "46d7cb1a-80d5-43b8-9f6a-3d0b2ef84c71",
+      "7e9fbc2d-d3f8-43b7-a6d2-58cb1d0a7ef5"
+    ],
+    "max_members": 55,
+    "is_locked": false
+  },
+  {
+    "id": "7e3a4dc2-f8b6-4df5-a2b1-9c7d1a3ef6b8",
+    "name": "Nova Sentinels",
+    "tag": "NOVA",
+    "description": "Guardians of the frontier with unwavering resolve.",
+    "leader_id": "1d9cb6a7-2f8d-4be5-8c73-0e5fd91bc4a2",
+    "coleader_ids": [
+      "f7a5e1c9-4d2b-43b8-a8df-62cb5d7ef914"
+    ],
+    "elite_ids": [],
+    "level": 18,
+    "members": [
+      "3cb2d1f7-6d8e-42f4-a9b6-f7d4c0be51a8",
+      "5f91a4c8-1d7b-4bc0-8d92-4e1b7af36dc5",
+      "8cb1d57e-f0d6-44c9-ae8f-9b2dc1f57e34"
+    ],
+    "max_members": 45,
+    "is_locked": true
+  },
+  {
+    "id": "2d84fc17-5c9a-4a1e-8db6-61ef3d7bc0a4",
+    "name": "Aurora Pact",
+    "tag": "AURA",
+    "description": "A friendly clan dedicated to growth and teamwork.",
+    "leader_id": "b5e7c8d1-6a42-41fd-a97b-2c4d9ef8a163",
+    "coleader_ids": [],
+    "elite_ids": [],
+    "level": 7,
+    "members": [
+      "0fc4d8e7-3b15-4c6d-a92f-58be7d14cf83",
+      "b2f7d9a1-9c64-4ef3-8b1d-f3a5e6d8cb70"
+    ],
+    "max_members": 20,
+    "is_locked": false
+  }
+]

@@ -5,7 +5,7 @@ import "github.com/google/uuid"
 type Clan struct {
 	Id          uuid.UUID   `json:"id"`
 	Name        string      `json:"name"`
-	Tag         [4]byte     `json:"tag"`
+	Tag         string      `json:"tag"`
 	Description string      `json:"description"`
 	LeaderId    uuid.UUID   `json:"leader_id"`
 	ColeaderId  []uuid.UUID `json:"coleader_ids,omitempty"`

@@ -14,7 +14,7 @@ type GetAllDTO struct {
 type CreateDTO struct {
 	Name        string      `json:"name" binding:"required,min=10,max=10"`
 	Description string      `json:"description" binding:"required,min=5,max=40"`
-	Tag         [4]byte     `json:"tag" binding:"required"`
+	Tag         string      `json:"tag" binding:"required"`
 	LeaderId    uuid.UUID   `json:"leader_id" binding:"required"`
 	ColeaderId  []uuid.UUID `json:"coleader_ids,omitempty" binding:"required"`
 	EliteId     []uuid.UUID `json:"elite_ids,omitempty" binding:"required"`
@@ -44,7 +44,7 @@ type UpdateDTO struct {
 }
 
 type DeleteOptions struct {
-	Type string `form:"delete_type" binding:"required,oneof=soft hard"` // 1 - Soft, 2 - Hard
+	Type string `form:"type" binding:"required,oneof=soft hard"` // 1 - Soft, 2 - Hard
 }
 
 type DeleteDTO struct {
