@@ -127,6 +127,7 @@ func (r *InMemoryChannelsRepository) Delete(ctx context.Context, dto DeleteDTO) 
 			break
 		}
 	}
+	r.mu.Unlock()
 
 	newLen := len(r.channels)
 	if newLen != oldLen {
