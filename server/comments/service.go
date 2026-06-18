@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
@@ -26,12 +27,14 @@ type Service interface {
 type LocalCommentsService struct {
 	repo   CommentsRepository
 	logger *zap.Logger
+	tracer trace.Tracer
 }
 
-func NewLocalCommentsService(repository CommentsRepository, l *zap.Logger) *LocalCommentsService {
+func NewLocalCommentsService(repository CommentsRepository, l *zap.Logger, t trace.Tracer) *LocalCommentsService {
 	return &LocalCommentsService{
 		repo:   repository,
 		logger: l,
+		tracer: t,
 	}
 }
 

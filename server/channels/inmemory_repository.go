@@ -8,6 +8,7 @@ import (
 
 	"github.com/abhinash-kml/nova/server/common"
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
@@ -15,10 +16,11 @@ type InMemoryChannelsRepository struct {
 	channels []Channel
 	logger   *zap.Logger
 	mu       sync.RWMutex
+	tracer   trace.Tracer
 }
 
-func NewInMemoryChannelsRepository(l *zap.Logger) *InMemoryChannelsRepository {
-	return &InMemoryChannelsRepository{logger: l}
+func NewInMemoryChannelsRepository(l *zap.Logger, t trace.Tracer) *InMemoryChannelsRepository {
+	return &InMemoryChannelsRepository{logger: l, tracer: t}
 }
 
 func (r *InMemoryChannelsRepository) Initialize() error {

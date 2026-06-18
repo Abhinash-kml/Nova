@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
@@ -24,12 +25,14 @@ type Service interface {
 type LocalChannelsService struct {
 	repo   Repository
 	logger *zap.Logger
+	tracer trace.Tracer
 }
 
-func NewLocalChannelService(r Repository, l *zap.Logger) *LocalChannelsService {
+func NewLocalChannelService(r Repository, l *zap.Logger, t trace.Tracer) *LocalChannelsService {
 	return &LocalChannelsService{
 		repo:   r,
 		logger: l,
+		tracer: t,
 	}
 }
 

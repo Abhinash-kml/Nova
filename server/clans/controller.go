@@ -7,19 +7,21 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
 type Controller struct {
 	service Service
 	logger  *zap.Logger
-	// tracer otel.Tracer
+	tracer  trace.Tracer
 }
 
-func NewController(s Service, l *zap.Logger) *Controller {
+func NewController(s Service, l *zap.Logger, t trace.Tracer) *Controller {
 	return &Controller{
 		service: s,
 		logger:  l,
+		tracer:  t,
 	}
 }
 

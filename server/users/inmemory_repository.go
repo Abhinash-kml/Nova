@@ -11,6 +11,7 @@ import (
 
 	"github.com/abhinash-kml/nova/server/common"
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
@@ -18,10 +19,11 @@ type InMemoryUsersRepository struct {
 	users  []User
 	logger *zap.Logger
 	mu     sync.RWMutex
+	tracer trace.Tracer
 }
 
-func NewInMemoryUsersRepository(l *zap.Logger) *InMemoryUsersRepository {
-	return &InMemoryUsersRepository{logger: l}
+func NewInMemoryUsersRepository(l *zap.Logger, t trace.Tracer) *InMemoryUsersRepository {
+	return &InMemoryUsersRepository{logger: l, tracer: t}
 }
 
 // INFO: Not needed as its in-memory

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
@@ -27,12 +28,14 @@ type Service interface {
 type LocalUsersService struct {
 	repo   UsersRepository
 	logger *zap.Logger
+	tracer trace.Tracer
 }
 
-func NewLocalUsersService(repository UsersRepository, l *zap.Logger) *LocalUsersService {
+func NewLocalUsersService(repository UsersRepository, l *zap.Logger, t trace.Tracer) *LocalUsersService {
 	return &LocalUsersService{
 		repo:   repository,
 		logger: l,
+		tracer: t,
 	}
 }
 

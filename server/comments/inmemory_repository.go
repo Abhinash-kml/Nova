@@ -11,6 +11,7 @@ import (
 
 	"github.com/abhinash-kml/nova/server/common"
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
@@ -18,10 +19,11 @@ type InMemoryCommentsRepository struct {
 	comments []Comment
 	logger   *zap.Logger
 	mu       sync.RWMutex
+	tracer   trace.Tracer
 }
 
-func NewInMemoryCommentsRepository(l *zap.Logger) *InMemoryCommentsRepository {
-	return &InMemoryCommentsRepository{logger: l}
+func NewInMemoryCommentsRepository(l *zap.Logger, t trace.Tracer) *InMemoryCommentsRepository {
+	return &InMemoryCommentsRepository{logger: l, tracer: t}
 }
 
 // INFO: Not required as its in-memory

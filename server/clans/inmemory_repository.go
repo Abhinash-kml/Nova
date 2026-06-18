@@ -10,6 +10,7 @@ import (
 
 	"github.com/abhinash-kml/nova/server/common"
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
@@ -17,10 +18,11 @@ type InMemoryClansRepository struct {
 	clans  []Clan
 	logger *zap.Logger
 	mu     sync.RWMutex
+	tracer trace.Tracer
 }
 
-func NewInMemoryClanRepository(l *zap.Logger) *InMemoryClansRepository {
-	return &InMemoryClansRepository{logger: l}
+func NewInMemoryClanRepository(l *zap.Logger, t trace.Tracer) *InMemoryClansRepository {
+	return &InMemoryClansRepository{logger: l, tracer: t}
 }
 
 func (r *InMemoryClansRepository) Initialize() error {
