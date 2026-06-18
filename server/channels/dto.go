@@ -21,23 +21,31 @@ type CreateDTO struct {
 	ProcessInterval string `json:"process_interval" binding:"required"`
 }
 
-type UpdateDTO struct {
-	Id              string `uri:"id" binding:"required,uuid"`
-	IsPersistant    bool   `json:"persistant" binding:"required"`
+type ChannelId struct {
+	Id string `uri:"id" binding:"required,uuid"`
+}
+
+type ChannelModifications struct {
+	IsPersistant    *bool  `json:"persistant" binding:"required"`
 	ProcessInterval string `json:"process_interval" binding:"required"`
 }
 
+type UpdateDTO struct {
+	ChannelId
+	ChannelModifications
+}
+
 type DeleteDTO struct {
-	Id   string `uri:"id" binding:"required,uuid"`
+	ChannelId
 	Type string `form:"type" binding:"required,oneof=soft hard"`
 }
 
 type ChannelDTO struct {
-	Id              uuid.UUID          `json:"id"`
-	Name            string             `json:"name"`
-	IsPersistant    bool               `json:"persistant"`
-	Subscribers     map[uuid.UUID]bool `json:"subscribers"`
-	ProcessInterval time.Duration      `json:"process_interval"`
+	Id               uuid.UUID     `json:"id"`
+	Name             string        `json:"name"`
+	IsPersistant     bool          `json:"persistant"`
+	TotalSubscribers int           `json:"total_subscribers"`
+	ProcessInterval  time.Duration `json:"process_interval"`
 }
 
 type BulkCreateDTO struct {

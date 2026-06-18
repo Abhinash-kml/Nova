@@ -15,6 +15,13 @@ type Controller struct {
 	logger  *zap.Logger
 }
 
+func NewController(s Service, l *zap.Logger) *Controller {
+	return &Controller{
+		service: s,
+		logger:  l,
+	}
+}
+
 func (c *Controller) GetAll(ctx *gin.Context) {
 	var dto GetAllDTO
 
@@ -74,15 +81,17 @@ func (c *Controller) Create(ctx *gin.Context) {
 	ctx.Status(http.StatusCreated)
 }
 
+// INFO: Bugged
+// TODO: Fix binding issue in this route
 func (c *Controller) Modify(ctx *gin.Context) {
 	var dto UpdateDTO
 
-	if err := ctx.ShouldBindUri(&dto); err != nil {
+	if err := ctx.ShouldBindUri(&dto.ChannelId); err != nil {
 		utils.SendProblemDetails(ctx, err)
 		return
 	}
 
-	if err := ctx.ShouldBindWith(&dto, binding.JSON); err != nil {
+	if err := ctx.ShouldBindWith(&dto.ChannelModifications, binding.JSON); err != nil {
 		utils.SendProblemDetails(ctx, err)
 		return
 	}
@@ -99,7 +108,7 @@ func (c *Controller) Modify(ctx *gin.Context) {
 func (c *Controller) Delete(ctx *gin.Context) {
 	var dto DeleteDTO
 
-	if err := ctx.ShouldBindUri(&dto); err != nil {
+	if err := ctx.ShouldBindUri(&dto.ChannelId); err != nil {
 		utils.SendProblemDetails(ctx, err)
 		return
 	}

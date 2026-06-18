@@ -26,7 +26,7 @@ type LocalChannelsService struct {
 	logger *zap.Logger
 }
 
-func NewLcoalChannelService(r Repository, l *zap.Logger) *LocalChannelsService {
+func NewLocalChannelService(r Repository, l *zap.Logger) *LocalChannelsService {
 	return &LocalChannelsService{
 		repo:   r,
 		logger: l,

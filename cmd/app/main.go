@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/abhinash-kml/nova/server/apiserver"
+	"github.com/abhinash-kml/nova/server/channels"
 	"github.com/abhinash-kml/nova/server/clans"
 	"github.com/abhinash-kml/nova/server/comments"
 	"github.com/abhinash-kml/nova/server/config"
@@ -143,6 +144,13 @@ func main() {
 	clansService := clans.NewLocalClansService(clansRepository, logger)
 	clansController := clans.NewController(clansService, logger)
 	clans.SetupRoutes(globalRouter, clansController)
+
+	// Setup channels module
+	channelsRepository := channels.NewInMemoryChannelsRepository(logger)
+	channelsRepository.Seed()
+	channelsService := channels.NewLocalChannelService(channelsRepository, logger)
+	channelsController := channels.NewController(channelsService, logger)
+	channels.SetupRoutes(globalRouter, channelsController)
 
 	// Create http api server & start it
 	server := apiserver.New(globalCtx, config.HttpServer, globalRouter, logger)

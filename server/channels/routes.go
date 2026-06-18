@@ -3,7 +3,7 @@ package channels
 import "github.com/gin-gonic/gin"
 
 func SetupRoutes(router *gin.Engine, c *Controller) {
-	group := router.Group("/comments")
+	group := router.Group("/channels")
 	{
 		group.GET("/", c.GetAll)
 		group.GET("/:id", c.Get)

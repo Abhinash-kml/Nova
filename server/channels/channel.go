@@ -112,17 +112,15 @@ func (c *Channel) Process() {
 }
 
 func (c *Channel) ProcessPersistantMessages() {
-	go func() {
-		for {
-			select {
-			case <-c.ctx.Done():
-				fmt.Println("Channel process terminated via context completion")
-				return
-			case message := <-c.PersistantMessage:
-				c.Persist(message)
-			}
+	for {
+		select {
+		case <-c.ctx.Done():
+			fmt.Println("Channel process terminated via context completion")
+			return
+		case message := <-c.PersistantMessage:
+			c.Persist(message)
 		}
-	}()
+	}
 }
 
 func (c *Channel) Persist(message ChannelMessage) {
