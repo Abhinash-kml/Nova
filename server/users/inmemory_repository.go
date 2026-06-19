@@ -57,6 +57,9 @@ func (r *InMemoryUsersRepository) Seed() error {
 }
 
 func (r *InMemoryUsersRepository) Add(ctx context.Context, user CreateDTO) error {
+	_, span := r.tracer.Start(ctx, "users.repository.add")
+	defer span.End()
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -80,6 +83,9 @@ func (r *InMemoryUsersRepository) Add(ctx context.Context, user CreateDTO) error
 }
 
 func (r *InMemoryUsersRepository) GetAll(ctx context.Context, cursor, count int) ([]User, error) {
+	_, span := r.tracer.Start(ctx, "users.repository.getall")
+	defer span.End()
+
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -96,6 +102,9 @@ func (r *InMemoryUsersRepository) GetAll(ctx context.Context, cursor, count int)
 
 // TODO: Implement this
 func (r *InMemoryUsersRepository) GetAllByAttribute(ctx context.Context, attribute string) ([]User, error) {
+	_, span := r.tracer.Start(ctx, "users.repository.getallbyattribute")
+	defer span.End()
+
 	if len(r.users) == 0 {
 		return nil, common.ErrNoResources
 	}
@@ -107,6 +116,9 @@ func (r *InMemoryUsersRepository) GetAllByAttribute(ctx context.Context, attribu
 
 // TODO: Improve this
 func (r *InMemoryUsersRepository) GetById(ctx context.Context, id uuid.UUID) (User, error) {
+	_, span := r.tracer.Start(ctx, "users.repository.getbyid")
+	defer span.End()
+
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -120,6 +132,9 @@ func (r *InMemoryUsersRepository) GetById(ctx context.Context, id uuid.UUID) (Us
 }
 
 func (r *InMemoryUsersRepository) GetByName(ctx context.Context, name string) (User, error) {
+	_, span := r.tracer.Start(ctx, "users.repository.getbyname")
+	defer span.End()
+
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -134,14 +149,23 @@ func (r *InMemoryUsersRepository) GetByName(ctx context.Context, name string) (U
 
 // TODO: Implement this
 func (r *InMemoryUsersRepository) Update(ctx context.Context, dto UpdateDTO) error {
+	_, span := r.tracer.Start(ctx, "users.repository.update")
+	defer span.End()
+
 	return nil
 }
 
 func (r *InMemoryUsersRepository) Replace(ctx context.Context, dto ReplaceDTO) error {
+	_, span := r.tracer.Start(ctx, "users.repository.replace")
+	defer span.End()
+
 	return nil
 }
 
 func (r *InMemoryUsersRepository) Delete(ctx context.Context, dto DeleteDTO) error {
+	_, span := r.tracer.Start(ctx, "users.repository.delete")
+	defer span.End()
+
 	oldLen := len(r.users)
 
 	r.mu.Lock()
@@ -164,6 +188,9 @@ func (r *InMemoryUsersRepository) Delete(ctx context.Context, dto DeleteDTO) err
 }
 
 func (r *InMemoryUsersRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) error {
+	_, span := r.tracer.Start(ctx, "users.repository.bulkadd")
+	defer span.End()
+
 	for index := range dto.Users {
 		err := r.Add(ctx, dto.Users[index])
 		if err != nil {
@@ -175,6 +202,9 @@ func (r *InMemoryUsersRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO
 }
 
 func (r *InMemoryUsersRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) error {
+	_, span := r.tracer.Start(ctx, "users.repository.bulkmodify")
+	defer span.End()
+
 	for index := range dto.Updates {
 		err := r.Update(ctx, dto.Updates[index])
 		if err != nil {
@@ -186,6 +216,9 @@ func (r *InMemoryUsersRepository) BulkModify(ctx context.Context, dto BulkModify
 }
 
 func (r *InMemoryUsersRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) error {
+	_, span := r.tracer.Start(ctx, "users.repository.bulkdelete")
+	defer span.End()
+
 	for index := range dto.Users {
 		id := dto.Users[index].String()
 		err := r.Delete(ctx, DeleteDTO{UserId: UserId{Id: id}})
