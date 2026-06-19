@@ -40,7 +40,7 @@ func NewLocalPostsService(repository PostsRepository, l *zap.Logger, t trace.Tra
 }
 
 func (s *LocalPostsService) Add(ctx context.Context, dto CreateDTO) error {
-	ctx, span := s.tracer.Start(ctx, "posts.service.")
+	ctx, span := s.tracer.Start(ctx, "posts.service.add")
 	defer span.End()
 
 	return s.repo.Add(ctx, dto)

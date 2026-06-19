@@ -32,6 +32,9 @@ func (r *InMemoryChannelsRepository) Seed() error {
 }
 
 func (r *InMemoryChannelsRepository) GetAll(ctx context.Context, cursor int, limit int) ([]ChannelDTO, error) {
+	_, span := r.tracer.Start(ctx, "channels.repository.getall")
+	defer span.End()
+
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -51,6 +54,9 @@ func (r *InMemoryChannelsRepository) GetAll(ctx context.Context, cursor int, lim
 }
 
 func (r *InMemoryChannelsRepository) GetById(ctx context.Context, id uuid.UUID) (ChannelDTO, error) {
+	_, span := r.tracer.Start(ctx, "channels.repository.getbyid")
+	defer span.End()
+
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -70,6 +76,9 @@ func (r *InMemoryChannelsRepository) GetById(ctx context.Context, id uuid.UUID) 
 }
 
 func (r *InMemoryChannelsRepository) Add(ctx context.Context, dto CreateDTO) error {
+	_, span := r.tracer.Start(ctx, "channels.repository.add")
+	defer span.End()
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -89,6 +98,9 @@ func (r *InMemoryChannelsRepository) Add(ctx context.Context, dto CreateDTO) err
 }
 
 func (r *InMemoryChannelsRepository) Modify(ctx context.Context, dto UpdateDTO) error {
+	_, span := r.tracer.Start(ctx, "channels.repository.modify")
+	defer span.End()
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -115,6 +127,9 @@ func (r *InMemoryChannelsRepository) Modify(ctx context.Context, dto UpdateDTO) 
 
 // TODO: Fix this buggy function
 func (r *InMemoryChannelsRepository) Delete(ctx context.Context, dto DeleteDTO) error {
+	_, span := r.tracer.Start(ctx, "channels.repository.delete")
+	defer span.End()
+
 	r.mu.Lock()
 
 	oldLen := len(r.channels)
@@ -141,13 +156,22 @@ func (r *InMemoryChannelsRepository) Delete(ctx context.Context, dto DeleteDTO) 
 
 // Bulk operations (left out for future implementation if needed)
 func (r *InMemoryChannelsRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) error {
+	_, span := r.tracer.Start(ctx, "channels.repository.bulkadd")
+	defer span.End()
+
 	return nil
 }
 
 func (r *InMemoryChannelsRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) error {
+	_, span := r.tracer.Start(ctx, "channels.repository.bulkmodify")
+	defer span.End()
+
 	return nil
 }
 
 func (r *InMemoryChannelsRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) error {
+	_, span := r.tracer.Start(ctx, "channels.repository.bulkdelete")
+	defer span.End()
+
 	return nil
 }
