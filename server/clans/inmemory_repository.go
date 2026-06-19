@@ -55,6 +55,9 @@ func (r *InMemoryClansRepository) Seed() error {
 }
 
 func (r *InMemoryClansRepository) GetById(ctx context.Context, id uuid.UUID) (Clan, error) {
+	_, span := r.tracer.Start(ctx, "clans.repository.getbyid")
+	defer span.End()
+
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -68,6 +71,9 @@ func (r *InMemoryClansRepository) GetById(ctx context.Context, id uuid.UUID) (Cl
 }
 
 func (r *InMemoryClansRepository) GetByName(ctx context.Context, name string) (Clan, error) {
+	_, span := r.tracer.Start(ctx, "clans.repository.getbyname")
+	defer span.End()
+
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -81,6 +87,9 @@ func (r *InMemoryClansRepository) GetByName(ctx context.Context, name string) (C
 }
 
 func (r *InMemoryClansRepository) GetAll(ctx context.Context, cursor, limit int) ([]Clan, error) {
+	_, span := r.tracer.Start(ctx, "clans.repository.getall")
+	defer span.End()
+
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -93,6 +102,9 @@ func (r *InMemoryClansRepository) GetAll(ctx context.Context, cursor, limit int)
 }
 
 func (r *InMemoryClansRepository) Add(ctx context.Context, dto CreateDTO) error {
+	_, span := r.tracer.Start(ctx, "clans.repository.add")
+	defer span.End()
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -114,6 +126,9 @@ func (r *InMemoryClansRepository) Add(ctx context.Context, dto CreateDTO) error 
 }
 
 func (r *InMemoryClansRepository) Delete(ctx context.Context, dto DeleteDTO) error {
+	_, span := r.tracer.Start(ctx, "clans.repository.delete")
+	defer span.End()
+
 	beforeLen := len(r.clans)
 	parsedId, _ := uuid.Parse(dto.Id)
 
@@ -138,10 +153,16 @@ func (r *InMemoryClansRepository) Delete(ctx context.Context, dto DeleteDTO) err
 
 // TODO: Implement this
 func (r *InMemoryClansRepository) Update(ctx context.Context, dto UpdateDTO) error {
+	_, span := r.tracer.Start(ctx, "clans.repository.update")
+	defer span.End()
+
 	return nil
 }
 
 func (r *InMemoryClansRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) error {
+	_, span := r.tracer.Start(ctx, "clans.repository.bulkadd")
+	defer span.End()
+
 	for index := range dto.Clans {
 		err := r.Add(ctx, dto.Clans[index])
 		if err != nil {
@@ -153,6 +174,9 @@ func (r *InMemoryClansRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO
 }
 
 func (r *InMemoryClansRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) error {
+	_, span := r.tracer.Start(ctx, "clans.repository.bulkmodify")
+	defer span.End()
+
 	for index := range dto.Updates {
 		err := r.Update(ctx, dto.Updates[index])
 		if err != nil {
@@ -164,6 +188,9 @@ func (r *InMemoryClansRepository) BulkModify(ctx context.Context, dto BulkModify
 }
 
 func (r *InMemoryClansRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) error {
+	_, span := r.tracer.Start(ctx, "clans.repository.bulkdelete")
+	defer span.End()
+
 	for index := range dto.Clans {
 		id := dto.Clans[index].String()
 		err := r.Delete(ctx, DeleteDTO{ClanId: ClanId{Id: id}})

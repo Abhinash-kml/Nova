@@ -38,37 +38,64 @@ func NewLocalClansService(repo ClansRepository, l *zap.Logger, t trace.Tracer) *
 }
 
 func (s *LocalClansService) GetById(ctx context.Context, id uuid.UUID) (Clan, error) {
+	ctx, span := s.tracer.Start(ctx, "clans.service.getbyid")
+	defer span.End()
+
 	return s.repo.GetById(ctx, id)
 }
 
 func (s *LocalClansService) GetByName(ctx context.Context, name string) (Clan, error) {
+	ctx, span := s.tracer.Start(ctx, "clans.service.getbyname")
+	defer span.End()
+
 	return s.repo.GetByName(ctx, name)
 }
 
 func (s *LocalClansService) GetAll(ctx context.Context, cursor, limit int) ([]Clan, error) {
+	ctx, span := s.tracer.Start(ctx, "clans.service.getall")
+	defer span.End()
+
 	return s.repo.GetAll(ctx, cursor, limit)
 }
 
 func (s *LocalClansService) Add(ctx context.Context, dto CreateDTO) error {
+	ctx, span := s.tracer.Start(ctx, "clans.service.add")
+	defer span.End()
+
 	return s.repo.Add(ctx, dto)
 }
 
 func (s *LocalClansService) Delete(ctx context.Context, dto DeleteDTO) error {
+	ctx, span := s.tracer.Start(ctx, "clans.service.delete")
+	defer span.End()
+
 	return s.repo.Delete(ctx, dto)
 }
 
 func (s *LocalClansService) Update(ctx context.Context, dto UpdateDTO) error {
+	ctx, span := s.tracer.Start(ctx, "clans.service.update")
+	defer span.End()
+
 	return s.repo.Update(ctx, dto)
 }
 
 func (s *LocalClansService) BulkAdd(ctx context.Context, dto BulkCreateDTO) error {
+	ctx, span := s.tracer.Start(ctx, "clans.service.bulkadd")
+	defer span.End()
+
 	return s.repo.BulkAdd(ctx, dto)
 }
 
 func (s *LocalClansService) BulkModify(ctx context.Context, dto BulkModifyDTO) error {
+	ctx, span := s.tracer.Start(ctx, "clans.service.bulkmodify")
+	defer span.End()
+
 	return s.repo.BulkModify(ctx, dto)
 }
 
 func (s *LocalClansService) BulkDelete(ctx context.Context, dto BulkDeleteDTO) error {
+	ctx, span := s.tracer.Start(ctx, "clans.service.bulkdelete")
+	defer span.End()
+
 	return s.repo.BulkDelete(ctx, dto)
 }
