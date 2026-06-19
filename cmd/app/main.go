@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -15,12 +16,14 @@ import (
 	"github.com/abhinash-kml/nova/server/comments"
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/abhinash-kml/nova/server/infra"
+	"github.com/abhinash-kml/nova/server/observability"
 	"github.com/abhinash-kml/nova/server/posts"
 	"github.com/abhinash-kml/nova/server/users"
 	"github.com/gin-contrib/cors"
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+	"go.opentelemetry.io/otel"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -91,6 +94,16 @@ func main() {
 
 	logger.Sugar().Infof("Current Time: %w", time.Now())
 
+	// Setup opentelemetry
+	shutdownFunc, err := observability.SetupOTelSDK(globalCtx)
+	if err != nil {
+		logger.Fatal("Failed to setuo opentelemtry for observability", zap.Error(err))
+	}
+	// Call shutdown func for proper cleanup so we dont leak anything
+	defer func() {
+		err = errors.Join(shutdownFunc(globalCtx))
+	}()
+
 	// Create gin router engine
 	globalRouter := gin.New()
 
@@ -118,38 +131,43 @@ func main() {
 	// Setup domains of interests
 
 	// Setup users module
-	usersRepository := users.NewInMemoryUsersRepository(logger)
+	usersTracer := otel.Tracer("users-domain")
+	usersRepository := users.NewInMemoryUsersRepository(logger, usersTracer)
 	usersRepository.Seed()
-	usersService := users.NewLocalUsersService(usersRepository, logger)
-	usersController := users.NewController(usersService, logger)
+	usersService := users.NewLocalUsersService(usersRepository, logger, usersTracer)
+	usersController := users.NewController(usersService, logger, usersTracer)
 	users.SetupRoutes(globalRouter, usersController)
 
 	// Setup posts module
-	postsRepository := posts.NewInMemoryPostsRepository(logger)
+	postsTracer := otel.Tracer("posts-domain")
+	postsRepository := posts.NewInMemoryPostsRepository(logger, postsTracer)
 	postsRepository.Seed()
-	postsService := posts.NewLocalPostsService(postsRepository, logger)
-	postsController := posts.NewController(postsService, logger)
+	postsService := posts.NewLocalPostsService(postsRepository, logger, postsTracer)
+	postsController := posts.NewController(postsService, logger, postsTracer)
 	posts.SetupRoutes(globalRouter, postsController)
 
 	// Setup comments module
-	commentsRepository := comments.NewInMemoryCommentsRepository(logger)
+	commentsTracer := otel.Tracer("comments-tracer")
+	commentsRepository := comments.NewInMemoryCommentsRepository(logger, commentsTracer)
 	commentsRepository.Seed()
-	commentsService := comments.NewLocalCommentsService(commentsRepository, logger)
-	commentsController := comments.NewController(commentsService, logger)
+	commentsService := comments.NewLocalCommentsService(commentsRepository, logger, commentsTracer)
+	commentsController := comments.NewController(commentsService, logger, commentsTracer)
 	comments.SetupRoutes(globalRouter, commentsController)
 
 	// Setup clans module
-	clansRepository := clans.NewInMemoryClanRepository(logger)
+	clansTracer := otel.Tracer("clans-tracer")
+	clansRepository := clans.NewInMemoryClanRepository(logger, clansTracer)
 	clansRepository.Seed()
-	clansService := clans.NewLocalClansService(clansRepository, logger)
-	clansController := clans.NewController(clansService, logger)
+	clansService := clans.NewLocalClansService(clansRepository, logger, clansTracer)
+	clansController := clans.NewController(clansService, logger, clansTracer)
 	clans.SetupRoutes(globalRouter, clansController)
 
 	// Setup channels module
-	channelsRepository := channels.NewInMemoryChannelsRepository(logger)
+	channelsTracer := otel.Tracer("channels-tracer")
+	channelsRepository := channels.NewInMemoryChannelsRepository(logger, channelsTracer)
 	channelsRepository.Seed()
-	channelsService := channels.NewLocalChannelService(channelsRepository, logger)
-	channelsController := channels.NewController(channelsService, logger)
+	channelsService := channels.NewLocalChannelService(channelsRepository, logger, channelsTracer)
+	channelsController := channels.NewController(channelsService, logger, channelsTracer)
 	channels.SetupRoutes(globalRouter, channelsController)
 
 	// Create http api server & start it

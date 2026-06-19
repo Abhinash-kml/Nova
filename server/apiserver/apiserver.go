@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/abhinash-kml/nova/server/config"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/zap"
 )
 
@@ -25,6 +26,7 @@ type Hook func(context.Context) error
 
 func New(ctx context.Context, config config.HttpServerConfig, handler http.Handler, logger *zap.Logger) *HttpServer {
 	ctx, cancel := context.WithCancel(ctx)
+	wrappedhandler := otelhttp.NewHandler(handler, "server")
 	return &HttpServer{
 		internalServer: http.Server{
 			Addr:           config.Address,
@@ -32,7 +34,7 @@ func New(ctx context.Context, config config.HttpServerConfig, handler http.Handl
 			WriteTimeout:   time.Duration(config.WriteTimeout * int(time.Second)),
 			IdleTimeout:    time.Duration(config.IdleTimeout * int(time.Second)),
 			MaxHeaderBytes: config.MaxHeaderBytes,
-			Handler:        handler,
+			Handler:        wrappedhandler,
 		},
 		errChan: make(chan error, 1),
 		ctx:     ctx,
