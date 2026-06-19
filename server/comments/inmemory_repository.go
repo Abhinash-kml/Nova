@@ -58,6 +58,9 @@ func (r *InMemoryCommentsRepository) Seed() error {
 }
 
 func (r *InMemoryCommentsRepository) Add(ctx context.Context, dto CreateDTO) error {
+	_, span := r.tracer.Start(ctx, "comments.repository.add")
+	defer span.End()
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -76,6 +79,9 @@ func (r *InMemoryCommentsRepository) Add(ctx context.Context, dto CreateDTO) err
 }
 
 func (r *InMemoryCommentsRepository) GetAll(ctx context.Context, cursor, count int) ([]Comment, error) {
+	_, span := r.tracer.Start(ctx, "comments.repository.getall")
+	defer span.End()
+
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -92,12 +98,18 @@ func (r *InMemoryCommentsRepository) GetAll(ctx context.Context, cursor, count i
 
 // TODO: Implement this
 func (r *InMemoryCommentsRepository) GetAllByAttribute(ctx context.Context, attribute string) ([]Comment, error) {
+	_, span := r.tracer.Start(ctx, "comments.repository.getallbyattribute")
+	defer span.End()
+
 	// Filter by attribute logic goes here
 
 	return nil, nil
 }
 
 func (r *InMemoryCommentsRepository) GetById(ctx context.Context, id uuid.UUID) (Comment, error) {
+	_, span := r.tracer.Start(ctx, "comments.repository.getbyid")
+	defer span.End()
+
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -112,14 +124,23 @@ func (r *InMemoryCommentsRepository) GetById(ctx context.Context, id uuid.UUID) 
 
 // TODO: Implement this
 func (r *InMemoryCommentsRepository) Update(ctx context.Context, dto UpdateDTO) error {
+	_, span := r.tracer.Start(ctx, "comments.repository.update")
+	defer span.End()
+
 	return nil
 }
 
 func (r *InMemoryCommentsRepository) Replace(ctx context.Context, dto ReplaceDTO) error {
+	_, span := r.tracer.Start(ctx, "comments.repository.replace")
+	defer span.End()
+
 	return nil
 }
 
 func (r *InMemoryCommentsRepository) Delete(ctx context.Context, dto DeleteDTO) error {
+	_, span := r.tracer.Start(ctx, "comments.repository.delete")
+	defer span.End()
+
 	oldLen := len(r.comments)
 
 	r.mu.Lock()
@@ -142,6 +163,9 @@ func (r *InMemoryCommentsRepository) Delete(ctx context.Context, dto DeleteDTO) 
 }
 
 func (r *InMemoryCommentsRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) error {
+	_, span := r.tracer.Start(ctx, "comments.repository.bulkadd")
+	defer span.End()
+
 	for index := range dto.Comments {
 		err := r.Add(ctx, dto.Comments[index])
 		if err != nil {
@@ -153,6 +177,9 @@ func (r *InMemoryCommentsRepository) BulkAdd(ctx context.Context, dto BulkCreate
 }
 
 func (r *InMemoryCommentsRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) error {
+	_, span := r.tracer.Start(ctx, "comments.repository.bulkmodify")
+	defer span.End()
+
 	for index := range dto.Updates {
 		err := r.Update(ctx, dto.Updates[index])
 		if err != nil {
@@ -164,6 +191,9 @@ func (r *InMemoryCommentsRepository) BulkModify(ctx context.Context, dto BulkMod
 }
 
 func (r *InMemoryCommentsRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) error {
+	_, span := r.tracer.Start(ctx, "comments.repository.bulkdelete")
+	defer span.End()
+
 	for index := range dto.Comments {
 		id := dto.Comments[index].String()
 		err := r.Delete(ctx, DeleteDTO{CommentId: CommentId{Id: id}})
