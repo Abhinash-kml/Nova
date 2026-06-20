@@ -2,6 +2,7 @@ package utils
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"github.com/abhinash-kml/nova/server/common"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/redis/go-redis/v9"
 )
 
 type LinksContainer struct {
@@ -179,4 +181,24 @@ func SendProblemDetails(c *gin.Context, err error) {
 		c.JSON(problem.StatusCode, problem)
 		return
 	}
+}
+
+func IsCacheMiss(err error) bool {
+	if err == nil {
+		return false
+	}
+	// Currently only support for redis is added, will add support for other stores as oer requirement
+	return errors.Is(err, redis.Nil)
+}
+
+type JSONCodec[T any] struct{}
+
+func (JSONCodec[T]) Marshal(t T) ([]byte, error) {
+	return json.Marshal(t)
+}
+
+func (JSONCodec[T]) Unmarshall(b []byte) (T, error) {
+	var t T
+	err := json.Unmarshal(b, &t)
+	return t, err
 }

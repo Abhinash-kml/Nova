@@ -97,7 +97,7 @@ func main() {
 	// Setup opentelemetry
 	shutdownFunc, err := observability.SetupOTelSDK(globalCtx)
 	if err != nil {
-		logger.Fatal("Failed to setuo opentelemtry for observability", zap.Error(err))
+		logger.Fatal("Failed to setup opentelemtry for observability", zap.Error(err))
 	}
 	// Call shutdown func for proper cleanup so we dont leak anything
 	defer func() {
@@ -134,7 +134,7 @@ func main() {
 	usersTracer := otel.Tracer("users-domain")
 	usersRepository := users.NewInMemoryUsersRepository(logger, usersTracer)
 	usersRepository.Seed()
-	usersService := users.NewLocalUsersService(usersRepository, logger, usersTracer)
+	usersService := users.NewLocalUsersService(usersRepository, redisClient, logger, usersTracer)
 	usersController := users.NewController(usersService, logger, usersTracer)
 	users.SetupRoutes(globalRouter, usersController)
 
