@@ -152,7 +152,7 @@ func main() {
 	postsTracer := otel.Tracer("posts-domain")
 	postsRepository := posts.NewInMemoryPostsRepository(logger, postsTracer)
 	postsRepository.Seed()
-	postsService := posts.NewLocalPostsService(postsRepository, logger, postsTracer)
+	postsService := posts.NewLocalPostsService(postsRepository, redisClient, logger, postsTracer)
 	postsController := posts.NewController(postsService, logger, postsTracer)
 	posts.SetupRoutes(globalRouter, postsController)
 

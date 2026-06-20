@@ -1,6 +1,7 @@
 package posts
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -28,4 +29,14 @@ func New(id, authorid uuid.UUID, title, body string) Post {
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
+}
+
+func (p *Post) Marshal() ([]byte, error) {
+	return json.Marshal(p)
+}
+
+func (Post) Unmarshall(b []byte) (Post, error) {
+	var t Post
+	err := json.Unmarshal(b, &t)
+	return t, err
 }
