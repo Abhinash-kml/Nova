@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/abhinash-kml/nova/server/common"
-	"github.com/go-viper/mapstructure/v2"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/otel/codes"
@@ -73,12 +72,10 @@ func (s *LocalUsersService) GetById(ctx context.Context, id uuid.UUID) (User, er
 	key := id.String()
 
 	// 1. Try cache
-	data, err := s.cache.HGetAll(ctx, key).Result()
-	if err == nil && len(data) > 0 {
-		var user User
-		if err := mapstructure.Decode(data, &user); err == nil {
-			return user, nil
-		}
+	var user User
+	err := s.cache.HGetAll(ctx, key).Scan(&user)
+	if err == nil && len(user.Username) != 0 {
+		return user, nil
 	}
 
 	// If Redis failed for infra reason, log but continue
@@ -87,7 +84,7 @@ func (s *LocalUsersService) GetById(ctx context.Context, id uuid.UUID) (User, er
 	}
 
 	// 2. Fallback to repo
-	user, err := s.repo.GetById(ctx, id)
+	user, err = s.repo.GetById(ctx, id)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())

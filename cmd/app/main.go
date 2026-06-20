@@ -22,6 +22,7 @@ import (
 	"github.com/gin-contrib/cors"
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/extra/redisotel/v9"
 	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/otel"
 	"go.uber.org/zap"
@@ -49,6 +50,15 @@ func main() {
 		Username: config.Redis.Username,
 		Password: config.Redis.Password,
 	})
+
+	err := redisotel.InstrumentTracing(redisClient)
+	if err != nil {
+		panic("Failed to setup redis otel tracing")
+	}
+	err = redisotel.InstrumentMetrics(redisClient)
+	if err != nil {
+		panic("Failed to setup redis otel metric")
+	}
 
 	// Create & connect postgres instance
 	postgresDsn := fmt.Sprintf("postgresql://%s:%s@%s/%s?sslmode=disable",

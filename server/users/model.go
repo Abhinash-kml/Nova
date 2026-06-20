@@ -1,6 +1,7 @@
 package users
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -34,4 +35,14 @@ func New(id uuid.UUID, username, displayname, email, country, state, langtag, ti
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
+}
+
+func (u *User) Marshal() ([]byte, error) {
+	return json.Marshal(u)
+}
+
+func (User) Unmarshall(b []byte) (User, error) {
+	var t User
+	err := json.Unmarshal(b, &t)
+	return t, err
 }
