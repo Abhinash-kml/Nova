@@ -7,6 +7,8 @@ import (
 	"github.com/google/uuid"
 )
 
+const UserPrefix = "user:"
+
 type User struct {
 	Id          uuid.UUID `json:"id" redis:"id"`
 	Username    string    `json:"username" redis:"username"`
@@ -45,4 +47,13 @@ func (User) Unmarshall(b []byte) (User, error) {
 	var t User
 	err := json.Unmarshal(b, &t)
 	return t, err
+}
+
+func (c *User) MarshalBinary() ([]byte, error) {
+	return json.Marshal(c)
+}
+
+// UnmarshalBinary deserializes the Redis blob back into your struct
+func (c *User) UnmarshalBinary(data []byte) error {
+	return json.Unmarshal(data, c)
 }

@@ -70,11 +70,11 @@ func (s *LocalPostsService) GetById(ctx context.Context, id uuid.UUID) (Post, er
 	ctx, span := s.tracer.Start(ctx, "posts.service.getbyid")
 	defer span.End()
 
-	key := id.String()
+	key := PostPrefix + id.String()
 
 	// 1. Try cache
 	var post Post
-	err := s.cache.HGetAll(ctx, key).Scan(&post)
+	err := s.cache.Get(ctx, key).Scan(&post)
 	if err == nil && len(post.Title) != 0 {
 		return post, nil
 	}
@@ -93,20 +93,9 @@ func (s *LocalPostsService) GetById(ctx context.Context, id uuid.UUID) (Post, er
 	}
 
 	// 3. Populate cache asynchronously (safe version)
-	go func(u Post, key string) {
+	go func(p Post, key string) {
 		bgCtx := context.WithoutCancel(ctx)
-
-		_, err := s.cache.HSet(bgCtx, key, map[string]any{
-			"id":         u.Id.String(),
-			"title":      u.Title,
-			"body":       u.Body,
-			"author_id":  u.AuthorId,
-			"likes":      u.Likes,
-			"comments":   u.Comments,
-			"created_at": u.CreatedAt,
-			"updated_at": u.UpdatedAt,
-		}).Result()
-
+		_, err := s.cache.Set(bgCtx, key, &p, 0).Result()
 		if err != nil {
 			s.logger.Error("failed to populate cache", zap.Error(err))
 		}
@@ -137,7 +126,8 @@ func (s *LocalPostsService) Update(ctx context.Context, dto UpdateDTO) error {
 	// Invalidate old record from cache, next get call with repopulate it
 	go func() {
 		bgCtx := context.WithoutCancel(ctx)
-		err := s.cache.Del(bgCtx, dto.Id).Err()
+		key := PostPrefix + dto.Id
+		err := s.cache.Del(bgCtx, key).Err()
 		if err != nil {
 			s.logger.Error("Failed to delete post from cache", zap.Error(err))
 		}
@@ -161,7 +151,8 @@ func (s *LocalPostsService) Replace(ctx context.Context, dto ReplaceDTO) error {
 	// Invalidate old record from cache, next get call with repopulate it
 	go func() {
 		bgCtx := context.WithoutCancel(ctx)
-		err := s.cache.Del(bgCtx, dto.Id).Err()
+		key := PostPrefix + dto.Id
+		err := s.cache.Del(bgCtx, key).Err()
 		if err != nil {
 			s.logger.Error("Failed to delete post from cache", zap.Error(err))
 		}
@@ -185,7 +176,8 @@ func (s *LocalPostsService) Delete(ctx context.Context, dto DeleteDTO) error {
 	// Delete from cache
 	go func() {
 		bgCtx := context.WithoutCancel(ctx)
-		err := s.cache.Del(bgCtx, dto.Id).Err()
+		key := PostPrefix + dto.Id
+		err := s.cache.Del(bgCtx, key).Err()
 		if err != nil {
 			s.logger.Error("Failed to delete post from cache", zap.Error(err))
 		}

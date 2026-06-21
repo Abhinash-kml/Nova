@@ -68,11 +68,11 @@ func (s *LocalCommentsService) GetById(ctx context.Context, id uuid.UUID) (Comme
 	ctx, span := s.tracer.Start(ctx, "comments.service.getbyid")
 	defer span.End()
 
-	key := id.String()
+	key := CommentPrefix + id.String()
 
 	// 1. Try cache
 	var comment Comment
-	err := s.cache.HGetAll(ctx, key).Scan(&comment)
+	err := s.cache.Get(ctx, key).Scan(&comment)
 	if err == nil && len(comment.Id.String()) != 0 {
 		return comment, nil
 	}
@@ -93,13 +93,7 @@ func (s *LocalCommentsService) GetById(ctx context.Context, id uuid.UUID) (Comme
 	// 3. Populate cache asynchronously (safe version)
 	go func(c Comment, key string) {
 		bgCtx := context.WithoutCancel(ctx)
-
-		_, err := s.cache.HSet(bgCtx, key, map[string]any{
-			"id":        c.Id.String(),
-			"postid":    c.PostId.String(),
-			"author_id": c.AuthorId.String(),
-			"body":      c.Body,
-		}).Result()
+		_, err := s.cache.Set(bgCtx, key, &c, 0).Result()
 
 		if err != nil {
 			s.logger.Error("failed to populate cache", zap.Error(err))
@@ -124,7 +118,8 @@ func (s *LocalCommentsService) Update(ctx context.Context, dto UpdateDTO) error 
 	// Invalidate old record from cache, next get call with repopulate it
 	go func() {
 		bgCtx := context.WithoutCancel(ctx)
-		err := s.cache.Del(bgCtx, dto.Id).Err()
+		key := CommentPrefix + dto.Id
+		err := s.cache.Del(bgCtx, key).Err()
 		if err != nil {
 			s.logger.Error("Failed to delete comment from cache", zap.Error(err))
 		}
@@ -148,7 +143,8 @@ func (s *LocalCommentsService) Replace(ctx context.Context, dto ReplaceDTO) erro
 	// Invalidate old record from cache, next get call with repopulate it
 	go func() {
 		bgCtx := context.WithoutCancel(ctx)
-		err := s.cache.Del(bgCtx, dto.Id).Err()
+		key := CommentPrefix + dto.Id
+		err := s.cache.Del(bgCtx, key).Err()
 		if err != nil {
 			s.logger.Error("Failed to delete comment from cache", zap.Error(err))
 		}
@@ -172,7 +168,8 @@ func (s *LocalCommentsService) Delete(ctx context.Context, dto DeleteDTO) error 
 	// Delete from cache
 	go func() {
 		bgCtx := context.WithoutCancel(ctx)
-		err := s.cache.Del(bgCtx, dto.Id).Err()
+		key := CommentPrefix + dto.Id
+		err := s.cache.Del(bgCtx, key).Err()
 		if err != nil {
 			s.logger.Error("Failed to delete comment from cache", zap.Error(err))
 		}

@@ -7,6 +7,8 @@ import (
 	"github.com/google/uuid"
 )
 
+const CommentPrefix = "comment:"
+
 type Comment struct {
 	Id        uuid.UUID `json:"id" redis:"id"`
 	PostId    uuid.UUID `json:"post_id" redis:"post_id"`
@@ -33,4 +35,12 @@ func (Comment) Unmarshall(b []byte) (Comment, error) {
 	var t Comment
 	err := json.Unmarshal(b, &t)
 	return t, err
+}
+
+func (c *Comment) MarshalBinary() ([]byte, error) {
+	return json.Marshal(c)
+}
+
+func (c *Comment) UnmarshalBinary(data []byte) error {
+	return json.Unmarshal(data, c)
 }

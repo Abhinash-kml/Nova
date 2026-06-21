@@ -69,11 +69,11 @@ func (s *LocalUsersService) GetById(ctx context.Context, id uuid.UUID) (User, er
 	ctx, span := s.tracer.Start(ctx, "users.service.getbyid")
 	defer span.End()
 
-	key := id.String()
+	key := UserPrefix + id.String()
 
 	// 1. Try cache
 	var user User
-	err := s.cache.HGetAll(ctx, key).Scan(&user)
+	err := s.cache.Get(ctx, key).Scan(&user)
 	if err == nil && len(user.Username) != 0 {
 		return user, nil
 	}
@@ -91,22 +91,10 @@ func (s *LocalUsersService) GetById(ctx context.Context, id uuid.UUID) (User, er
 		return User{}, common.ErrResourceNotFound
 	}
 
-	// 3. Populate cache asynchronously (safe version)
+	// 3. Populate cache asynchronously
 	go func(u User, key string) {
 		bgCtx := context.WithoutCancel(ctx)
-
-		_, err := s.cache.HSet(bgCtx, key, map[string]any{
-			"id":           u.Id.String(),
-			"username":     u.Username,
-			"display_name": u.DisplayName,
-			"email":        u.Email,
-			"country":      u.Country,
-			"state":        u.State,
-			"avatar_url":   u.AvatarURL,
-			"lang_tag":     u.LangTag,
-			"timezone":     u.Timezone,
-		}).Result()
-
+		_, err := s.cache.Set(bgCtx, key, &u, 0).Result()
 		if err != nil {
 			s.logger.Error("failed to populate cache", zap.Error(err))
 		}
@@ -140,7 +128,8 @@ func (s *LocalUsersService) Update(ctx context.Context, dto UpdateDTO) error {
 	// Invalidate old record from cache, next get call with repopulate it
 	go func() {
 		bgCtx := context.WithoutCancel(ctx)
-		err := s.cache.Del(bgCtx, dto.Id).Err()
+		key := UserPrefix + dto.Id
+		err := s.cache.Del(bgCtx, key).Err()
 		if err != nil {
 			s.logger.Error("Failed to delete user from cache", zap.Error(err))
 		}
@@ -164,7 +153,8 @@ func (s *LocalUsersService) Replace(ctx context.Context, dto ReplaceDTO) error {
 	// Invalidate old record from cache, next get call with repopulate it
 	go func() {
 		bgCtx := context.WithoutCancel(ctx)
-		err := s.cache.Del(bgCtx, dto.Id).Err()
+		key := UserPrefix + dto.Id
+		err := s.cache.Del(bgCtx, key).Err()
 		if err != nil {
 			s.logger.Error("Failed to delete user from cache", zap.Error(err))
 		}
@@ -188,7 +178,8 @@ func (s *LocalUsersService) Delete(ctx context.Context, dto DeleteDTO) error {
 	// Delete from cache
 	go func() {
 		bgCtx := context.WithoutCancel(ctx)
-		err := s.cache.Del(bgCtx, dto.Id).Err()
+		key := UserPrefix + dto.Id
+		err := s.cache.Del(bgCtx, key).Err()
 		if err != nil {
 			s.logger.Error("Failed to delete user from cache", zap.Error(err))
 		}
