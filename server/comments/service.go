@@ -3,7 +3,10 @@ package comments
 import (
 	"context"
 
+	"github.com/abhinash-kml/nova/server/common"
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
@@ -28,11 +31,13 @@ type LocalCommentsService struct {
 	repo   CommentsRepository
 	logger *zap.Logger
 	tracer trace.Tracer
+	cache  *redis.Client
 }
 
-func NewLocalCommentsService(repository CommentsRepository, l *zap.Logger, t trace.Tracer) *LocalCommentsService {
+func NewLocalCommentsService(repository CommentsRepository, r *redis.Client, l *zap.Logger, t trace.Tracer) *LocalCommentsService {
 	return &LocalCommentsService{
 		repo:   repository,
+		cache:  r,
 		logger: l,
 		tracer: t,
 	}
@@ -63,28 +68,117 @@ func (s *LocalCommentsService) GetById(ctx context.Context, id uuid.UUID) (Comme
 	ctx, span := s.tracer.Start(ctx, "comments.service.getbyid")
 	defer span.End()
 
-	return s.repo.GetById(ctx, id)
+	key := id.String()
+
+	// 1. Try cache
+	var comment Comment
+	err := s.cache.HGetAll(ctx, key).Scan(&comment)
+	if err == nil && len(comment.Id.String()) != 0 {
+		return comment, nil
+	}
+
+	// If Redis failed for infra reason, log but continue
+	if err != nil && err != redis.Nil {
+		s.logger.Warn("cache error", zap.Error(err))
+	}
+
+	// 2. Fallback to repo
+	comment, err = s.repo.GetById(ctx, id)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return Comment{}, common.ErrResourceNotFound
+	}
+
+	// 3. Populate cache asynchronously (safe version)
+	go func(c Comment, key string) {
+		bgCtx := context.WithoutCancel(ctx)
+
+		_, err := s.cache.HSet(bgCtx, key, map[string]any{
+			"id":        c.Id.String(),
+			"postid":    c.PostId.String(),
+			"author_id": c.AuthorId.String(),
+			"body":      c.Body,
+		}).Result()
+
+		if err != nil {
+			s.logger.Error("failed to populate cache", zap.Error(err))
+		}
+	}(comment, key)
+
+	return comment, nil
 }
 
 func (s *LocalCommentsService) Update(ctx context.Context, dto UpdateDTO) error {
 	ctx, span := s.tracer.Start(ctx, "comments.service.update")
 	defer span.End()
 
-	return s.repo.Update(ctx, dto)
+	// Update repository first
+	err := s.repo.Update(ctx, dto)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return err
+	}
+
+	// Invalidate old record from cache, next get call with repopulate it
+	go func() {
+		bgCtx := context.WithoutCancel(ctx)
+		err := s.cache.Del(bgCtx, dto.Id).Err()
+		if err != nil {
+			s.logger.Error("Failed to delete comment from cache", zap.Error(err))
+		}
+	}()
+
+	return nil
 }
 
 func (s *LocalCommentsService) Replace(ctx context.Context, dto ReplaceDTO) error {
 	ctx, span := s.tracer.Start(ctx, "comments.service.replace")
 	defer span.End()
 
-	return s.repo.Replace(ctx, dto)
+	// Update repository first
+	err := s.repo.Replace(ctx, dto)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return err
+	}
+
+	// Invalidate old record from cache, next get call with repopulate it
+	go func() {
+		bgCtx := context.WithoutCancel(ctx)
+		err := s.cache.Del(bgCtx, dto.Id).Err()
+		if err != nil {
+			s.logger.Error("Failed to delete comment from cache", zap.Error(err))
+		}
+	}()
+
+	return nil
 }
 
 func (s *LocalCommentsService) Delete(ctx context.Context, dto DeleteDTO) error {
 	ctx, span := s.tracer.Start(ctx, "comments.service.delete")
 	defer span.End()
 
-	return s.repo.Delete(ctx, dto)
+	// Delete in repo
+	err := s.repo.Delete(ctx, dto)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return err
+	}
+
+	// Delete from cache
+	go func() {
+		bgCtx := context.WithoutCancel(ctx)
+		err := s.cache.Del(bgCtx, dto.Id).Err()
+		if err != nil {
+			s.logger.Error("Failed to delete comment from cache", zap.Error(err))
+		}
+	}()
+
+	return nil
 }
 
 func (s *LocalCommentsService) BulkAdd(ctx context.Context, dto BulkCreateDTO) error {

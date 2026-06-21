@@ -1,6 +1,7 @@
 package comments
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,4 +23,14 @@ func New(id, postid, authorid uuid.UUID, body string) Comment {
 		AuthorId: authorid,
 		Body:     body,
 	}
+}
+
+func (p *Comment) Marshal() ([]byte, error) {
+	return json.Marshal(p)
+}
+
+func (Comment) Unmarshall(b []byte) (Comment, error) {
+	var t Comment
+	err := json.Unmarshal(b, &t)
+	return t, err
 }

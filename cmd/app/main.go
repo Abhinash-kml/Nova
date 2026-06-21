@@ -160,7 +160,7 @@ func main() {
 	commentsTracer := otel.Tracer("comments-tracer")
 	commentsRepository := comments.NewInMemoryCommentsRepository(logger, commentsTracer)
 	commentsRepository.Seed()
-	commentsService := comments.NewLocalCommentsService(commentsRepository, logger, commentsTracer)
+	commentsService := comments.NewLocalCommentsService(commentsRepository, redisClient, logger, commentsTracer)
 	commentsController := comments.NewController(commentsService, logger, commentsTracer)
 	comments.SetupRoutes(globalRouter, commentsController)
 

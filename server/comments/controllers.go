@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
@@ -65,6 +66,8 @@ func (c *Controller) Get(ctx *gin.Context) {
 		return
 	}
 
+	span.SetAttributes(attribute.String("commentid", dto.Id))
+
 	parsedUuid, _ := uuid.Parse(dto.Id)
 
 	comment, err := c.service.GetById(sctx, parsedUuid)
@@ -115,6 +118,8 @@ func (c *Controller) Modify(ctx *gin.Context) {
 		return
 	}
 
+	span.SetAttributes(attribute.String("commentid", dto.Id))
+
 	if err := ctx.ShouldBindWith(&dto.Body, binding.JSON); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -146,12 +151,16 @@ func (c *Controller) Delete(ctx *gin.Context) {
 		return
 	}
 
+	span.SetAttributes(attribute.String("commentid", dto.Id))
+
 	if err := ctx.ShouldBindQuery(&dto.DeleteOptions); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		utils.SendProblemDetails(ctx, err)
 		return
 	}
+
+	span.SetAttributes(attribute.String("type", dto.Type))
 
 	err := c.service.Delete(sctx, dto)
 	if err != nil {
@@ -176,6 +185,8 @@ func (c *Controller) Replace(ctx *gin.Context) {
 		utils.SendProblemDetails(ctx, err)
 		return
 	}
+
+	span.SetAttributes(attribute.String("commentid", dto.Id))
 
 	if err := ctx.ShouldBindWith(&dto.Body, binding.JSON); err != nil {
 		span.RecordError(err)
