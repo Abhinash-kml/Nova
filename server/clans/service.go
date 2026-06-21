@@ -3,7 +3,10 @@ package clans
 import (
 	"context"
 
+	"github.com/abhinash-kml/nova/server/common"
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
@@ -27,11 +30,13 @@ type LocalClansService struct {
 	repo   ClansRepository
 	logger *zap.Logger
 	tracer trace.Tracer
+	cache  *redis.Client
 }
 
-func NewLocalClansService(repo ClansRepository, l *zap.Logger, t trace.Tracer) *LocalClansService {
+func NewLocalClansService(repo ClansRepository, r *redis.Client, l *zap.Logger, t trace.Tracer) *LocalClansService {
 	return &LocalClansService{
 		repo:   repo,
+		cache:  r,
 		logger: l,
 		tracer: t,
 	}
@@ -41,12 +46,47 @@ func (s *LocalClansService) GetById(ctx context.Context, id uuid.UUID) (Clan, er
 	ctx, span := s.tracer.Start(ctx, "clans.service.getbyid")
 	defer span.End()
 
-	return s.repo.GetById(ctx, id)
+	key := ClanPrefix + id.String()
+
+	// 1. Try cache
+	var clan Clan
+	err := s.cache.Get(ctx, key).Scan(&clan)
+	if err == nil && len(clan.Name) != 0 {
+		return clan, nil
+	}
+
+	// If Redis failed for infra reason, log but continue
+	if err != nil && err != redis.Nil {
+		s.logger.Warn("cache error", zap.Error(err))
+	}
+
+	// 2. Fallback to repo
+	clan, err = s.repo.GetById(ctx, id)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return Clan{}, common.ErrResourceNotFound
+	}
+
+	// 3. Populate cache asynchronously (safe version)
+	go func(c Clan, key string) {
+		bgCtx := context.WithoutCancel(ctx)
+
+		_, err := s.cache.Set(bgCtx, key, &c, 0).Result()
+
+		if err != nil {
+			s.logger.Error("failed to populate cache", zap.Error(err))
+		}
+	}(clan, key)
+
+	return clan, nil
 }
 
 func (s *LocalClansService) GetByName(ctx context.Context, name string) (Clan, error) {
 	ctx, span := s.tracer.Start(ctx, "clans.service.getbyname")
 	defer span.End()
+
+	// Caching logic
 
 	return s.repo.GetByName(ctx, name)
 }
@@ -69,14 +109,50 @@ func (s *LocalClansService) Delete(ctx context.Context, dto DeleteDTO) error {
 	ctx, span := s.tracer.Start(ctx, "clans.service.delete")
 	defer span.End()
 
-	return s.repo.Delete(ctx, dto)
+	// Delete in repo
+	err := s.repo.Delete(ctx, dto)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return err
+	}
+
+	// Delete from cache
+	go func() {
+		bgCtx := context.WithoutCancel(ctx)
+		key := ClanPrefix + dto.Id
+		err := s.cache.Del(bgCtx, key).Err()
+		if err != nil {
+			s.logger.Error("Failed to delete clan from cache", zap.Error(err))
+		}
+	}()
+
+	return nil
 }
 
 func (s *LocalClansService) Update(ctx context.Context, dto UpdateDTO) error {
 	ctx, span := s.tracer.Start(ctx, "clans.service.update")
 	defer span.End()
 
-	return s.repo.Update(ctx, dto)
+	// Update repository first
+	err := s.repo.Update(ctx, dto)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return err
+	}
+
+	// Invalidate old record from cache, next get call with repopulate it
+	go func() {
+		bgCtx := context.WithoutCancel(ctx)
+		key := ClanPrefix + dto.Id
+		err := s.cache.Del(bgCtx, key).Err()
+		if err != nil {
+			s.logger.Error("Failed to delete clan from cache", zap.Error(err))
+		}
+	}()
+
+	return nil
 }
 
 func (s *LocalClansService) BulkAdd(ctx context.Context, dto BulkCreateDTO) error {

@@ -168,7 +168,7 @@ func main() {
 	clansTracer := otel.Tracer("clans-tracer")
 	clansRepository := clans.NewInMemoryClanRepository(logger, clansTracer)
 	clansRepository.Seed()
-	clansService := clans.NewLocalClansService(clansRepository, logger, clansTracer)
+	clansService := clans.NewLocalClansService(clansRepository, redisClient, logger, clansTracer)
 	clansController := clans.NewController(clansService, logger, clansTracer)
 	clans.SetupRoutes(globalRouter, clansController)
 
