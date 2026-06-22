@@ -1,13 +1,11 @@
 package users
 
-import "github.com/google/uuid"
-
 type UserId struct {
-	Id string `uri:"id" binding:"required,uuid"`
+	Id string `uri:"id" json:"id" binding:"required,uuid"`
 }
 
 type DeleteOptions struct {
-	Type string `form:"type" binding:"required,oneof=soft hard"`
+	Type string `form:"type" json:"type" binding:"required,oneof=soft hard"`
 }
 
 type GetDTO struct {
@@ -73,5 +71,5 @@ type BulkModifyDTO struct {
 }
 
 type BulkDeleteDTO struct {
-	Users []uuid.UUID `json:"users" binding:"required"`
+	Users []DeleteDTO `json:"users" binding:"required"`
 }

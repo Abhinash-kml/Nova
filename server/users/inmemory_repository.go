@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"slices"
 	"sync"
@@ -56,7 +57,7 @@ func (r *InMemoryUsersRepository) Seed() error {
 	return nil
 }
 
-func (r *InMemoryUsersRepository) Add(ctx context.Context, user CreateDTO) error {
+func (r *InMemoryUsersRepository) Add(ctx context.Context, user CreateDTO) (User, error) {
 	_, span := r.tracer.Start(ctx, "users.repository.add")
 	defer span.End()
 
@@ -64,8 +65,7 @@ func (r *InMemoryUsersRepository) Add(ctx context.Context, user CreateDTO) error
 	defer r.mu.Unlock()
 
 	now := time.Now()
-
-	r.users = append(r.users, User{
+	newUser := User{
 		Id:         uuid.New(),
 		Username:   user.DisplayName,
 		Email:      user.Email,
@@ -77,9 +77,10 @@ func (r *InMemoryUsersRepository) Add(ctx context.Context, user CreateDTO) error
 		CreatedAt:  now,
 		UpdatedAt:  now,
 		VerifiedAt: now,
-	})
+	}
+	r.users = append(r.users, newUser)
 
-	return nil
+	return newUser, nil
 }
 
 func (r *InMemoryUsersRepository) GetAll(ctx context.Context, cursor, count int) ([]User, error) {
@@ -148,21 +149,21 @@ func (r *InMemoryUsersRepository) GetByName(ctx context.Context, name string) (U
 }
 
 // TODO: Implement this
-func (r *InMemoryUsersRepository) Update(ctx context.Context, dto UpdateDTO) error {
+func (r *InMemoryUsersRepository) Update(ctx context.Context, dto UpdateDTO) (User, error) {
 	_, span := r.tracer.Start(ctx, "users.repository.update")
 	defer span.End()
 
-	return nil
+	return User{}, nil
 }
 
-func (r *InMemoryUsersRepository) Replace(ctx context.Context, dto ReplaceDTO) error {
+func (r *InMemoryUsersRepository) Replace(ctx context.Context, dto ReplaceDTO) (User, error) {
 	_, span := r.tracer.Start(ctx, "users.repository.replace")
 	defer span.End()
 
-	return nil
+	return User{}, nil
 }
 
-func (r *InMemoryUsersRepository) Delete(ctx context.Context, dto DeleteDTO) error {
+func (r *InMemoryUsersRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
 	_, span := r.tracer.Start(ctx, "users.repository.delete")
 	defer span.End()
 
@@ -181,51 +182,83 @@ func (r *InMemoryUsersRepository) Delete(ctx context.Context, dto DeleteDTO) err
 
 	newLen := len(r.users)
 	if oldLen != newLen {
-		return nil
+		return parsedId, nil
 	}
 
-	return common.ErrResourceCannotBeDeleted
+	return uuid.Nil, common.ErrResourceCannotBeDeleted
 }
 
-func (r *InMemoryUsersRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) error {
+func (r *InMemoryUsersRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {
 	_, span := r.tracer.Start(ctx, "users.repository.bulkadd")
 	defer span.End()
 
+	results := make([]common.BulkOpResult, 0, len(dto.Users))
+
 	for index := range dto.Users {
-		err := r.Add(ctx, dto.Users[index])
+		var result common.BulkOpResult
+		user, err := r.Add(ctx, dto.Users[index])
 		if err != nil {
-			return err
+			result.Id = uuid.Nil
+			result.Success = false
+			result.Status = 500
+			result.Message = err.Error()
 		}
+		result.Id = user.Id
+		result.Success = true
+		result.Status = 200
+		result.Message = "created"
+		results = append(results, result)
 	}
 
-	return nil
+	return results, nil
 }
 
-func (r *InMemoryUsersRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) error {
+func (r *InMemoryUsersRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
 	_, span := r.tracer.Start(ctx, "users.repository.bulkmodify")
 	defer span.End()
 
+	results := make([]common.BulkOpResult, 0, len(dto.Updates))
+
 	for index := range dto.Updates {
-		err := r.Update(ctx, dto.Updates[index])
+		var result common.BulkOpResult
+		updated, err := r.Update(ctx, dto.Updates[index])
 		if err != nil {
-			return err
+			result.Id = uuid.Nil
+			result.Success = false
+			result.Status = http.StatusInternalServerError
+			result.Message = err.Error()
 		}
+		result.Id = updated.Id
+		result.Success = true
+		result.Status = http.StatusNoContent
+		result.Message = "modified"
+		results = append(results, result)
 	}
 
-	return nil
+	return results, nil
 }
 
-func (r *InMemoryUsersRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) error {
+func (r *InMemoryUsersRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
 	_, span := r.tracer.Start(ctx, "users.repository.bulkdelete")
 	defer span.End()
 
+	results := make([]common.BulkOpResult, 0, len(dto.Users))
+
 	for index := range dto.Users {
-		id := dto.Users[index].String()
-		err := r.Delete(ctx, DeleteDTO{UserId: UserId{Id: id}})
+		var result common.BulkOpResult
+		deletedId, err := r.Delete(ctx, dto.Users[index])
 		if err != nil {
-			return err
+			result.Id = uuid.Nil
+			result.Success = false
+			result.Status = http.StatusInternalServerError
+			result.Message = err.Error()
 		}
+		result.Id = deletedId
+		result.Success = true
+		result.Status = http.StatusNoContent
+		result.Message = "deleted"
+		results = append(results, result)
 	}
 
-	return nil
+	return results, nil
 }

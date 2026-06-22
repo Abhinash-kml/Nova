@@ -3,6 +3,7 @@ package users
 import (
 	"net/http"
 
+	"github.com/abhinash-kml/nova/server/common"
 	"github.com/abhinash-kml/nova/server/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -100,7 +101,7 @@ func (c *Controller) Create(ctx *gin.Context) {
 		return
 	}
 
-	err := c.service.Add(sctx, dto)
+	user, err := c.service.Add(sctx, dto)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -108,7 +109,7 @@ func (c *Controller) Create(ctx *gin.Context) {
 		return
 	}
 
-	ctx.Status(http.StatusCreated)
+	ctx.JSON(http.StatusCreated, user)
 }
 
 func (c *Controller) Modify(ctx *gin.Context) {
@@ -133,7 +134,7 @@ func (c *Controller) Modify(ctx *gin.Context) {
 		return
 	}
 
-	err := c.service.Update(sctx, dto)
+	modifiedUser, err := c.service.Update(sctx, dto)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -141,7 +142,7 @@ func (c *Controller) Modify(ctx *gin.Context) {
 		return
 	}
 
-	ctx.Status(http.StatusNoContent)
+	ctx.JSON(http.StatusOK, modifiedUser)
 }
 
 func (c *Controller) Delete(ctx *gin.Context) {
@@ -168,7 +169,7 @@ func (c *Controller) Delete(ctx *gin.Context) {
 
 	span.SetAttributes(attribute.String("type", dto.Type))
 
-	err := c.service.Delete(sctx, dto)
+	_, err := c.service.Delete(sctx, dto)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -201,7 +202,7 @@ func (c *Controller) Replace(ctx *gin.Context) {
 		return
 	}
 
-	err := c.service.Replace(sctx, dto)
+	replacedUser, err := c.service.Replace(sctx, dto)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -209,7 +210,7 @@ func (c *Controller) Replace(ctx *gin.Context) {
 		return
 	}
 
-	ctx.Status(http.StatusNoContent)
+	ctx.JSON(http.StatusOK, replacedUser)
 }
 
 func (c *Controller) BulkAdd(ctx *gin.Context) {
@@ -225,7 +226,7 @@ func (c *Controller) BulkAdd(ctx *gin.Context) {
 		return
 	}
 
-	err := c.service.BulkAdd(sctx, dto)
+	results, err := c.service.BulkAdd(sctx, dto)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -233,7 +234,31 @@ func (c *Controller) BulkAdd(ctx *gin.Context) {
 		return
 	}
 
-	ctx.Status(http.StatusCreated)
+	var errCount int
+	var addResults []common.AddResult
+	for index := range results {
+		if !results[index].Success {
+			errCount++
+		}
+
+		addResults = append(addResults, common.AddResult{
+			Id:      results[index].Id,
+			Status:  results[index].Status,
+			Message: results[index].Message,
+		})
+	}
+
+	response := common.BulkResponse{
+		Success: errCount == 0,
+		Summary: common.BulkSummary{
+			TotalProcessed: len(results),
+			TotalSuccess:   len(results) - errCount,
+			TotalErrors:    errCount,
+		},
+		Added: addResults,
+	}
+
+	ctx.JSON(http.StatusOK, response)
 }
 
 func (c *Controller) BulkModify(ctx *gin.Context) {
@@ -249,7 +274,7 @@ func (c *Controller) BulkModify(ctx *gin.Context) {
 		return
 	}
 
-	err := c.service.BulkModify(sctx, dto)
+	results, err := c.service.BulkModify(sctx, dto)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -257,7 +282,31 @@ func (c *Controller) BulkModify(ctx *gin.Context) {
 		return
 	}
 
-	ctx.Status(http.StatusNoContent)
+	var errCount int
+	var replaceResults []common.ReplaceResult
+	for index := range results {
+		if !results[index].Success {
+			errCount++
+		}
+
+		replaceResults = append(replaceResults, common.ReplaceResult{
+			Id:      results[index].Id,
+			Status:  results[index].Status,
+			Message: results[index].Message,
+		})
+	}
+
+	response := common.BulkResponse{
+		Success: errCount == 0,
+		Summary: common.BulkSummary{
+			TotalProcessed: len(results),
+			TotalSuccess:   len(results) - errCount,
+			TotalErrors:    errCount,
+		},
+		Deleted: replaceResults,
+	}
+
+	ctx.JSON(http.StatusOK, response)
 }
 
 func (c *Controller) BulkDelete(ctx *gin.Context) {
@@ -273,7 +322,7 @@ func (c *Controller) BulkDelete(ctx *gin.Context) {
 		return
 	}
 
-	err := c.service.BulkDelete(sctx, dto)
+	results, err := c.service.BulkDelete(sctx, dto)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -281,11 +330,37 @@ func (c *Controller) BulkDelete(ctx *gin.Context) {
 		return
 	}
 
-	ctx.Status(http.StatusNoContent)
+	var errCount int
+	var deleteResults []common.AddResult
+	for index := range results {
+		if !results[index].Success {
+			errCount++
+		}
+
+		deleteResults = append(deleteResults, common.DeleteResult{
+			Id:      results[index].Id,
+			Status:  results[index].Status,
+			Message: results[index].Message,
+		})
+	}
+
+	response := common.BulkResponse{
+		Success: errCount == 0,
+		Summary: common.BulkSummary{
+			TotalProcessed: len(results),
+			TotalSuccess:   len(results) - errCount,
+			TotalErrors:    errCount,
+		},
+		Deleted: deleteResults,
+	}
+
+	ctx.JSON(http.StatusOK, response)
 }
 
 func (c *Controller) Login(ctx *gin.Context) {
-
+	// 550e8400-e29b-41d4-a716-446655440001
+	// 550e8400-e29b-41d4-a716-446655440002
+	// 550e8400-e29b-41d4-a716-446655440003
 }
 
 func (c *Controller) Refresh(ctx *gin.Context) {

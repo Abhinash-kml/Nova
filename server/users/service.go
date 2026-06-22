@@ -13,19 +13,19 @@ import (
 
 type Service interface {
 	// General operations
-	Add(ctx context.Context, dto CreateDTO) error
+	Add(ctx context.Context, dto CreateDTO) (User, error)
 	GetAll(ctx context.Context, cursor int, limit int) ([]User, error)
 	GetAllByAttribute(ctx context.Context, attribute string) ([]User, error)
 	GetById(ctx context.Context, id uuid.UUID) (User, error)
 	GetByName(ctx context.Context, name string) (User, error)
-	Update(ctx context.Context, dto UpdateDTO) error
-	Replace(ctx context.Context, dto ReplaceDTO) error
-	Delete(ctx context.Context, dto DeleteDTO) error
+	Update(ctx context.Context, dto UpdateDTO) (User, error)
+	Replace(ctx context.Context, dto ReplaceDTO) (User, error)
+	Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error)
 
 	// Bulk operations
-	BulkAdd(ctx context.Context, dto BulkCreateDTO) error
-	BulkModify(ctx context.Context, dto BulkModifyDTO) error
-	BulkDelete(ctx context.Context, dto BulkDeleteDTO) error
+	BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error)
+	BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error)
+	BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error)
 }
 
 type LocalUsersService struct {
@@ -44,7 +44,7 @@ func NewLocalUsersService(repository UsersRepository, r *redis.Client, l *zap.Lo
 	}
 }
 
-func (s *LocalUsersService) Add(ctx context.Context, user CreateDTO) error {
+func (s *LocalUsersService) Add(ctx context.Context, user CreateDTO) (User, error) {
 	ctx, span := s.tracer.Start(ctx, "users.service.add")
 	defer span.End()
 
@@ -113,16 +113,16 @@ func (s *LocalUsersService) GetByName(ctx context.Context, name string) (User, e
 	return s.repo.GetByName(ctx, name)
 }
 
-func (s *LocalUsersService) Update(ctx context.Context, dto UpdateDTO) error {
+func (s *LocalUsersService) Update(ctx context.Context, dto UpdateDTO) (User, error) {
 	ctx, span := s.tracer.Start(ctx, "users.service.update")
 	defer span.End()
 
 	// Update repository first
-	err := s.repo.Update(ctx, dto)
+	user, err := s.repo.Update(ctx, dto)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return err
+		return User{}, err
 	}
 
 	// Invalidate old record from cache, next get call with repopulate it
@@ -135,19 +135,19 @@ func (s *LocalUsersService) Update(ctx context.Context, dto UpdateDTO) error {
 		}
 	}()
 
-	return nil
+	return user, nil
 }
 
-func (s *LocalUsersService) Replace(ctx context.Context, dto ReplaceDTO) error {
+func (s *LocalUsersService) Replace(ctx context.Context, dto ReplaceDTO) (User, error) {
 	ctx, span := s.tracer.Start(ctx, "users.service.replace")
 	defer span.End()
 
 	// Update repository first
-	err := s.repo.Replace(ctx, dto)
+	user, err := s.repo.Replace(ctx, dto)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return err
+		return User{}, err
 	}
 
 	// Invalidate old record from cache, next get call with repopulate it
@@ -160,19 +160,19 @@ func (s *LocalUsersService) Replace(ctx context.Context, dto ReplaceDTO) error {
 		}
 	}()
 
-	return nil
+	return user, nil
 }
 
-func (s *LocalUsersService) Delete(ctx context.Context, dto DeleteDTO) error {
+func (s *LocalUsersService) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
 	ctx, span := s.tracer.Start(ctx, "users.service.delete")
 	defer span.End()
 
 	// Delete in repo
-	err := s.repo.Delete(ctx, dto)
+	deletedId, err := s.repo.Delete(ctx, dto)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return err
+		return uuid.Nil, err
 	}
 
 	// Delete from cache
@@ -185,24 +185,24 @@ func (s *LocalUsersService) Delete(ctx context.Context, dto DeleteDTO) error {
 		}
 	}()
 
-	return nil
+	return deletedId, nil
 }
 
-func (s *LocalUsersService) BulkAdd(ctx context.Context, dto BulkCreateDTO) error {
+func (s *LocalUsersService) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {
 	ctx, span := s.tracer.Start(ctx, "users.service.bulkadd")
 	defer span.End()
 
 	return s.repo.BulkAdd(ctx, dto)
 }
 
-func (s *LocalUsersService) BulkModify(ctx context.Context, dto BulkModifyDTO) error {
+func (s *LocalUsersService) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
 	ctx, span := s.tracer.Start(ctx, "users.service.bulkmodify")
 	defer span.End()
 
 	return s.repo.BulkModify(ctx, dto)
 }
 
-func (s *LocalUsersService) BulkDelete(ctx context.Context, dto BulkDeleteDTO) error {
+func (s *LocalUsersService) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
 	ctx, span := s.tracer.Start(ctx, "users.service.bulkdelete")
 	defer span.End()
 
