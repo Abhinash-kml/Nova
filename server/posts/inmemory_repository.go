@@ -56,7 +56,7 @@ func (r *InMemoryPostsRepository) Seed() error {
 	return nil
 }
 
-func (r *InMemoryPostsRepository) Add(ctx context.Context, dto CreateDTO) error {
+func (r *InMemoryPostsRepository) Add(ctx context.Context, dto CreateDTO) (Post, error) {
 	_, span := r.tracer.Start(ctx, "posts.repository.add")
 	defer span.End()
 
@@ -64,8 +64,7 @@ func (r *InMemoryPostsRepository) Add(ctx context.Context, dto CreateDTO) error 
 	defer r.mu.Unlock()
 
 	now := time.Now()
-
-	r.posts = append(r.posts, Post{
+	post := Post{
 		Id:        uuid.New(),
 		Title:     dto.Title,
 		Body:      dto.Body,
@@ -74,9 +73,10 @@ func (r *InMemoryPostsRepository) Add(ctx context.Context, dto CreateDTO) error 
 		Comments:  0,
 		CreatedAt: now,
 		UpdatedAt: now,
-	})
+	}
+	r.posts = append(r.posts, post)
 
-	return nil
+	return post, nil
 }
 
 func (r *InMemoryPostsRepository) GetAll(ctx context.Context, cursor, count int) ([]Post, error) {
@@ -140,21 +140,22 @@ func (r *InMemoryPostsRepository) GetByName(ctx context.Context, name string) (P
 }
 
 // TODO: Implement this
-func (r *InMemoryPostsRepository) Update(ctx context.Context, dto UpdateDTO) error {
+func (r *InMemoryPostsRepository) Update(ctx context.Context, dto UpdateDTO) (Post, error) {
 	_, span := r.tracer.Start(ctx, "posts.repository.update")
 	defer span.End()
 
-	return nil
+	return Post{}, nil
 }
 
-func (r *InMemoryPostsRepository) Replace(ctx context.Context, dto ReplaceDTO) error {
+// TODO: Implement this
+func (r *InMemoryPostsRepository) Replace(ctx context.Context, dto ReplaceDTO) (Post, error) {
 	_, span := r.tracer.Start(ctx, "posts.repository.replace")
 	defer span.End()
 
-	return nil
+	return Post{}, nil
 }
 
-func (r *InMemoryPostsRepository) Delete(ctx context.Context, dto DeleteDTO) error {
+func (r *InMemoryPostsRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
 	_, span := r.tracer.Start(ctx, "posts.repository.delete")
 	defer span.End()
 
@@ -173,51 +174,84 @@ func (r *InMemoryPostsRepository) Delete(ctx context.Context, dto DeleteDTO) err
 
 	newLen := len(r.posts)
 	if oldLen != newLen {
-		return nil
+		return parsedId, nil
 	}
 
-	return common.ErrResourceCannotBeDeleted
+	return uuid.Nil, common.ErrResourceCannotBeDeleted
 }
 
-func (r *InMemoryPostsRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) error {
+func (r *InMemoryPostsRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {
 	_, span := r.tracer.Start(ctx, "posts.repository.bulkcreate")
 	defer span.End()
 
+	results := make([]common.BulkOpResult, 0, len(dto.Posts))
+
 	for index := range dto.Posts {
-		err := r.Add(ctx, dto.Posts[index])
+		var result common.BulkOpResult
+		post, err := r.Add(ctx, dto.Posts[index])
 		if err != nil {
-			return err
+			result.Id = uuid.Nil
+			result.Success = false
+			result.Status = 500
+			result.Message = err.Error()
 		}
+		result.Id = post.Id
+		result.Success = true
+		result.Status = 200
+		result.Message = "created"
+		results = append(results, result)
 	}
 
-	return nil
+	return results, nil
 }
 
-func (r *InMemoryPostsRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) error {
+func (r *InMemoryPostsRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
 	_, span := r.tracer.Start(ctx, "posts.repository.bulkmodify")
 	defer span.End()
 
+	results := make([]common.BulkOpResult, 0, len(dto.Updates))
+
 	for index := range dto.Updates {
-		err := r.Update(ctx, dto.Updates[index])
+		var result common.BulkOpResult
+		post, err := r.Update(ctx, dto.Updates[index])
 		if err != nil {
-			return err
+			result.Id = uuid.Nil
+			result.Success = false
+			result.Status = 500
+			result.Message = err.Error()
 		}
+		result.Id = post.Id
+		result.Success = true
+		result.Status = 200
+		result.Message = "modified"
+		results = append(results, result)
 	}
 
-	return nil
+	return results, nil
 }
 
-func (r *InMemoryPostsRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) error {
+func (r *InMemoryPostsRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
 	_, span := r.tracer.Start(ctx, "posts.repository.bulkdelete")
 	defer span.End()
 
+	results := make([]common.BulkOpResult, 0, len(dto.Posts))
+
 	for index := range dto.Posts {
+		var result common.BulkOpResult
 		id := dto.Posts[index].String()
-		err := r.Delete(ctx, DeleteDTO{PostId: PostId{Id: id}})
+		deletedId, err := r.Delete(ctx, DeleteDTO{PostId: PostId{Id: id}})
 		if err != nil {
-			return err
+			result.Id = uuid.Nil
+			result.Success = false
+			result.Status = 500
+			result.Message = err.Error()
 		}
+		result.Id = deletedId
+		result.Success = true
+		result.Status = 200
+		result.Message = "deleted"
+		results = append(results, result)
 	}
 
-	return nil
+	return results, nil
 }

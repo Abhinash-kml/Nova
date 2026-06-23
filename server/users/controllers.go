@@ -226,6 +226,8 @@ func (c *Controller) BulkAdd(ctx *gin.Context) {
 		return
 	}
 
+	span.SetAttributes(attribute.Int("count", len(dto.Users)))
+
 	results, err := c.service.BulkAdd(sctx, dto)
 	if err != nil {
 		span.RecordError(err)
@@ -273,6 +275,8 @@ func (c *Controller) BulkModify(ctx *gin.Context) {
 		utils.SendProblemDetails(ctx, err)
 		return
 	}
+
+	span.SetAttributes(attribute.Int("count", len(dto.Updates)))
 
 	results, err := c.service.BulkModify(sctx, dto)
 	if err != nil {
@@ -322,6 +326,8 @@ func (c *Controller) BulkDelete(ctx *gin.Context) {
 		return
 	}
 
+	span.SetAttributes(attribute.Int("count", len(dto.Users)))
+
 	results, err := c.service.BulkDelete(sctx, dto)
 	if err != nil {
 		span.RecordError(err)
@@ -331,7 +337,7 @@ func (c *Controller) BulkDelete(ctx *gin.Context) {
 	}
 
 	var errCount int
-	var deleteResults []common.AddResult
+	var deleteResults []common.DeleteResult
 	for index := range results {
 		if !results[index].Success {
 			errCount++

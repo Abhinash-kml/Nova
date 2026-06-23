@@ -13,19 +13,19 @@ import (
 
 type Service interface {
 	// General operations
-	Add(ctx context.Context, dto CreateDTO) error
+	Add(ctx context.Context, dto CreateDTO) (Post, error)
 	GetAll(ctx context.Context, cursor int, limit int) ([]Post, error)
 	GetAllByAttribute(ctx context.Context, attribute string) ([]Post, error)
 	GetById(ctx context.Context, id uuid.UUID) (Post, error)
 	GetByName(ctx context.Context, name string) (Post, error)
-	Update(ctx context.Context, dto UpdateDTO) error
-	Replace(ctx context.Context, dto ReplaceDTO) error
-	Delete(ctx context.Context, dto DeleteDTO) error
+	Update(ctx context.Context, dto UpdateDTO) (Post, error)
+	Replace(ctx context.Context, dto ReplaceDTO) (Post, error)
+	Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error)
 
 	// Bulk operations
-	BulkAdd(ctx context.Context, dto BulkCreateDTO) error
-	BulkModify(ctx context.Context, dto BulkModifyDTO) error
-	BulkDelete(ctx context.Context, dto BulkDeleteDTO) error
+	BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error)
+	BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error)
+	BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error)
 }
 
 type LocalPostsService struct {
@@ -44,7 +44,7 @@ func NewLocalPostsService(repository PostsRepository, r *redis.Client, l *zap.Lo
 	}
 }
 
-func (s *LocalPostsService) Add(ctx context.Context, dto CreateDTO) error {
+func (s *LocalPostsService) Add(ctx context.Context, dto CreateDTO) (Post, error) {
 	ctx, span := s.tracer.Start(ctx, "posts.service.add")
 	defer span.End()
 
@@ -111,16 +111,16 @@ func (s *LocalPostsService) GetByName(ctx context.Context, name string) (Post, e
 	return s.repo.GetByName(ctx, name)
 }
 
-func (s *LocalPostsService) Update(ctx context.Context, dto UpdateDTO) error {
+func (s *LocalPostsService) Update(ctx context.Context, dto UpdateDTO) (Post, error) {
 	ctx, span := s.tracer.Start(ctx, "posts.service.update")
 	defer span.End()
 
 	// Update repository first
-	err := s.repo.Update(ctx, dto)
+	post, err := s.repo.Update(ctx, dto)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return err
+		return Post{}, err
 	}
 
 	// Invalidate old record from cache, next get call with repopulate it
@@ -133,19 +133,19 @@ func (s *LocalPostsService) Update(ctx context.Context, dto UpdateDTO) error {
 		}
 	}()
 
-	return nil
+	return post, nil
 }
 
-func (s *LocalPostsService) Replace(ctx context.Context, dto ReplaceDTO) error {
+func (s *LocalPostsService) Replace(ctx context.Context, dto ReplaceDTO) (Post, error) {
 	ctx, span := s.tracer.Start(ctx, "posts.service.replace")
 	defer span.End()
 
 	// Update repository first
-	err := s.repo.Replace(ctx, dto)
+	post, err := s.repo.Replace(ctx, dto)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return err
+		return Post{}, err
 	}
 
 	// Invalidate old record from cache, next get call with repopulate it
@@ -158,19 +158,19 @@ func (s *LocalPostsService) Replace(ctx context.Context, dto ReplaceDTO) error {
 		}
 	}()
 
-	return nil
+	return post, nil
 }
 
-func (s *LocalPostsService) Delete(ctx context.Context, dto DeleteDTO) error {
+func (s *LocalPostsService) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
 	ctx, span := s.tracer.Start(ctx, "posts.service.delete")
 	defer span.End()
 
 	// Delete from repository first
-	err := s.repo.Delete(ctx, dto)
+	deletedId, err := s.repo.Delete(ctx, dto)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return err
+		return uuid.Nil, err
 	}
 
 	// Delete from cache
@@ -183,24 +183,24 @@ func (s *LocalPostsService) Delete(ctx context.Context, dto DeleteDTO) error {
 		}
 	}()
 
-	return nil
+	return deletedId, nil
 }
 
-func (s *LocalPostsService) BulkAdd(ctx context.Context, dto BulkCreateDTO) error {
+func (s *LocalPostsService) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {
 	ctx, span := s.tracer.Start(ctx, "posts.service.bulkadd")
 	defer span.End()
 
 	return s.repo.BulkAdd(ctx, dto)
 }
 
-func (s *LocalPostsService) BulkModify(ctx context.Context, dto BulkModifyDTO) error {
+func (s *LocalPostsService) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
 	ctx, span := s.tracer.Start(ctx, "posts.service.bulkmodify")
 	defer span.End()
 
 	return s.repo.BulkModify(ctx, dto)
 }
 
-func (s *LocalPostsService) BulkDelete(ctx context.Context, dto BulkDeleteDTO) error {
+func (s *LocalPostsService) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
 	ctx, span := s.tracer.Start(ctx, "posts.service.bulkdelete")
 	defer span.End()
 
