@@ -13,18 +13,18 @@ import (
 
 type Service interface {
 	// General operations
-	Add(ctx context.Context, dto CreateDTO) error
+	Add(ctx context.Context, dto CreateDTO) (Comment, error)
 	GetAll(ctx context.Context, cursor int, limit int) ([]Comment, error)
 	GetAllByAttribute(ctx context.Context, attribute string) ([]Comment, error)
 	GetById(ctx context.Context, id uuid.UUID) (Comment, error)
-	Update(ctx context.Context, dto UpdateDTO) error
-	Replace(ctx context.Context, dto ReplaceDTO) error
-	Delete(ctx context.Context, dto DeleteDTO) error
+	Update(ctx context.Context, dto UpdateDTO) (Comment, error)
+	Replace(ctx context.Context, dto ReplaceDTO) (Comment, error)
+	Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error)
 
 	// Bulk operations
-	BulkAdd(ctx context.Context, dto BulkCreateDTO) error
-	BulkModify(ctx context.Context, dto BulkModifyDTO) error
-	BulkDelete(ctx context.Context, dto BulkDeleteDTO) error
+	BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error)
+	BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error)
+	BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error)
 }
 
 type LocalCommentsService struct {
@@ -43,7 +43,7 @@ func NewLocalCommentsService(repository CommentsRepository, r *redis.Client, l *
 	}
 }
 
-func (s *LocalCommentsService) Add(ctx context.Context, dto CreateDTO) error {
+func (s *LocalCommentsService) Add(ctx context.Context, dto CreateDTO) (Comment, error) {
 	ctx, span := s.tracer.Start(ctx, "comments.service.add")
 	defer span.End()
 
@@ -103,16 +103,16 @@ func (s *LocalCommentsService) GetById(ctx context.Context, id uuid.UUID) (Comme
 	return comment, nil
 }
 
-func (s *LocalCommentsService) Update(ctx context.Context, dto UpdateDTO) error {
+func (s *LocalCommentsService) Update(ctx context.Context, dto UpdateDTO) (Comment, error) {
 	ctx, span := s.tracer.Start(ctx, "comments.service.update")
 	defer span.End()
 
 	// Update repository first
-	err := s.repo.Update(ctx, dto)
+	comment, err := s.repo.Update(ctx, dto)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return err
+		return Comment{}, err
 	}
 
 	// Invalidate old record from cache, next get call with repopulate it
@@ -125,19 +125,19 @@ func (s *LocalCommentsService) Update(ctx context.Context, dto UpdateDTO) error 
 		}
 	}()
 
-	return nil
+	return comment, nil
 }
 
-func (s *LocalCommentsService) Replace(ctx context.Context, dto ReplaceDTO) error {
+func (s *LocalCommentsService) Replace(ctx context.Context, dto ReplaceDTO) (Comment, error) {
 	ctx, span := s.tracer.Start(ctx, "comments.service.replace")
 	defer span.End()
 
 	// Update repository first
-	err := s.repo.Replace(ctx, dto)
+	comment, err := s.repo.Replace(ctx, dto)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return err
+		return Comment{}, err
 	}
 
 	// Invalidate old record from cache, next get call with repopulate it
@@ -150,19 +150,19 @@ func (s *LocalCommentsService) Replace(ctx context.Context, dto ReplaceDTO) erro
 		}
 	}()
 
-	return nil
+	return comment, nil
 }
 
-func (s *LocalCommentsService) Delete(ctx context.Context, dto DeleteDTO) error {
+func (s *LocalCommentsService) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
 	ctx, span := s.tracer.Start(ctx, "comments.service.delete")
 	defer span.End()
 
 	// Delete in repo
-	err := s.repo.Delete(ctx, dto)
+	deletedId, err := s.repo.Delete(ctx, dto)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return err
+		return uuid.Nil, err
 	}
 
 	// Delete from cache
@@ -175,24 +175,24 @@ func (s *LocalCommentsService) Delete(ctx context.Context, dto DeleteDTO) error 
 		}
 	}()
 
-	return nil
+	return deletedId, nil
 }
 
-func (s *LocalCommentsService) BulkAdd(ctx context.Context, dto BulkCreateDTO) error {
+func (s *LocalCommentsService) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {
 	ctx, span := s.tracer.Start(ctx, "comments.service.bulkadd")
 	defer span.End()
 
 	return s.repo.BulkAdd(ctx, dto)
 }
 
-func (s *LocalCommentsService) BulkModify(ctx context.Context, dto BulkModifyDTO) error {
+func (s *LocalCommentsService) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
 	ctx, span := s.tracer.Start(ctx, "comments.service.bulkmodify")
 	defer span.End()
 
 	return s.repo.BulkModify(ctx, dto)
 }
 
-func (s *LocalCommentsService) BulkDelete(ctx context.Context, dto BulkDeleteDTO) error {
+func (s *LocalCommentsService) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
 	ctx, span := s.tracer.Start(ctx, "comments.service.bulkdelete")
 	defer span.End()
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"slices"
 	"sync"
@@ -57,7 +58,7 @@ func (r *InMemoryCommentsRepository) Seed() error {
 	return nil
 }
 
-func (r *InMemoryCommentsRepository) Add(ctx context.Context, dto CreateDTO) error {
+func (r *InMemoryCommentsRepository) Add(ctx context.Context, dto CreateDTO) (Comment, error) {
 	_, span := r.tracer.Start(ctx, "comments.repository.add")
 	defer span.End()
 
@@ -65,17 +66,17 @@ func (r *InMemoryCommentsRepository) Add(ctx context.Context, dto CreateDTO) err
 	defer r.mu.Unlock()
 
 	now := time.Now()
-
-	r.comments = append(r.comments, Comment{
+	comment := Comment{
 		Id:        uuid.New(),
 		PostId:    dto.PostId,
 		AuthorId:  dto.AuthorId,
 		Body:      dto.Body,
 		CreatedAt: now,
 		UpdatedAt: now,
-	})
+	}
+	r.comments = append(r.comments, comment)
 
-	return nil
+	return comment, nil
 }
 
 func (r *InMemoryCommentsRepository) GetAll(ctx context.Context, cursor, count int) ([]Comment, error) {
@@ -123,21 +124,21 @@ func (r *InMemoryCommentsRepository) GetById(ctx context.Context, id uuid.UUID) 
 }
 
 // TODO: Implement this
-func (r *InMemoryCommentsRepository) Update(ctx context.Context, dto UpdateDTO) error {
+func (r *InMemoryCommentsRepository) Update(ctx context.Context, dto UpdateDTO) (Comment, error) {
 	_, span := r.tracer.Start(ctx, "comments.repository.update")
 	defer span.End()
 
-	return nil
+	return Comment{}, nil
 }
 
-func (r *InMemoryCommentsRepository) Replace(ctx context.Context, dto ReplaceDTO) error {
+func (r *InMemoryCommentsRepository) Replace(ctx context.Context, dto ReplaceDTO) (Comment, error) {
 	_, span := r.tracer.Start(ctx, "comments.repository.replace")
 	defer span.End()
 
-	return nil
+	return Comment{}, nil
 }
 
-func (r *InMemoryCommentsRepository) Delete(ctx context.Context, dto DeleteDTO) error {
+func (r *InMemoryCommentsRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
 	_, span := r.tracer.Start(ctx, "comments.repository.delete")
 	defer span.End()
 
@@ -156,51 +157,89 @@ func (r *InMemoryCommentsRepository) Delete(ctx context.Context, dto DeleteDTO) 
 
 	newLen := len(r.comments)
 	if oldLen != newLen {
-		return nil
+		return parsedId, nil
 	}
 
-	return common.ErrResourceCannotBeDeleted
+	return uuid.Nil, common.ErrResourceCannotBeDeleted
 }
 
-func (r *InMemoryCommentsRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) error {
+func (r *InMemoryCommentsRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {
 	_, span := r.tracer.Start(ctx, "comments.repository.bulkadd")
 	defer span.End()
 
+	results := make([]common.BulkOpResult, 0, len(dto.Comments))
+
 	for index := range dto.Comments {
-		err := r.Add(ctx, dto.Comments[index])
+		var result common.BulkOpResult
+		comment, err := r.Add(ctx, dto.Comments[index])
 		if err != nil {
-			return err
+			result.Id = uuid.Nil
+			result.Success = false
+			result.Status = 500
+			result.Message = err.Error()
 		}
+		result.Id = comment.Id
+		result.Success = true
+		result.Status = http.StatusOK
+		result.Message = "created"
+		results = append(results, result)
 	}
 
-	return nil
+	return results, nil
 }
 
-func (r *InMemoryCommentsRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) error {
+func (r *InMemoryCommentsRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
 	_, span := r.tracer.Start(ctx, "comments.repository.bulkmodify")
 	defer span.End()
 
+	results := make([]common.BulkOpResult, 0, len(dto.Updates))
+
 	for index := range dto.Updates {
-		err := r.Update(ctx, dto.Updates[index])
+		var result common.BulkOpResult
+		updated, err := r.Update(ctx, dto.Updates[index])
 		if err != nil {
-			return err
+			result.Id = uuid.Nil
+			result.Success = false
+			result.Status = http.StatusInternalServerError
+			result.Message = err.Error()
 		}
+		result.Id = updated.Id
+		result.Success = true
+		result.Status = http.StatusNoContent
+		result.Message = "modified"
+		results = append(results, result)
 	}
 
-	return nil
+	return results, nil
 }
 
-func (r *InMemoryCommentsRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) error {
+func (r *InMemoryCommentsRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
 	_, span := r.tracer.Start(ctx, "comments.repository.bulkdelete")
 	defer span.End()
 
+	results := make([]common.BulkOpResult, 0, len(dto.Comments))
+
 	for index := range dto.Comments {
+		var result common.BulkOpResult
 		id := dto.Comments[index].String()
-		err := r.Delete(ctx, DeleteDTO{CommentId: CommentId{Id: id}})
+		deletedId, err := r.Delete(ctx, DeleteDTO{
+			CommentId: CommentId{id},
+			DeleteOptions: DeleteOptions{
+				Type: "soft",
+			},
+		})
 		if err != nil {
-			return err
+			result.Id = uuid.Nil
+			result.Success = false
+			result.Status = http.StatusInternalServerError
+			result.Message = err.Error()
 		}
+		result.Id = deletedId
+		result.Success = true
+		result.Status = http.StatusNoContent
+		result.Message = "deleted"
+		results = append(results, result)
 	}
 
-	return nil
+	return results, nil
 }
