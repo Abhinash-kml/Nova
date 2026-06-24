@@ -13,17 +13,17 @@ import (
 
 type Service interface {
 	// General operations
-	Add(ctx context.Context, dto CreateDTO) error
+	Add(ctx context.Context, dto CreateDTO) (Clan, error)
 	GetById(ctx context.Context, id uuid.UUID) (Clan, error)
 	GetByName(ctx context.Context, name string) (Clan, error)
 	GetAll(ctx context.Context, cursor int, limit int) ([]Clan, error)
-	Update(ctx context.Context, dto UpdateDTO) error
-	Delete(ctx context.Context, dto DeleteDTO) error
+	Update(ctx context.Context, dto UpdateDTO) (Clan, error)
+	Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error)
 
 	// Bulk operations
-	BulkAdd(ctx context.Context, dto BulkCreateDTO) error
-	BulkModify(ctx context.Context, dto BulkModifyDTO) error
-	BulkDelete(ctx context.Context, dto BulkDeleteDTO) error
+	BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error)
+	BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error)
+	BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error)
 }
 
 type LocalClansService struct {
@@ -98,23 +98,23 @@ func (s *LocalClansService) GetAll(ctx context.Context, cursor, limit int) ([]Cl
 	return s.repo.GetAll(ctx, cursor, limit)
 }
 
-func (s *LocalClansService) Add(ctx context.Context, dto CreateDTO) error {
+func (s *LocalClansService) Add(ctx context.Context, dto CreateDTO) (Clan, error) {
 	ctx, span := s.tracer.Start(ctx, "clans.service.add")
 	defer span.End()
 
 	return s.repo.Add(ctx, dto)
 }
 
-func (s *LocalClansService) Delete(ctx context.Context, dto DeleteDTO) error {
+func (s *LocalClansService) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
 	ctx, span := s.tracer.Start(ctx, "clans.service.delete")
 	defer span.End()
 
 	// Delete in repo
-	err := s.repo.Delete(ctx, dto)
+	deletedId, err := s.repo.Delete(ctx, dto)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return err
+		return uuid.Nil, err
 	}
 
 	// Delete from cache
@@ -127,19 +127,19 @@ func (s *LocalClansService) Delete(ctx context.Context, dto DeleteDTO) error {
 		}
 	}()
 
-	return nil
+	return deletedId, nil
 }
 
-func (s *LocalClansService) Update(ctx context.Context, dto UpdateDTO) error {
+func (s *LocalClansService) Update(ctx context.Context, dto UpdateDTO) (Clan, error) {
 	ctx, span := s.tracer.Start(ctx, "clans.service.update")
 	defer span.End()
 
 	// Update repository first
-	err := s.repo.Update(ctx, dto)
+	updatedClan, err := s.repo.Update(ctx, dto)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return err
+		return Clan{}, err
 	}
 
 	// Invalidate old record from cache, next get call with repopulate it
@@ -152,24 +152,24 @@ func (s *LocalClansService) Update(ctx context.Context, dto UpdateDTO) error {
 		}
 	}()
 
-	return nil
+	return updatedClan, nil
 }
 
-func (s *LocalClansService) BulkAdd(ctx context.Context, dto BulkCreateDTO) error {
+func (s *LocalClansService) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {
 	ctx, span := s.tracer.Start(ctx, "clans.service.bulkadd")
 	defer span.End()
 
 	return s.repo.BulkAdd(ctx, dto)
 }
 
-func (s *LocalClansService) BulkModify(ctx context.Context, dto BulkModifyDTO) error {
+func (s *LocalClansService) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
 	ctx, span := s.tracer.Start(ctx, "clans.service.bulkmodify")
 	defer span.End()
 
 	return s.repo.BulkModify(ctx, dto)
 }
 
-func (s *LocalClansService) BulkDelete(ctx context.Context, dto BulkDeleteDTO) error {
+func (s *LocalClansService) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
 	ctx, span := s.tracer.Start(ctx, "clans.service.bulkdelete")
 	defer span.End()
 

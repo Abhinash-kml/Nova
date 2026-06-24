@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"slices"
 	"sync"
@@ -101,14 +102,14 @@ func (r *InMemoryClansRepository) GetAll(ctx context.Context, cursor, limit int)
 	return r.clans[start:end], nil
 }
 
-func (r *InMemoryClansRepository) Add(ctx context.Context, dto CreateDTO) error {
+func (r *InMemoryClansRepository) Add(ctx context.Context, dto CreateDTO) (Clan, error) {
 	_, span := r.tracer.Start(ctx, "clans.repository.add")
 	defer span.End()
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.clans = append(r.clans, Clan{
+	clan := Clan{
 		Id:          uuid.New(),
 		Name:        dto.Name,
 		Tag:         dto.Tag,
@@ -120,12 +121,13 @@ func (r *InMemoryClansRepository) Add(ctx context.Context, dto CreateDTO) error 
 		Members:     dto.Members,
 		MaxMembers:  dto.MaxMembers,
 		IsLocked:    dto.IsLocked,
-	})
+	}
+	r.clans = append(r.clans, clan)
 
-	return nil
+	return clan, nil
 }
 
-func (r *InMemoryClansRepository) Delete(ctx context.Context, dto DeleteDTO) error {
+func (r *InMemoryClansRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
 	_, span := r.tracer.Start(ctx, "clans.repository.delete")
 	defer span.End()
 
@@ -145,59 +147,97 @@ func (r *InMemoryClansRepository) Delete(ctx context.Context, dto DeleteDTO) err
 	afterLen := len(r.clans)
 
 	if afterLen != beforeLen {
-		return nil
+		return parsedId, nil
 	}
 
-	return common.ErrResourceCannotBeDeleted
+	return uuid.Nil, common.ErrResourceCannotBeDeleted
 }
 
 // TODO: Implement this
-func (r *InMemoryClansRepository) Update(ctx context.Context, dto UpdateDTO) error {
+func (r *InMemoryClansRepository) Update(ctx context.Context, dto UpdateDTO) (Clan, error) {
 	_, span := r.tracer.Start(ctx, "clans.repository.update")
 	defer span.End()
 
-	return nil
+	return Clan{}, nil
 }
 
-func (r *InMemoryClansRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) error {
+func (r *InMemoryClansRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {
 	_, span := r.tracer.Start(ctx, "clans.repository.bulkadd")
 	defer span.End()
 
+	results := make([]common.BulkOpResult, 0, len(dto.Clans))
+
 	for index := range dto.Clans {
-		err := r.Add(ctx, dto.Clans[index])
+		var result common.BulkOpResult
+		user, err := r.Add(ctx, dto.Clans[index])
 		if err != nil {
-			return err
+			result.Id = uuid.Nil
+			result.Success = false
+			result.Status = 500
+			result.Message = err.Error()
 		}
+		result.Id = user.Id
+		result.Success = true
+		result.Status = http.StatusOK
+		result.Message = "created"
+		results = append(results, result)
 	}
 
-	return nil
+	return results, nil
 }
 
-func (r *InMemoryClansRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) error {
+func (r *InMemoryClansRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
 	_, span := r.tracer.Start(ctx, "clans.repository.bulkmodify")
 	defer span.End()
 
+	results := make([]common.BulkOpResult, 0, len(dto.Updates))
+
 	for index := range dto.Updates {
-		err := r.Update(ctx, dto.Updates[index])
+		var result common.BulkOpResult
+		updated, err := r.Update(ctx, dto.Updates[index])
 		if err != nil {
-			return err
+			result.Id = uuid.Nil
+			result.Success = false
+			result.Status = http.StatusInternalServerError
+			result.Message = err.Error()
 		}
+		result.Id = updated.Id
+		result.Success = true
+		result.Status = http.StatusNoContent
+		result.Message = "modified"
+		results = append(results, result)
 	}
 
-	return nil
+	return results, nil
 }
 
-func (r *InMemoryClansRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) error {
+func (r *InMemoryClansRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
 	_, span := r.tracer.Start(ctx, "clans.repository.bulkdelete")
 	defer span.End()
 
+	results := make([]common.BulkOpResult, 0, len(dto.Clans))
+
 	for index := range dto.Clans {
+		var result common.BulkOpResult
 		id := dto.Clans[index].String()
-		err := r.Delete(ctx, DeleteDTO{ClanId: ClanId{Id: id}})
+		deletedId, err := r.Delete(ctx, DeleteDTO{
+			ClanId: ClanId{Id: id},
+			DeleteOptions: DeleteOptions{
+				Type: "soft",
+			},
+		})
 		if err != nil {
-			return err
+			result.Id = uuid.Nil
+			result.Success = false
+			result.Status = http.StatusInternalServerError
+			result.Message = err.Error()
 		}
+		result.Id = deletedId
+		result.Success = true
+		result.Status = http.StatusNoContent
+		result.Message = "deleted"
+		results = append(results, result)
 	}
 
-	return nil
+	return results, nil
 }
