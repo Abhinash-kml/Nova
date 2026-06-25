@@ -35,9 +35,13 @@ type UpdateDTO struct {
 	ChannelModifications
 }
 
+type DeleteOptions struct {
+	Type string `form:"type" binding:"required,oneof=soft hard"` // 1 - Soft, 2 - Hard
+}
+
 type DeleteDTO struct {
 	ChannelId
-	Type string `form:"type" binding:"required,oneof=soft hard"`
+	DeleteOptions
 }
 
 type ChannelDTO struct {
