@@ -24,6 +24,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/extra/redisotel/v9"
 	"github.com/redis/go-redis/v9"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.opentelemetry.io/otel"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -131,6 +132,9 @@ func main() {
 		// return origin == ""
 		// },
 	}))
+
+	// Setup olelgin metrics middleware
+	globalRouter.Use(otelgin.Middleware("nova-server"))
 
 	// Setup logging middleware
 	globalRouter.Use(ginzap.Ginzap(logger, time.RFC3339, true))

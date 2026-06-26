@@ -46,8 +46,15 @@ func SetupOTelSDK(ctx context.Context) (func(context.Context) error, error) {
 	prop := newPropagator()
 	otel.SetTextMapPropagator(prop)
 
+	// Creaste a new resource
+	resource, err := newResource(ctx, "nova-server", "1.0.0", "meow")
+	if err != nil {
+		handleErr(err)
+		return shutdown, err
+	}
+
 	// Set up trace provider.
-	tracerProvider, err := newTracerProvider()
+	tracerProvider, err := newTracerProvider(resource)
 	if err != nil {
 		handleErr(err)
 		return shutdown, err
@@ -56,18 +63,18 @@ func SetupOTelSDK(ctx context.Context) (func(context.Context) error, error) {
 	shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
 	otel.SetTracerProvider(tracerProvider)
 
-	// Set up meter provider.
-	// meterProvider, err := newMeterProvider()
-	// if err != nil {
-	// 	handleErr(err)
-	// 	return shutdown, err
-	// }
+	//Set up meter provider.
+	meterProvider, err := newMeterProvider(resource)
+	if err != nil {
+		handleErr(err)
+		return shutdown, err
+	}
 
-	// shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
-	// otel.SetMeterProvider(meterProvider)
+	shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
+	otel.SetMeterProvider(meterProvider)
 
 	// Set up logger provider.
-	loggerProvider, err := newLoggerProvider()
+	loggerProvider, err := newLoggerProvider(resource)
 	if err != nil {
 		handleErr(err)
 		return shutdown, err
@@ -86,7 +93,22 @@ func newPropagator() propagation.TextMapPropagator {
 	)
 }
 
-func newTracerProvider() (*trace.TracerProvider, error) {
+func newResource(ctx context.Context, name, version, environment string) (*resource.Resource, error) {
+	res, err := resource.New(ctx,
+		resource.WithAttributes(
+			semconv.ServiceNameKey.String(name),
+			semconv.ServiceVersionKey.String(version),
+			semconv.DeploymentEnvironmentNameKey.String(environment),
+		))
+	if err != nil {
+		zap.L().Error("Failed to create semconv resource", zap.Error(err))
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func newTracerProvider(res *resource.Resource) (*trace.TracerProvider, error) {
 	// traceExporter, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
 	// if err != nil {
 	// 	return nil, err
@@ -99,22 +121,16 @@ func newTracerProvider() (*trace.TracerProvider, error) {
 		zap.L().Fatal("Failed to created Otel trace exporter", zap.Error(err))
 	}
 
-	resource, err := resource.New(context.Background(),
-		resource.WithAttributes(semconv.ServiceName("my-cool-api")))
-	if err != nil {
-		zap.L().Fatal("Failed to create Otel resource", zap.Error(err))
-	}
-
 	tracerProvider := trace.NewTracerProvider(
 		trace.WithBatcher(traceExporter,
 			trace.WithBatchTimeout(time.Second)), // Default is 5s. Set to 1s for demonstrative purposes.
-		trace.WithResource(resource),
+		trace.WithResource(res),
 	)
 
 	return tracerProvider, nil
 }
 
-func newMeterProvider() (*metric.MeterProvider, error) {
+func newMeterProvider(res *resource.Resource) (*metric.MeterProvider, error) {
 	// metricExporter, err := stdoutmetric.New(stdoutmetric.WithPrettyPrint())
 	// if err != nil {
 	// 	return nil, err
@@ -129,13 +145,14 @@ func newMeterProvider() (*metric.MeterProvider, error) {
 
 	meterProvider := metric.NewMeterProvider(
 		metric.WithReader(metric.NewPeriodicReader(metricExporter,
-			metric.WithInterval(3*time.Second))), // Default is 1m. Set to 3s for demonstrative purposes.
+			metric.WithInterval(3*time.Second))),
+		metric.WithResource(res), // Default is 1m. Set to 3s for demonstrative purposes.
 	)
 
 	return meterProvider, nil
 }
 
-func newLoggerProvider() (*log.LoggerProvider, error) {
+func newLoggerProvider(res *resource.Resource) (*log.LoggerProvider, error) {
 	// logExporter, err := stdoutlog.New(stdoutlog.WithPrettyPrint())
 	// if err != nil {
 	// 	return nil, err
@@ -150,6 +167,7 @@ func newLoggerProvider() (*log.LoggerProvider, error) {
 
 	loggerProvider := log.NewLoggerProvider(
 		log.WithProcessor(log.NewBatchProcessor(logExporter)),
+		log.WithResource(res),
 	)
 
 	return loggerProvider, nil
