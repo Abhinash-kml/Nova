@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"strconv"
 	"sync"
 	"time"
 
@@ -144,7 +145,39 @@ func (r *InMemoryPostsRepository) Update(ctx context.Context, dto UpdateDTO) (Po
 	_, span := r.tracer.Start(ctx, "posts.repository.update")
 	defer span.End()
 
-	return Post{}, nil
+	parsedId, _ := uuid.Parse(dto.Id)
+	var updatedUserindex int = -1
+
+	for targetIndex := range r.posts {
+		if r.posts[targetIndex].Id == parsedId {
+			updatedUserindex = targetIndex
+
+			r.mu.Lock()
+
+			for index := range dto.Updates {
+				currentUpdate := dto.Updates[index]
+				switch currentUpdate.Field {
+				case "title":
+					r.posts[targetIndex].Title = currentUpdate.Value
+				case "body":
+					r.posts[targetIndex].Body = currentUpdate.Value
+				case "likes":
+					value, _ := strconv.Atoi(currentUpdate.Value)
+					r.posts[targetIndex].Likes = value
+				}
+
+				r.posts[targetIndex].UpdatedAt = time.Now()
+			}
+			r.mu.Unlock()
+			break
+		}
+	}
+
+	if updatedUserindex != -1 {
+		return r.posts[updatedUserindex], nil
+	} else {
+		return Post{}, common.ErrResourceNotFound
+	}
 }
 
 // TODO: Implement this
@@ -152,7 +185,29 @@ func (r *InMemoryPostsRepository) Replace(ctx context.Context, dto ReplaceDTO) (
 	_, span := r.tracer.Start(ctx, "posts.repository.replace")
 	defer span.End()
 
-	return Post{}, nil
+	parsedId, _ := uuid.Parse(dto.Id)
+	var updatedUserindex int
+
+	for index := range r.posts {
+		if r.posts[index].Id == parsedId {
+			updatedUserindex = index
+
+			r.mu.Lock()
+
+			r.posts[index].Title = dto.Title
+			r.posts[index].Body = dto.Body
+			r.posts[index].UpdatedAt = time.Now()
+
+			r.mu.Unlock()
+			break
+		}
+	}
+
+	if updatedUserindex != -1 {
+		return r.posts[updatedUserindex], nil
+	} else {
+		return Post{}, common.ErrResourceNotFound
+	}
 }
 
 func (r *InMemoryPostsRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
