@@ -115,7 +115,6 @@ func (r *InMemoryUsersRepository) GetAllByAttribute(ctx context.Context, attribu
 	return nil, nil
 }
 
-// TODO: Improve this
 func (r *InMemoryUsersRepository) GetById(ctx context.Context, id uuid.UUID) (User, error) {
 	_, span := r.tracer.Start(ctx, "users.repository.getbyid")
 	defer span.End()
@@ -148,19 +147,81 @@ func (r *InMemoryUsersRepository) GetByName(ctx context.Context, name string) (U
 	return User{}, common.ErrResourceNotFound
 }
 
-// TODO: Implement this
 func (r *InMemoryUsersRepository) Update(ctx context.Context, dto UpdateDTO) (User, error) {
 	_, span := r.tracer.Start(ctx, "users.repository.update")
 	defer span.End()
 
-	return User{}, nil
+	parsedId, _ := uuid.Parse(dto.Id)
+	var updatedUserindex int = -1
+
+	for targetIndex := range r.users {
+		if r.users[targetIndex].Id == parsedId {
+			updatedUserindex = targetIndex
+
+			r.mu.Lock()
+
+			for index := range dto.Updates {
+				currentUpdate := dto.Updates[index]
+				switch currentUpdate.Field {
+				case "display_name":
+					r.users[targetIndex].DisplayName = currentUpdate.Value
+				case "email":
+					r.users[targetIndex].Email = currentUpdate.Value
+				case "username":
+					r.users[targetIndex].Username = currentUpdate.Value
+				case "country":
+					r.users[targetIndex].Country = currentUpdate.Value
+				case "state":
+					r.users[targetIndex].State = currentUpdate.Value
+				}
+
+				r.users[targetIndex].UpdatedAt = time.Now()
+			}
+			r.mu.Unlock()
+			break
+		}
+	}
+
+	if updatedUserindex != -1 {
+		return r.users[updatedUserindex], nil
+	} else {
+		return User{}, common.ErrResourceNotFound
+	}
 }
 
 func (r *InMemoryUsersRepository) Replace(ctx context.Context, dto ReplaceDTO) (User, error) {
 	_, span := r.tracer.Start(ctx, "users.repository.replace")
 	defer span.End()
 
-	return User{}, nil
+	parsedId, _ := uuid.Parse(dto.Id)
+	var updatedUserindex int
+
+	for index := range r.users {
+		if r.users[index].Id == parsedId {
+			updatedUserindex = index
+
+			r.mu.Lock()
+
+			r.users[index].Username = dto.Username
+			r.users[index].DisplayName = dto.DisplayName
+			r.users[index].Email = dto.Email
+			r.users[index].Country = dto.Country
+			r.users[index].State = dto.State
+			r.users[index].LangTag = dto.LangTag
+			r.users[index].Timezone = dto.Timezone
+
+			r.users[index].UpdatedAt = time.Now()
+
+			r.mu.Unlock()
+			break
+		}
+	}
+
+	if updatedUserindex != -1 {
+		return r.users[updatedUserindex], nil
+	} else {
+		return User{}, common.ErrResourceNotFound
+	}
 }
 
 func (r *InMemoryUsersRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
