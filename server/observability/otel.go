@@ -19,6 +19,12 @@ import (
 	"go.uber.org/zap"
 )
 
+var (
+	tProvider *trace.TracerProvider = nil
+	mProvider *metric.MeterProvider = nil
+	lProvider *log.LoggerProvider   = nil
+)
+
 // setupOTelSDK bootstraps the OpenTelemetry pipeline.
 // If it does not return an error, make sure to call shutdown for proper cleanup.
 func SetupOTelSDK(ctx context.Context) (func(context.Context) error, error) {
@@ -59,6 +65,7 @@ func SetupOTelSDK(ctx context.Context) (func(context.Context) error, error) {
 		handleErr(err)
 		return shutdown, err
 	}
+	tProvider = tracerProvider
 
 	shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
 	otel.SetTracerProvider(tracerProvider)
@@ -69,6 +76,7 @@ func SetupOTelSDK(ctx context.Context) (func(context.Context) error, error) {
 		handleErr(err)
 		return shutdown, err
 	}
+	mProvider = meterProvider
 
 	shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
 	otel.SetMeterProvider(meterProvider)
@@ -79,6 +87,7 @@ func SetupOTelSDK(ctx context.Context) (func(context.Context) error, error) {
 		handleErr(err)
 		return shutdown, err
 	}
+	lProvider = loggerProvider
 
 	shutdownFuncs = append(shutdownFuncs, loggerProvider.Shutdown)
 	global.SetLoggerProvider(loggerProvider)
@@ -171,4 +180,16 @@ func newLoggerProvider(res *resource.Resource) (*log.LoggerProvider, error) {
 	)
 
 	return loggerProvider, nil
+}
+
+func TraceProvider() *trace.TracerProvider {
+	return tProvider
+}
+
+func MetricsProvider() *metric.MeterProvider {
+	return mProvider
+}
+
+func LoggerProvider() *log.LoggerProvider {
+	return lProvider
 }

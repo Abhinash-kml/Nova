@@ -24,6 +24,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/extra/redisotel/v9"
 	"github.com/redis/go-redis/v9"
+	"go.opentelemetry.io/contrib/bridges/otelzap"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.opentelemetry.io/otel"
 	"go.uber.org/zap"
@@ -89,6 +90,16 @@ func main() {
 	}
 	defer file.Close()
 
+	// Setup opentelemetry
+	shutdownFunc, err := observability.SetupOTelSDK(globalCtx)
+	if err != nil {
+		log.Fatal("Failed to setup opentelemtry for observability. Error: %w", err)
+	}
+	// Call shutdown func for proper cleanup so we dont leak anything
+	defer func() {
+		err = errors.Join(shutdownFunc(globalCtx))
+	}()
+
 	// Setup logger
 	fileSyncer := zapcore.AddSync(file)
 	stdOutSyncer := os.Stdout
@@ -99,21 +110,12 @@ func main() {
 	logLevel := zap.NewAtomicLevelAt(zapcore.InfoLevel)
 	fileCore := zapcore.NewCore(fileEncoder, fileSyncer, logLevel)
 	stdOutCore := zapcore.NewCore(consoleEncoder, stdOutSyncer, logLevel)
-	teeCore := zapcore.NewTee(fileCore, stdOutCore)
+	otelLogCore := otelzap.NewCore("my/pkg/name", otelzap.WithLoggerProvider(observability.LoggerProvider()))
+	teeCore := zapcore.NewTee(fileCore, stdOutCore, otelLogCore)
 	logger := zap.New(teeCore)
 	defer logger.Sync()
 
 	logger.Sugar().Infof("Current Time: %w", time.Now())
-
-	// Setup opentelemetry
-	shutdownFunc, err := observability.SetupOTelSDK(globalCtx)
-	if err != nil {
-		logger.Fatal("Failed to setup opentelemtry for observability", zap.Error(err))
-	}
-	// Call shutdown func for proper cleanup so we dont leak anything
-	defer func() {
-		err = errors.Join(shutdownFunc(globalCtx))
-	}()
 
 	// Create gin router engine
 	globalRouter := gin.New()
