@@ -123,19 +123,54 @@ func (r *InMemoryCommentsRepository) GetById(ctx context.Context, id uuid.UUID) 
 	return Comment{}, common.ErrResourceNotFound
 }
 
-// TODO: Implement this
 func (r *InMemoryCommentsRepository) Update(ctx context.Context, dto UpdateDTO) (Comment, error) {
 	_, span := r.tracer.Start(ctx, "comments.repository.update")
 	defer span.End()
 
-	return Comment{}, nil
+	parsedId, _ := uuid.Parse(dto.Id)
+	var updatedCommentindex int = -1
+
+	for targetIndex := range r.comments {
+		if r.comments[targetIndex].Id == parsedId {
+			updatedCommentindex = targetIndex
+
+			r.mu.Lock()
+			r.comments[targetIndex].Body = dto.Body.Body
+			r.mu.Unlock()
+			break
+		}
+	}
+
+	if updatedCommentindex != -1 {
+		return r.comments[updatedCommentindex], nil
+	} else {
+		return Comment{}, common.ErrResourceNotFound
+	}
 }
 
 func (r *InMemoryCommentsRepository) Replace(ctx context.Context, dto ReplaceDTO) (Comment, error) {
 	_, span := r.tracer.Start(ctx, "comments.repository.replace")
 	defer span.End()
 
-	return Comment{}, nil
+	parsedId, _ := uuid.Parse(dto.Id)
+	var replacedCommentIndex int = -1
+
+	for targetIndex := range r.comments {
+		if r.comments[targetIndex].Id == parsedId {
+			replacedCommentIndex = targetIndex
+
+			r.mu.Lock()
+			r.comments[targetIndex].Body = dto.Body.Body
+			r.mu.Unlock()
+			break
+		}
+	}
+
+	if replacedCommentIndex != -1 {
+		return r.comments[replacedCommentIndex], nil
+	} else {
+		return Comment{}, common.ErrResourceNotFound
+	}
 }
 
 func (r *InMemoryCommentsRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {

@@ -7,7 +7,9 @@ import (
 	"net/http"
 	"os"
 	"slices"
+	"strconv"
 	"sync"
+	"time"
 
 	"github.com/abhinash-kml/nova/server/common"
 	"github.com/google/uuid"
@@ -158,7 +160,47 @@ func (r *InMemoryClansRepository) Update(ctx context.Context, dto UpdateDTO) (Cl
 	_, span := r.tracer.Start(ctx, "clans.repository.update")
 	defer span.End()
 
-	return Clan{}, nil
+	parsedId, _ := uuid.Parse(dto.Id)
+	var updatedClanIndex int = -1
+
+	for targetIndex := range r.clans {
+		if r.clans[targetIndex].Id == parsedId {
+			updatedClanIndex = targetIndex
+
+			r.mu.Lock()
+
+			for index := range dto.Updates {
+				currentUpdate := dto.Updates[index]
+				switch currentUpdate.Field {
+				case "name":
+					r.clans[targetIndex].Name = currentUpdate.Value
+				case "description":
+					r.clans[targetIndex].Description = currentUpdate.Value
+				case "tag":
+					r.clans[targetIndex].Tag = currentUpdate.Value
+				case "locked":
+					if currentUpdate.Value == "true" {
+						r.clans[targetIndex].IsLocked = true
+					} else {
+						r.clans[targetIndex].IsLocked = false
+					}
+				case "max_members":
+					num, _ := strconv.Atoi(currentUpdate.Value)
+					r.clans[targetIndex].MaxMembers = num
+				}
+
+				r.clans[targetIndex].UpdatedAt = time.Now()
+			}
+			r.mu.Unlock()
+			break
+		}
+	}
+
+	if updatedClanIndex != -1 {
+		return r.clans[updatedClanIndex], nil
+	} else {
+		return Clan{}, common.ErrResourceNotFound
+	}
 }
 
 func (r *InMemoryClansRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {

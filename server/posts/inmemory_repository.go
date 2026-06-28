@@ -140,17 +140,16 @@ func (r *InMemoryPostsRepository) GetByName(ctx context.Context, name string) (P
 	return Post{}, common.ErrResourceNotFound
 }
 
-// TODO: Implement this
 func (r *InMemoryPostsRepository) Update(ctx context.Context, dto UpdateDTO) (Post, error) {
 	_, span := r.tracer.Start(ctx, "posts.repository.update")
 	defer span.End()
 
 	parsedId, _ := uuid.Parse(dto.Id)
-	var updatedUserindex int = -1
+	var updatedPostIndex int = -1
 
 	for targetIndex := range r.posts {
 		if r.posts[targetIndex].Id == parsedId {
-			updatedUserindex = targetIndex
+			updatedPostIndex = targetIndex
 
 			r.mu.Lock()
 
@@ -173,24 +172,23 @@ func (r *InMemoryPostsRepository) Update(ctx context.Context, dto UpdateDTO) (Po
 		}
 	}
 
-	if updatedUserindex != -1 {
-		return r.posts[updatedUserindex], nil
+	if updatedPostIndex != -1 {
+		return r.posts[updatedPostIndex], nil
 	} else {
 		return Post{}, common.ErrResourceNotFound
 	}
 }
 
-// TODO: Implement this
 func (r *InMemoryPostsRepository) Replace(ctx context.Context, dto ReplaceDTO) (Post, error) {
 	_, span := r.tracer.Start(ctx, "posts.repository.replace")
 	defer span.End()
 
 	parsedId, _ := uuid.Parse(dto.Id)
-	var updatedUserindex int
+	var replacedPostIndex int
 
 	for index := range r.posts {
 		if r.posts[index].Id == parsedId {
-			updatedUserindex = index
+			replacedPostIndex = index
 
 			r.mu.Lock()
 
@@ -203,8 +201,8 @@ func (r *InMemoryPostsRepository) Replace(ctx context.Context, dto ReplaceDTO) (
 		}
 	}
 
-	if updatedUserindex != -1 {
-		return r.posts[updatedUserindex], nil
+	if replacedPostIndex != -1 {
+		return r.posts[replacedPostIndex], nil
 	} else {
 		return Post{}, common.ErrResourceNotFound
 	}

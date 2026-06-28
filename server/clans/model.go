@@ -2,6 +2,7 @@ package clans
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -20,6 +21,7 @@ type Clan struct {
 	Members     []uuid.UUID `json:"members" redis:"members"`
 	MaxMembers  int         `json:"max_members" redis:"max_members"`
 	IsLocked    bool        `json:"is_locked" redis:"locked"`
+	UpdatedAt   time.Time   `json:"updated_at" redis:"updated_at"`
 }
 
 func (c *Clan) MarshalBinary() ([]byte, error) {
