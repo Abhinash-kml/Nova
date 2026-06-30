@@ -68,7 +68,7 @@ func main() {
 		config.Postgres.Password,
 		config.Postgres.Address,
 		config.Postgres.Database)
-	postgresClient := infra.NewPostgres(postgresDsn)
+	postgresClient := infra.NewPostgresPGX(postgresDsn)
 
 	// Ping redis to test connection
 	result, err := redisClient.Ping(context.Background()).Result()
@@ -78,7 +78,7 @@ func main() {
 	fmt.Println("Redis ping result:", result)
 
 	// Ping postgres to test connection
-	err = postgresClient.Ping()
+	err = postgresClient.Ping(context.Background())
 	if err != nil {
 		fmt.Println("Failed to ping connected postgres client", err)
 	}
