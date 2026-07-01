@@ -3,12 +3,15 @@ package users
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/abhinash-kml/nova/server/common"
 	"github.com/google/uuid"
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"go.uber.org/zap"
 )
 
@@ -50,7 +53,7 @@ func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (User, erro
 	now := time.Now()
 	dummyAvatarUrl := "-"
 
-	result, err := r.pgx.Query(ctx, rawQuery,
+	rows, err := r.pgx.Query(ctx, rawQuery,
 		dto.Username,
 		dto.DisplayName,
 		dto.Email,
@@ -64,11 +67,12 @@ func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (User, erro
 		now)
 	if err != nil {
 		r.logger.Error("Failed to execute sql insert query", zap.Error(err))
-		return User{}, err
+		return User{}, common.ErrResourceCannotBeAdded
 	}
+	defer rows.Close()
 
 	var user User
-	err = result.Scan(&user.Id, &user.Username, &user.DisplayName, &user.Email, &user.Country, &user.State, &user.AvatarURL, &user.LangTag, &user.Timezone,
+	err = rows.Scan(&user.Id, &user.Username, &user.DisplayName, &user.Email, &user.Country, &user.State, &user.AvatarURL, &user.LangTag, &user.Timezone,
 		&user.CreatedAt, &user.UpdatedAt, &user.VerifiedAt)
 
 	return user, nil
@@ -118,18 +122,19 @@ func (r *PostgresRepository) GetById(ctx context.Context, id uuid.UUID) (User, e
 				FROM users
 				WHERE id = $1;`
 
-	result, err := r.pgx.Query(ctx, rawQuery, id)
+	rows, err := r.pgx.Query(ctx, rawQuery, id)
 	if err != nil {
-		r.logger.Error("Failed to execute egtbyid query", zap.Error(err))
-		return User{}, err
+		r.logger.Error("Failed to execute getbyid query", zap.Error(err))
+		return User{}, r.translateError(err)
 	}
+	defer rows.Close()
 
 	var user User
-	err = result.Scan(&user.Id, &user.Username, &user.DisplayName, &user.Email, &user.Country, &user.State, &user.AvatarURL, &user.LangTag, &user.Timezone,
+	err = rows.Scan(&user.Id, &user.Username, &user.DisplayName, &user.Email, &user.Country, &user.State, &user.AvatarURL, &user.LangTag, &user.Timezone,
 		&user.CreatedAt, &user.UpdatedAt, &user.VerifiedAt)
 	if err != nil {
-		r.logger.Error("Failed to scan result in query", zap.Error(err))
-		return User{}, err
+		r.logger.Error("Failed to scan row in query", zap.Error(err))
+		return User{}, r.translateError(err)
 	}
 
 	return user, nil
@@ -168,16 +173,35 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (User, e
 	query, args, err := builder.ToSql()
 	if err != nil {
 		r.logger.Error("Failed to generate update query using squirrel", zap.Error(err))
-		return User{}, err
+		return User{}, common.ErrResourceOperationFailed
 	}
 
 	var user User
-	result := r.pgx.QueryRow(ctx, query, args...)
+	tx, err := r.pgx.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
+	if err != nil {
+		r.logger.Error("Failed to begin transaction in update query", zap.Error(err))
+		return User{}, common.ErrResourceOperationFailed
+	}
+	defer tx.Rollback(ctx)
+
+	_, err = tx.Query(ctx, "SELECT username FROM users WHERE id = $1 FOR UPDATE;", dto.Id)
+	if err != nil {
+		r.logger.Error("Failed to lock row for update in transaction", zap.Error(err))
+		return User{}, common.ErrResourceOperationFailed
+	}
+
+	result := tx.QueryRow(ctx, query, args...)
 	err = result.Scan(&user.Id, &user.Username, &user.DisplayName, &user.Email, &user.Country, &user.State, &user.AvatarURL, &user.LangTag, &user.Timezone,
 		&user.CreatedAt, &user.UpdatedAt, &user.VerifiedAt)
 	if err != nil {
-		r.logger.Error("Failed to scan returned object from update query", zap.Error(err))
-		return User{}, err
+		r.logger.Error("Failed to scan returned object from update query in transaction", zap.Error(err))
+		return User{}, common.ErrResourceOperationFailed
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		r.logger.Error("Failed to commit transaction in update query", zap.Error(err))
+		return User{}, common.ErrResourceOperationFailed
 	}
 
 	return user, nil
@@ -201,16 +225,35 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (User,
 				id = $1
 				RETURNING *;`
 
-	result := r.pgx.QueryRow(ctx, rawQuery, dto.Id, dto.Username, dto.DisplayName, dto.Email, dto.Country, dto.State, dto.LangTag, dto.Timezone)
 	var user User
-	err := result.Scan(&user.Id, &user.Username, &user.DisplayName, &user.Email, &user.Country, &user.State, &user.AvatarURL, &user.LangTag, &user.Timezone,
+
+	tx, err := r.pgx.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
+	if err != nil {
+		return User{}, common.ErrResourceOperationFailed
+	}
+	defer tx.Rollback(ctx)
+
+	_, err = tx.Query(ctx, "SELECT username FROM users WHERE id = $1 FOR UPDATE;", dto.Id)
+	if err != nil {
+		r.logger.Error("Failed ")
+		return User{}, common.ErrResourceOperationFailed
+	}
+
+	result := tx.QueryRow(ctx, rawQuery, dto.Id, dto.Username, dto.DisplayName, dto.Email, dto.Country, dto.State, dto.LangTag, dto.Timezone)
+	err = result.Scan(&user.Id, &user.Username, &user.DisplayName, &user.Email, &user.Country, &user.State, &user.AvatarURL, &user.LangTag, &user.Timezone,
 		&user.CreatedAt, &user.UpdatedAt, &user.VerifiedAt)
 	if err != nil {
 		r.logger.Error("Failed to scan result of replace query", zap.Error(err))
-		return User{}, err
+		return User{}, common.ErrResourceOperationFailed
 	}
 
-	return user, err
+	err = tx.Commit(ctx)
+	if err != nil {
+		r.logger.Error("Failed to commit transaction in replace query", zap.Error(err))
+		return User{}, common.ErrResourceOperationFailed
+	}
+
+	return user, nil
 }
 
 func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
@@ -310,7 +353,7 @@ func (r *PostgresRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) 
 	_, err = r.pgx.Exec(ctx, query, args...)
 	if err != nil {
 		r.logger.Error("Failed to execute bulk modify query", zap.Error(err))
-		return nil, common.ErrResoucesCannotBeModified
+		return nil, common.ErrResourcesCannotBeModified
 	}
 
 	return nil, nil
@@ -318,4 +361,53 @@ func (r *PostgresRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) 
 
 func (r *PostgresRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
 	return nil, nil
+}
+
+func (r *PostgresRepository) translateError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	// 1. Handle standard pgx infrastructure errors
+	if errors.Is(err, pgx.ErrNoRows) {
+		return common.ErrResourceNotFound
+	}
+
+	// Handle Go's native context timeout/cancelation
+	if errors.Is(err, context.DeadlineExceeded) {
+		return common.ErrResourceOperationFailed
+	}
+
+	// 2. Unpack PostgreSQL driver-specific errors
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		switch pgErr.Code {
+		case pgerrcode.UniqueViolation: // "23505"
+			return common.ErrResourceAlreadyExists
+
+		case pgerrcode.LockNotAvailable: // "55P03"
+			// Triggered instantly if you use "SELECT ... FOR UPDATE NOWAIT"
+			return common.ErrResourceOperationFailed
+
+		case pgerrcode.DeadlockDetected: // "40P01"
+			// Postgres actively detected a dependency cycle between transactions
+			return common.ErrResourceOperationFailed
+
+		case pgerrcode.SerializationFailure: // "40001"
+			// Occurs under Serializable isolation level when a conflict is detected
+			return common.ErrResourceOperationFailed
+
+		case pgerrcode.QueryCanceled: // "57014"
+			// Postgres killed the query because statement_timeout or lock_timeout fired
+			return common.ErrResourceOperationFailed
+		}
+
+		// Log unexpected raw database errors for internal observability
+		r.logger.Error("Unhandled postgres error",
+			zap.String("code", pgErr.Code),
+			zap.String("message", pgErr.Message),
+		)
+	}
+
+	return common.ErrRepositoryGeneric
 }
