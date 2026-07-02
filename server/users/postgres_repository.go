@@ -3,43 +3,101 @@ package users
 import (
 	"context"
 	"database/sql"
-	"errors"
+	"encoding/json"
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/abhinash-kml/nova/server/common"
 	"github.com/google/uuid"
-	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"go.uber.org/zap"
 )
 
 type PostgresRepository struct {
-	logger *zap.Logger
-	db     *sql.DB
-	pgx    *pgx.Conn
+	logger           *zap.Logger
+	db               *sql.DB
+	pgx              *pgx.Conn
+	statementBuilder squirrel.StatementBuilderType
 }
 
 func NewPostgresRepository(connection *sql.DB, l *zap.Logger) *PostgresRepository {
 	return &PostgresRepository{
-		logger: l,
-		db:     connection,
+		logger:           l,
+		db:               connection,
+		statementBuilder: squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar),
 	}
 }
 
 func NewPostgresRepositoryFromPGX(connection *pgx.Conn, l *zap.Logger) *PostgresRepository {
 	return &PostgresRepository{
-		logger: l,
-		pgx:    connection,
+		logger:           l,
+		pgx:              connection,
+		statementBuilder: squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar),
 	}
 }
 
-func (r *PostgresRepository) Initialize() error {
+func (r *PostgresRepository) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (r *PostgresRepository) Seed() error {
+func (r *PostgresRepository) Seed(ctx context.Context) error {
+	queryBuilder := r.statementBuilder.Insert("users").Columns(
+		"id",
+		"username",
+		"displayname",
+		"email",
+		"country",
+		"state",
+		"avatar_url",
+		"langtag",
+		"timezone",
+		"created_at",
+		"updated_at",
+		"verified_at",
+	)
+
+	file, err := os.OpenFile("./seeds/users.json", os.O_RDONLY, 0755)
+	if err != nil {
+		r.logger.Error("Failed to open users seeds file", zap.Error(err))
+		return fmt.Errorf("Failed to open user's seeds file. Error: %w", err)
+	}
+	defer file.Close()
+
+	decoder := json.NewDecoder(file)
+	if decoder == nil {
+		r.logger.Error("Failed to create json decoder. Returned nil pointer")
+		return fmt.Errorf("Failed to create json decoder. Returned nil pointer")
+	}
+
+	var users []User
+	err = decoder.Decode(&users)
+	if err != nil {
+		r.logger.Error("Failed to decode seeded users from file", zap.Error(err))
+		return fmt.Errorf("Faield to decode seeded users from file")
+	}
+
+	now := time.Now()
+	for i := range users {
+		id, _ := uuid.NewV7()
+		dummyAvatarUrl := "-"
+		queryBuilder = queryBuilder.Values(id, users[i].Username, users[i].DisplayName, users[i].Email, users[i].Country, users[i].State,
+			dummyAvatarUrl, users[i].LangTag, users[i].Timezone, now, now, now)
+	}
+
+	query, args, err := queryBuilder.ToSql()
+	if err != nil {
+		r.logger.Error("Failed to generate sql query with squirrel for seeding users table", zap.Error(err))
+		return fmt.Errorf("Failed seeding users table")
+	}
+
+	_, err = r.pgx.Exec(ctx, query, args...)
+	if err != nil {
+		r.logger.Error("Failed to execute query to seed users table", zap.Error(err))
+		return fmt.Errorf("Failed seeding users table")
+	}
+
 	return nil
 }
 
@@ -67,7 +125,7 @@ func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (User, erro
 		now)
 	if err != nil {
 		r.logger.Error("Failed to execute sql insert query", zap.Error(err))
-		return User{}, common.ErrResourceCannotBeAdded
+		return User{}, common.TranslatePostgresError(err, r.logger)
 	}
 	defer rows.Close()
 
@@ -125,7 +183,7 @@ func (r *PostgresRepository) GetById(ctx context.Context, id uuid.UUID) (User, e
 	rows, err := r.pgx.Query(ctx, rawQuery, id)
 	if err != nil {
 		r.logger.Error("Failed to execute getbyid query", zap.Error(err))
-		return User{}, r.translateError(err)
+		return User{}, common.TranslatePostgresError(err, r.logger)
 	}
 	defer rows.Close()
 
@@ -134,7 +192,7 @@ func (r *PostgresRepository) GetById(ctx context.Context, id uuid.UUID) (User, e
 		&user.CreatedAt, &user.UpdatedAt, &user.VerifiedAt)
 	if err != nil {
 		r.logger.Error("Failed to scan row in query", zap.Error(err))
-		return User{}, r.translateError(err)
+		return User{}, common.TranslatePostgresError(err, r.logger)
 	}
 
 	return user, nil
@@ -149,7 +207,7 @@ func (r *PostgresRepository) GetByName(ctx context.Context, name string) (User, 
 	result, err := r.pgx.Query(ctx, rawQuery, name)
 	if err != nil {
 		r.logger.Error("Failed to execute getbyid query", zap.Error(err))
-		return User{}, err
+		return User{}, common.TranslatePostgresError(err, r.logger)
 	}
 
 	var user User
@@ -157,37 +215,36 @@ func (r *PostgresRepository) GetByName(ctx context.Context, name string) (User, 
 		&user.CreatedAt, &user.UpdatedAt, &user.VerifiedAt)
 	if err != nil {
 		r.logger.Error("Failed to scan result in query", zap.Error(err))
-		return User{}, err
+		return User{}, common.TranslatePostgresError(err, r.logger)
 	}
 
 	return user, nil
 }
 
 func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (User, error) {
-	psql := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
-	builder := psql.Update("users").Where(squirrel.Eq{"id": dto.Id})
+	queryBuilder := r.statementBuilder.Update("users").Where(squirrel.Eq{"id": dto.Id})
 	for i := range dto.Updates {
-		builder.Set(dto.Updates[i].Field, dto.Updates[i].Value)
+		queryBuilder = queryBuilder.Set(dto.Updates[i].Field, dto.Updates[i].Value)
 	}
-	builder.Suffix("RETURNING *")
-	query, args, err := builder.ToSql()
+	queryBuilder = queryBuilder.Suffix("RETURNING *")
+	query, args, err := queryBuilder.ToSql()
 	if err != nil {
 		r.logger.Error("Failed to generate update query using squirrel", zap.Error(err))
-		return User{}, common.ErrResourceOperationFailed
+		return User{}, common.TranslatePostgresError(err, r.logger)
 	}
 
 	var user User
 	tx, err := r.pgx.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
 		r.logger.Error("Failed to begin transaction in update query", zap.Error(err))
-		return User{}, common.ErrResourceOperationFailed
+		return User{}, common.TranslatePostgresError(err, r.logger)
 	}
 	defer tx.Rollback(ctx)
 
 	_, err = tx.Query(ctx, "SELECT username FROM users WHERE id = $1 FOR UPDATE;", dto.Id)
 	if err != nil {
 		r.logger.Error("Failed to lock row for update in transaction", zap.Error(err))
-		return User{}, common.ErrResourceOperationFailed
+		return User{}, common.TranslatePostgresError(err, r.logger)
 	}
 
 	result := tx.QueryRow(ctx, query, args...)
@@ -195,13 +252,13 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (User, e
 		&user.CreatedAt, &user.UpdatedAt, &user.VerifiedAt)
 	if err != nil {
 		r.logger.Error("Failed to scan returned object from update query in transaction", zap.Error(err))
-		return User{}, common.ErrResourceOperationFailed
+		return User{}, common.TranslatePostgresError(err, r.logger)
 	}
 
 	err = tx.Commit(ctx)
 	if err != nil {
 		r.logger.Error("Failed to commit transaction in update query", zap.Error(err))
-		return User{}, common.ErrResourceOperationFailed
+		return User{}, common.TranslatePostgresError(err, r.logger)
 	}
 
 	return user, nil
@@ -229,14 +286,14 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (User,
 
 	tx, err := r.pgx.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
-		return User{}, common.ErrResourceOperationFailed
+		return User{}, common.TranslatePostgresError(err, r.logger)
 	}
 	defer tx.Rollback(ctx)
 
 	_, err = tx.Query(ctx, "SELECT username FROM users WHERE id = $1 FOR UPDATE;", dto.Id)
 	if err != nil {
 		r.logger.Error("Failed ")
-		return User{}, common.ErrResourceOperationFailed
+		return User{}, common.TranslatePostgresError(err, r.logger)
 	}
 
 	result := tx.QueryRow(ctx, rawQuery, dto.Id, dto.Username, dto.DisplayName, dto.Email, dto.Country, dto.State, dto.LangTag, dto.Timezone)
@@ -244,13 +301,13 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (User,
 		&user.CreatedAt, &user.UpdatedAt, &user.VerifiedAt)
 	if err != nil {
 		r.logger.Error("Failed to scan result of replace query", zap.Error(err))
-		return User{}, common.ErrResourceOperationFailed
+		return User{}, common.TranslatePostgresError(err, r.logger)
 	}
 
 	err = tx.Commit(ctx)
 	if err != nil {
 		r.logger.Error("Failed to commit transaction in replace query", zap.Error(err))
-		return User{}, common.ErrResourceOperationFailed
+		return User{}, common.TranslatePostgresError(err, r.logger)
 	}
 
 	return user, nil
@@ -283,10 +340,9 @@ func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UU
 	return deletedId, nil
 }
 
-// Bulk operations
+// Bulk operations - subject to change for improvement (dont use these queries right now)
 func (r *PostgresRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {
-	psql := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
-	builder := psql.Insert("users").Columns(
+	queryBuilder := r.statementBuilder.Insert("users").Columns(
 		"id",
 		"username",
 		"displayname",
@@ -307,44 +363,58 @@ func (r *PostgresRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]
 		id, _ := uuid.NewV7()
 		now := time.Now()
 		dummyAvatarUrl := "-"
-		builder.Values(id, dto.Users[i].Username, dto.Users[i].DisplayName, dto.Users[i].Email, dto.Users[i].Country, dto.Users[i].State,
+		queryBuilder = queryBuilder.Values(id, dto.Users[i].Username, dto.Users[i].DisplayName, dto.Users[i].Email, dto.Users[i].Country, dto.Users[i].State,
 			dummyAvatarUrl, dto.Users[i].LangTag, dto.Users[i].Timezone, now, now, now)
 
 		var result common.BulkOpResult
 		result.Id = id
-		result.Status = 200
+		result.Status = 1
 		result.Success = true
 		result.Message = "added"
 		results = append(results, result)
 	}
 
-	query, args, err := builder.ToSql()
+	query, args, err := queryBuilder.ToSql()
 	if err != nil {
 		r.logger.Error("Failed to generate bulk insert users query using squirrel", zap.Error(err))
-		return nil, common.ErrResourceNotAdded
+		return nil, common.TranslatePostgresError(err, r.logger)
 	}
 
 	_, err = r.pgx.Exec(ctx, query, args...)
 	if err != nil {
 		r.logger.Error("Failed to execute bulk insert query", zap.Error(err))
-		return nil, common.ErrResourceNotAdded
+		for i := range results {
+			results[i].Status = 0
+			results[i].Success = false
+			results[i].Message = "failed"
+		}
+		return results, common.TranslatePostgresError(err, r.logger)
 	}
 
 	return results, nil
 }
 
 func (r *PostgresRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
-	psql := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
-	builder := psql.Update("users")
+	queryBuilder := r.statementBuilder.Update("users")
+
+	var results []common.BulkOpResult
 
 	for i := range dto.Updates {
 		currentUser := dto.Updates[i]
 		for j := range currentUser.Updates {
-			builder = builder.Set(currentUser.Updates[j].Field, currentUser.Updates[j].Value)
+			queryBuilder = queryBuilder.Set(currentUser.Updates[j].Field, currentUser.Updates[j].Value)
 		}
+
+		var result common.BulkOpResult
+		id, _ := uuid.Parse(currentUser.Id)
+		result.Id = id
+		result.Status = 1
+		result.Success = true
+		result.Message = "modified"
+		results = append(results, result)
 	}
 
-	query, args, err := builder.ToSql()
+	query, args, err := queryBuilder.ToSql()
 	if err != nil {
 		r.logger.Error("Failed to generate bulk modify query with squirrel", zap.Error(err))
 		return nil, common.ErrResourcesCannotBeModified
@@ -353,61 +423,51 @@ func (r *PostgresRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) 
 	_, err = r.pgx.Exec(ctx, query, args...)
 	if err != nil {
 		r.logger.Error("Failed to execute bulk modify query", zap.Error(err))
-		return nil, common.ErrResourcesCannotBeModified
+		for i := range results {
+			results[i].Status = 0
+			results[i].Success = false
+			results[i].Message = "failed"
+		}
+		return results, common.ErrResourcesCannotBeModified
 	}
 
 	return nil, nil
 }
 
 func (r *PostgresRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
-	return nil, nil
-}
+	queryBuilder := r.statementBuilder.Delete("users")
 
-func (r *PostgresRepository) translateError(err error) error {
-	if err == nil {
-		return nil
+	var results []common.BulkOpResult
+
+	for i := range dto.Users {
+		currentUser := dto.Users[i]
+		queryBuilder = queryBuilder.Where(squirrel.Eq{"id": currentUser.Id})
+
+		var result common.BulkOpResult
+		id, _ := uuid.Parse(currentUser.Id)
+		result.Id = id
+		result.Status = 1
+		result.Success = true
+		result.Message = "deleted"
+		results = append(results, result)
 	}
 
-	// 1. Handle standard pgx infrastructure errors
-	if errors.Is(err, pgx.ErrNoRows) {
-		return common.ErrResourceNotFound
+	query, args, err := queryBuilder.ToSql()
+	if err != nil {
+		r.logger.Error("Failed to generate bulk delete query with squirrel", zap.Error(err))
+		return nil, common.ErrResourcesCannotBeDeleted
 	}
 
-	// Handle Go's native context timeout/cancelation
-	if errors.Is(err, context.DeadlineExceeded) {
-		return common.ErrResourceOperationFailed
-	}
-
-	// 2. Unpack PostgreSQL driver-specific errors
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
-		switch pgErr.Code {
-		case pgerrcode.UniqueViolation: // "23505"
-			return common.ErrResourceAlreadyExists
-
-		case pgerrcode.LockNotAvailable: // "55P03"
-			// Triggered instantly if you use "SELECT ... FOR UPDATE NOWAIT"
-			return common.ErrResourceOperationFailed
-
-		case pgerrcode.DeadlockDetected: // "40P01"
-			// Postgres actively detected a dependency cycle between transactions
-			return common.ErrResourceOperationFailed
-
-		case pgerrcode.SerializationFailure: // "40001"
-			// Occurs under Serializable isolation level when a conflict is detected
-			return common.ErrResourceOperationFailed
-
-		case pgerrcode.QueryCanceled: // "57014"
-			// Postgres killed the query because statement_timeout or lock_timeout fired
-			return common.ErrResourceOperationFailed
+	_, err = r.pgx.Exec(ctx, query, args...)
+	if err != nil {
+		r.logger.Error("Failed to execute bulk delete query", zap.Error(err))
+		for i := range results {
+			results[i].Status = 0
+			results[i].Message = "failed"
+			results[i].Success = false
 		}
-
-		// Log unexpected raw database errors for internal observability
-		r.logger.Error("Unhandled postgres error",
-			zap.String("code", pgErr.Code),
-			zap.String("message", pgErr.Message),
-		)
+		return results, common.TranslatePostgresError(err, r.logger)
 	}
 
-	return common.ErrRepositoryGeneric
+	return results, nil
 }

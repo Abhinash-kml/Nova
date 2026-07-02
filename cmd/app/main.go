@@ -148,8 +148,9 @@ func main() {
 
 	// Setup users module
 	usersTracer := otel.Tracer("users-domain")
-	usersRepository := users.NewInMemoryUsersRepository(logger, usersTracer)
-	usersRepository.Seed()
+	// usersRepository := users.NewInMemoryUsersRepository(logger, usersTracer)
+	usersRepository := users.NewPostgresRepositoryFromPGX(postgresClient, logger)
+	usersRepository.Seed(context.Background())
 	usersService := users.NewLocalUsersService(usersRepository, redisClient, logger, usersTracer)
 	usersController := users.NewController(usersService, logger, usersTracer)
 	users.SetupRoutes(globalRouter, usersController)

@@ -8,8 +8,8 @@ import (
 )
 
 type UsersRepository interface {
-	Initialize() error
-	Seed() error
+	Initialize(context.Context) error
+	Seed(context.Context) error
 
 	// General operations
 	Add(ctx context.Context, dto CreateDTO) (User, error)

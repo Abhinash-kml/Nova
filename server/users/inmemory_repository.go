@@ -28,11 +28,11 @@ func NewInMemoryUsersRepository(l *zap.Logger, t trace.Tracer) *InMemoryUsersRep
 }
 
 // INFO: Not needed as its in-memory
-func (r *InMemoryUsersRepository) Initialize() error {
+func (r *InMemoryUsersRepository) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (r *InMemoryUsersRepository) Seed() error {
+func (r *InMemoryUsersRepository) Seed(ctx context.Context) error {
 	file, err := os.OpenFile("./seeds/users.json", os.O_RDONLY, 0755)
 	if err != nil {
 		r.logger.Error("Failed to open users seeds file", zap.Error(err))
