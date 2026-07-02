@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -136,7 +138,7 @@ func (mm *MigrationManager) MigrateWithLock(ctx context.Context) error {
 
 	// Acquire advisory lock
 	var locked bool
-	err := mm.db.QueryRowContext(ctx, "SELECT pq_try_advisory_lock($1);", lockId).Scan(&locked)
+	err := mm.db.QueryRowContext(ctx, "SELECT pg_try_advisory_lock($1);", lockId).Scan(&locked)
 	if err != nil {
 		return fmt.Errorf("failed to acquire advisory lock: %w", err)
 	}
@@ -152,7 +154,7 @@ func (mm *MigrationManager) MigrateWithLock(ctx context.Context) error {
 	}()
 
 	// Run migrations
-	return mm.Up()
+	return mm.MigrateWithRollback()
 }
 
 func (mm *MigrationManager) MigrateWithRollback() error {
@@ -172,11 +174,17 @@ func (mm *MigrationManager) MigrateWithRollback() error {
 		}
 
 		if err != nil {
-			mm.logger.Info("Migration failed", zap.Int("count", count), zap.Error(err))
+			if errors.Is(err, os.ErrNotExist) || strings.Contains(err.Error(), "file does not exist") {
+				mm.logger.Info("All available migrations applied successfully", zap.Int("total_steps_run", count))
+				break
+			}
+
+			mm.logger.Info("Migration step execution failed", zap.Int("count", count), zap.Error(err))
 			return mm.rollbackToStart()
 		}
 
 		// Update current version
+		count++
 		mm.currentVersion, _, _ = mm.migrate.Version()
 		mm.logger.Info("Successfully applied migrations", zap.Uint("version", mm.currentVersion), zap.Int("count", count))
 	}

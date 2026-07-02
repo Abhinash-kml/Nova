@@ -22,6 +22,7 @@ import (
 	"github.com/gin-contrib/cors"
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/redis/go-redis/extra/redisotel/v9"
 	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/contrib/bridges/otelzap"
@@ -68,19 +69,19 @@ func main() {
 		config.Postgres.Password,
 		config.Postgres.Address,
 		config.Postgres.Database)
-	postgresClient := infra.NewPostgresPGX(postgresDsn)
+	postgresPool := infra.NewPostgressPgxPool(globalCtx, postgresDsn)
 
 	// Ping redis to test connection
 	result, err := redisClient.Ping(context.Background()).Result()
 	if err != nil {
-		fmt.Println("Failed to ping connected redis", err)
+		fmt.Println("Failed to ping connected redis. Error:", err)
 	}
 	fmt.Println("Redis ping result:", result)
 
 	// Ping postgres to test connection
-	err = postgresClient.Ping(context.Background())
+	err = postgresPool.Ping(context.Background())
 	if err != nil {
-		fmt.Println("Failed to ping connected postgres client", err)
+		fmt.Println("Failed to ping connected postgres client. Error:", err)
 	}
 
 	// Open file for writing logs
@@ -110,7 +111,7 @@ func main() {
 	logLevel := zap.NewAtomicLevelAt(zapcore.InfoLevel)
 	fileCore := zapcore.NewCore(fileEncoder, fileSyncer, logLevel)
 	stdOutCore := zapcore.NewCore(consoleEncoder, stdOutSyncer, logLevel)
-	otelLogCore := otelzap.NewCore("my/pkg/name", otelzap.WithLoggerProvider(observability.LoggerProvider()))
+	otelLogCore := otelzap.NewCore("nova", otelzap.WithLoggerProvider(observability.LoggerProvider()))
 	teeCore := zapcore.NewTee(fileCore, stdOutCore, otelLogCore)
 	logger := zap.New(teeCore)
 	defer logger.Sync()
@@ -145,11 +146,22 @@ func main() {
 	//globalRouter.Use(auth.Token())
 
 	// Setup domains of interests
+	postgresDb := stdlib.OpenDBFromPool(postgresPool)
+	migrationManager, err := infra.NewMigrationManager(postgresDb, "./migrations/postgres", logger)
+	if err != nil {
+		logger.Fatal("Failed to create migration manager", zap.Error(err))
+	}
+
+	// Run migrations
+	err = migrationManager.MigrateWithLock(context.Background())
+	if err != nil {
+		logger.Fatal("Failed to run migrations with lock & rollback", zap.Error(err))
+	}
 
 	// Setup users module
 	usersTracer := otel.Tracer("users-domain")
 	// usersRepository := users.NewInMemoryUsersRepository(logger, usersTracer)
-	usersRepository := users.NewPostgresRepositoryFromPGX(postgresClient, logger)
+	usersRepository := users.NewPostgresRepositoryFromPgxPool(postgresPool, logger)
 	usersRepository.Seed(context.Background())
 	usersService := users.NewLocalUsersService(usersRepository, redisClient, logger, usersTracer)
 	usersController := users.NewController(usersService, logger, usersTracer)
@@ -199,4 +211,6 @@ func main() {
 
 	// Call stop() to immeaditely stop downstream services
 	stop()
+	postgresPool.Close()
+	redisClient.Close()
 }

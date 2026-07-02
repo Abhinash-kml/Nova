@@ -22,6 +22,7 @@ type User struct {
 	CreatedAt   time.Time `json:"created_at" redis:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at" redis:"updated_at"`
 	VerifiedAt  time.Time `json:"verified_at" redis:"verified_at"`
+	DisabledAt  time.Time `json:"disabled_at" redis:"disabled_at"`
 }
 
 func New(id uuid.UUID, username, displayname, email, country, state, langtag, timezone string) User {

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/lib/pq"
 	"go.uber.org/zap"
 )
@@ -18,11 +19,21 @@ func NewPostgres(dsn string) *sql.DB {
 	return db
 }
 
-func NewPostgresPGX(dsn string) *pgx.Conn {
+func NewPostgresPGX(ctx context.Context, dsn string) *pgx.Conn {
 	conn, err := pgx.Connect(context.Background(), dsn)
 	if err != nil {
 		zap.L().Error("Failed to connect to postgress using pgx library", zap.Error(err))
 	}
 
 	return conn
+}
+
+func NewPostgressPgxPool(ctx context.Context, dsn string) *pgxpool.Pool {
+	pool, err := pgxpool.New(ctx, dsn)
+	if err != nil {
+		zap.L().Error("Failed to connect to postgress pool", zap.Error(err))
+		return nil
+	}
+
+	return pool
 }

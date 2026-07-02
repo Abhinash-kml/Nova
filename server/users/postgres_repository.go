@@ -2,7 +2,6 @@ package users
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -12,25 +11,17 @@ import (
 	"github.com/abhinash-kml/nova/server/common"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
 
 type PostgresRepository struct {
 	logger           *zap.Logger
-	db               *sql.DB
-	pgx              *pgx.Conn
+	pgx              *pgxpool.Pool
 	statementBuilder squirrel.StatementBuilderType
 }
 
-func NewPostgresRepository(connection *sql.DB, l *zap.Logger) *PostgresRepository {
-	return &PostgresRepository{
-		logger:           l,
-		db:               connection,
-		statementBuilder: squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar),
-	}
-}
-
-func NewPostgresRepositoryFromPGX(connection *pgx.Conn, l *zap.Logger) *PostgresRepository {
+func NewPostgresRepositoryFromPgxPool(connection *pgxpool.Pool, l *zap.Logger) *PostgresRepository {
 	return &PostgresRepository{
 		logger:           l,
 		pgx:              connection,
@@ -176,7 +167,7 @@ func (r *PostgresRepository) GetAllByAttribute(ctx context.Context, attribute st
 
 func (r *PostgresRepository) GetById(ctx context.Context, id uuid.UUID) (User, error) {
 	rawQuery := `SELECT
-				id, username, displayname, email, country, state, avatar_url, langtag, timezone, created_at, updated_at, verified_at
+				id, username, displayname, email, country, state, avatar_url, langtag, timezone, created_at, updated_at, verified_at, disabled_at
 				FROM users
 				WHERE id = $1;`
 
