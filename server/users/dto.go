@@ -44,12 +44,12 @@ type UpdateDTO struct {
 
 type ReplacementData struct {
 	Username    string `json:"username" binding:"required,gte=5,lte=20"`
-	DisplayName string `json:"display_name" binding:"required,gte=5,lte=10"`
+	DisplayName string `json:"displayname" binding:"required,gte=5,lte=10"`
 	Email       string `json:"email" binding:"required,email"`
 	Country     string `json:"country" binding:"required"`
 	State       string `json:"state" binding:"required"`
 	LangTag     string `json:"lang_tag" binding:"required"`
-	Timezone    string `json:"time_zone" binding:"required"`
+	Timezone    string `json:"timezone" binding:"required"`
 }
 
 type ReplaceDTO struct {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/lib/pq"
@@ -29,7 +30,15 @@ func NewPostgresPGX(ctx context.Context, dsn string) *pgx.Conn {
 }
 
 func NewPostgressPgxPool(ctx context.Context, dsn string) *pgxpool.Pool {
-	pool, err := pgxpool.New(ctx, dsn)
+	cfg, err := pgxpool.ParseConfig(dsn)
+	if err != nil {
+		zap.L().Error("Failed to parse pgx poll config", zap.Error(err))
+		return nil
+	}
+
+	cfg.ConnConfig.Tracer = otelpgx.NewTracer()
+
+	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
 		zap.L().Error("Failed to connect to postgress pool", zap.Error(err))
 		return nil

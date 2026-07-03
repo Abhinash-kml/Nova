@@ -186,7 +186,7 @@ func (c *Controller) Replace(ctx *gin.Context) {
 
 	var dto ReplaceDTO
 
-	if err := ctx.ShouldBindUri(&dto.Id); err != nil {
+	if err := ctx.ShouldBindUri(&dto.UserId); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		utils.SendProblemDetails(ctx, err)

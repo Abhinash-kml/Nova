@@ -34,6 +34,23 @@ func (r *PostgresRepository) Initialize(ctx context.Context) error {
 }
 
 func (r *PostgresRepository) Seed(ctx context.Context) error {
+	// Check if rows already exists, if so then dont seed
+	existQuery := `SELECT count(*) FROM users;`
+	row := r.pgx.QueryRow(ctx, existQuery)
+
+	var count int
+	if err := row.Scan(&count); err != nil {
+		r.logger.Error("Failed to scan count of rows from users table", zap.Error(err))
+		return err
+	}
+
+	// Rows already exists, dont seed
+	if count != 0 {
+		r.logger.Sugar().Infof("Users table containers %d rows, skipping seeding from file...", count)
+		return nil
+	}
+
+	// Table is empty, so seed from file to table
 	queryBuilder := r.statementBuilder.Insert("users").Columns(
 		"id",
 		"username",
@@ -42,7 +59,7 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 		"country",
 		"state",
 		"avatar_url",
-		"langtag",
+		"lang_tag",
 		"timezone",
 		"created_at",
 		"updated_at",
@@ -95,7 +112,7 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 // General operations
 func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (User, error) {
 	rawQuery := `INSERT INTO 
-				users(username, displayname, email, country, state, avatar_url, langtag, timezone, created_at, updated_at, verified_at)
+				users(username, displayname, email, country, state, avatar_url, lang_tag, timezone, created_at, updated_at, verified_at)
 				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
 				RETURNING *;`
 
@@ -131,7 +148,7 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 	var rows pgx.Rows
 	var err error
 	rawQuery := `SELECT 
-				id, username, displayname, email, country, state, avatar_url, langtag, timezone, created_at, updated_at, verified_at
+				id, username, displayname, email, country, state, avatar_url, lang_tag, timezone, created_at, updated_at, verified_at
 				FROM users`
 	if cursor == 0 {
 		rawQuery += ` ORDER BY id
@@ -167,23 +184,24 @@ func (r *PostgresRepository) GetAllByAttribute(ctx context.Context, attribute st
 
 func (r *PostgresRepository) GetById(ctx context.Context, id uuid.UUID) (User, error) {
 	rawQuery := `SELECT
-				id, username, displayname, email, country, state, avatar_url, langtag, timezone, created_at, updated_at, verified_at, disabled_at
+				id, username, displayname, email, country, state, avatar_url, lang_tag, timezone, created_at, updated_at, verified_at, disabled_at
 				FROM users
 				WHERE id = $1;`
 
-	rows, err := r.pgx.Query(ctx, rawQuery, id)
-	if err != nil {
-		r.logger.Error("Failed to execute getbyid query", zap.Error(err))
-		return User{}, common.TranslatePostgresError(err, r.logger)
-	}
-	defer rows.Close()
+	row := r.pgx.QueryRow(ctx, rawQuery, id)
 
 	var user User
-	err = rows.Scan(&user.Id, &user.Username, &user.DisplayName, &user.Email, &user.Country, &user.State, &user.AvatarURL, &user.LangTag, &user.Timezone,
-		&user.CreatedAt, &user.UpdatedAt, &user.VerifiedAt)
+	var disabledAt *time.Time
+
+	err := row.Scan(&user.Id, &user.Username, &user.DisplayName, &user.Email, &user.Country, &user.State, &user.AvatarURL, &user.LangTag, &user.Timezone,
+		&user.CreatedAt, &user.UpdatedAt, &user.VerifiedAt, &disabledAt)
 	if err != nil {
-		r.logger.Error("Failed to scan row in query", zap.Error(err))
+		r.logger.Error("Failed to scan row in getbyid query", zap.Error(err))
 		return User{}, common.TranslatePostgresError(err, r.logger)
+	}
+
+	if disabledAt != nil && !disabledAt.IsZero() {
+		user.DisabledAt = *disabledAt
 	}
 
 	return user, nil
@@ -191,22 +209,23 @@ func (r *PostgresRepository) GetById(ctx context.Context, id uuid.UUID) (User, e
 
 func (r *PostgresRepository) GetByName(ctx context.Context, name string) (User, error) {
 	rawQuery := `SELECT
-				id, username, displayname, email, country, state, avatar_url, langtag, timezone, created_at, updated_at, verified_at
+				id, username, displayname, email, country, state, avatar_url, lang_tag, timezone, created_at, updated_at, verified_at, disabled_at
 				FROM users
 				WHERE username = $1;`
 
-	result, err := r.pgx.Query(ctx, rawQuery, name)
+	row := r.pgx.QueryRow(ctx, rawQuery, name)
+
+	var user User
+	var disabledAt *time.Time
+	err := row.Scan(&user.Id, &user.Username, &user.DisplayName, &user.Email, &user.Country, &user.State, &user.AvatarURL, &user.LangTag, &user.Timezone,
+		&user.CreatedAt, &user.UpdatedAt, &user.VerifiedAt, &disabledAt)
 	if err != nil {
-		r.logger.Error("Failed to execute getbyid query", zap.Error(err))
+		r.logger.Error("Failed to scan result in getbyname query", zap.Error(err))
 		return User{}, common.TranslatePostgresError(err, r.logger)
 	}
 
-	var user User
-	err = result.Scan(&user.Id, &user.Username, &user.DisplayName, &user.Email, &user.Country, &user.State, &user.AvatarURL, &user.LangTag, &user.Timezone,
-		&user.CreatedAt, &user.UpdatedAt, &user.VerifiedAt)
-	if err != nil {
-		r.logger.Error("Failed to scan result in query", zap.Error(err))
-		return User{}, common.TranslatePostgresError(err, r.logger)
+	if disabledAt != nil && !disabledAt.IsZero() {
+		user.DisabledAt = *disabledAt
 	}
 
 	return user, nil
@@ -225,6 +244,8 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (User, e
 	}
 
 	var user User
+	var disabledAt *time.Time
+
 	tx, err := r.pgx.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
 		r.logger.Error("Failed to begin transaction in update query", zap.Error(err))
@@ -232,7 +253,7 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (User, e
 	}
 	defer tx.Rollback(ctx)
 
-	_, err = tx.Query(ctx, "SELECT username FROM users WHERE id = $1 FOR UPDATE;", dto.Id)
+	_, err = tx.Exec(ctx, "SELECT username FROM users WHERE id = $1 FOR UPDATE;", dto.Id)
 	if err != nil {
 		r.logger.Error("Failed to lock row for update in transaction", zap.Error(err))
 		return User{}, common.TranslatePostgresError(err, r.logger)
@@ -240,10 +261,13 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (User, e
 
 	result := tx.QueryRow(ctx, query, args...)
 	err = result.Scan(&user.Id, &user.Username, &user.DisplayName, &user.Email, &user.Country, &user.State, &user.AvatarURL, &user.LangTag, &user.Timezone,
-		&user.CreatedAt, &user.UpdatedAt, &user.VerifiedAt)
+		&user.CreatedAt, &user.UpdatedAt, &user.VerifiedAt, &disabledAt)
 	if err != nil {
 		r.logger.Error("Failed to scan returned object from update query in transaction", zap.Error(err))
 		return User{}, common.TranslatePostgresError(err, r.logger)
+	}
+	if disabledAt != nil && !disabledAt.IsZero() {
+		user.DisabledAt = *disabledAt
 	}
 
 	err = tx.Commit(ctx)
@@ -258,22 +282,22 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (User, e
 func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (User, error) {
 	rawQuery := `UPDATE users
 				SET
-				username = $2,
-				displayname = $3,
-				email = $4,
-				country = $5,
-				state = $6,
-				avatar_url = '-',
-				langtag = $8,
-				timezone = $9,
-				created_at = now(),
-				updated_at = now(),
-				verified_at = now(),
+					username = $2,
+					displayname = $3,
+					email = $4,
+					country = $5,
+					state = $6,
+					avatar_url = '-',
+					lang_tag = $7,
+					timezone = $8,
+					updated_at = now(),
+					verified_at = now()
 				WHERE
-				id = $1
+					id = $1
 				RETURNING *;`
 
 	var user User
+	var disabledAt *time.Time
 
 	tx, err := r.pgx.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
@@ -281,18 +305,21 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (User,
 	}
 	defer tx.Rollback(ctx)
 
-	_, err = tx.Query(ctx, "SELECT username FROM users WHERE id = $1 FOR UPDATE;", dto.Id)
+	_, err = tx.Exec(ctx, "SELECT username FROM users WHERE id = $1 FOR UPDATE;", dto.Id)
 	if err != nil {
-		r.logger.Error("Failed ")
+		r.logger.Error("Failed to lock row for replace in transaction", zap.Error(err))
 		return User{}, common.TranslatePostgresError(err, r.logger)
 	}
 
 	result := tx.QueryRow(ctx, rawQuery, dto.Id, dto.Username, dto.DisplayName, dto.Email, dto.Country, dto.State, dto.LangTag, dto.Timezone)
 	err = result.Scan(&user.Id, &user.Username, &user.DisplayName, &user.Email, &user.Country, &user.State, &user.AvatarURL, &user.LangTag, &user.Timezone,
-		&user.CreatedAt, &user.UpdatedAt, &user.VerifiedAt)
+		&user.CreatedAt, &user.UpdatedAt, &user.VerifiedAt, &disabledAt)
 	if err != nil {
 		r.logger.Error("Failed to scan result of replace query", zap.Error(err))
 		return User{}, common.TranslatePostgresError(err, r.logger)
+	}
+	if disabledAt != nil && !disabledAt.IsZero() {
+		user.DisabledAt = *disabledAt
 	}
 
 	err = tx.Commit(ctx)
@@ -311,12 +338,12 @@ func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UU
 					RETURNING id;`
 	disableQuery := `UPDATE
 					users
-					SET disabled = true
+					SET disabled_at = now()
 					WHERE id = $1
 					RETURNING id;`
 
 	var result pgx.Row
-	if dto.DeleteOptions.Type == "disable" {
+	if dto.DeleteOptions.Type == "soft" {
 		result = r.pgx.QueryRow(ctx, disableQuery, dto.Id)
 	} else {
 		result = r.pgx.QueryRow(ctx, deleteQuery, dto.Id)
@@ -341,7 +368,7 @@ func (r *PostgresRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]
 		"country",
 		"state",
 		"avatar_url",
-		"langtag",
+		"lang_tag",
 		"timezone",
 		"created_at",
 		"updated_at",

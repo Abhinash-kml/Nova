@@ -159,45 +159,64 @@ func main() {
 	}
 
 	// Setup users module
-	usersTracer := otel.Tracer("users-domain")
-	// usersRepository := users.NewInMemoryUsersRepository(logger, usersTracer)
-	usersRepository := users.NewPostgresRepositoryFromPgxPool(postgresPool, logger)
-	usersRepository.Seed(context.Background())
-	usersService := users.NewLocalUsersService(usersRepository, redisClient, logger, usersTracer)
-	usersController := users.NewController(usersService, logger, usersTracer)
-	users.SetupRoutes(globalRouter, usersController)
+	{
+		usersTracer := otel.Tracer("users-domain")
+		usersRepository := users.NewPostgresRepositoryFromPgxPool(postgresPool, logger)
+		if err = usersRepository.Seed(context.Background()); err != nil {
+			logger.Error("Failed to seed users repository", zap.Error(err))
+		}
+		usersService := users.NewLocalUsersService(usersRepository, redisClient, logger, usersTracer)
+		usersController := users.NewController(usersService, logger, usersTracer)
+		users.SetupRoutes(globalRouter, usersController)
+	}
 
 	// Setup posts module
-	postsTracer := otel.Tracer("posts-domain")
-	postsRepository := posts.NewInMemoryPostsRepository(logger, postsTracer)
-	postsRepository.Seed()
-	postsService := posts.NewLocalPostsService(postsRepository, redisClient, logger, postsTracer)
-	postsController := posts.NewController(postsService, logger, postsTracer)
-	posts.SetupRoutes(globalRouter, postsController)
+	{
+		postsTracer := otel.Tracer("posts-domain")
+		postsRepository := posts.NewInMemoryPostsRepository(logger, postsTracer)
+		if err = postsRepository.Seed(); err != nil {
+			logger.Error("Failed to seed posts repository", zap.Error(err))
+		}
+		postsService := posts.NewLocalPostsService(postsRepository, redisClient, logger, postsTracer)
+		postsController := posts.NewController(postsService, logger, postsTracer)
+		posts.SetupRoutes(globalRouter, postsController)
+	}
 
 	// Setup comments module
-	commentsTracer := otel.Tracer("comments-tracer")
-	commentsRepository := comments.NewInMemoryCommentsRepository(logger, commentsTracer)
-	commentsRepository.Seed()
-	commentsService := comments.NewLocalCommentsService(commentsRepository, redisClient, logger, commentsTracer)
-	commentsController := comments.NewController(commentsService, logger, commentsTracer)
-	comments.SetupRoutes(globalRouter, commentsController)
+	{
+		commentsTracer := otel.Tracer("comments-tracer")
+		commentsRepository := comments.NewInMemoryCommentsRepository(logger, commentsTracer)
+		if err = commentsRepository.Seed(); err != nil {
+			logger.Error("Failed to seed comments repository", zap.Error(err))
+		}
+		commentsService := comments.NewLocalCommentsService(commentsRepository, redisClient, logger, commentsTracer)
+		commentsController := comments.NewController(commentsService, logger, commentsTracer)
+		comments.SetupRoutes(globalRouter, commentsController)
+	}
 
 	// Setup clans module
-	clansTracer := otel.Tracer("clans-tracer")
-	clansRepository := clans.NewInMemoryClanRepository(logger, clansTracer)
-	clansRepository.Seed()
-	clansService := clans.NewLocalClansService(clansRepository, redisClient, logger, clansTracer)
-	clansController := clans.NewController(clansService, logger, clansTracer)
-	clans.SetupRoutes(globalRouter, clansController)
+	{
+		clansTracer := otel.Tracer("clans-tracer")
+		clansRepository := clans.NewInMemoryClanRepository(logger, clansTracer)
+		if err = clansRepository.Seed(); err != nil {
+			logger.Error("Failed to seed clans repository", zap.Error(err))
+		}
+		clansService := clans.NewLocalClansService(clansRepository, redisClient, logger, clansTracer)
+		clansController := clans.NewController(clansService, logger, clansTracer)
+		clans.SetupRoutes(globalRouter, clansController)
+	}
 
 	// Setup channels module
-	channelsTracer := otel.Tracer("channels-tracer")
-	channelsRepository := channels.NewInMemoryChannelsRepository(logger, channelsTracer)
-	channelsRepository.Seed()
-	channelsService := channels.NewLocalChannelService(channelsRepository, logger, channelsTracer)
-	channelsController := channels.NewController(channelsService, logger, channelsTracer)
-	channels.SetupRoutes(globalRouter, channelsController)
+	{
+		channelsTracer := otel.Tracer("channels-tracer")
+		channelsRepository := channels.NewInMemoryChannelsRepository(logger, channelsTracer)
+		if err = channelsRepository.Seed(); err != nil {
+			logger.Error("Failed to seed channels repository", zap.Error(err))
+		}
+		channelsService := channels.NewLocalChannelService(channelsRepository, logger, channelsTracer)
+		channelsController := channels.NewController(channelsService, logger, channelsTracer)
+		channels.SetupRoutes(globalRouter, channelsController)
+	}
 
 	// Create http api server & start it
 	server := apiserver.New(globalCtx, config.HttpServer, globalRouter, logger)
