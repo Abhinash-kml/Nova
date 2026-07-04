@@ -46,7 +46,7 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 
 	// Rows already exists, dont seed
 	if count != 0 {
-		r.logger.Sugar().Infof("Users table containers %d rows, skipping seeding from file...", count)
+		r.logger.Sugar().Infof("Users table contains %d rows, skipping seeding from file...", count)
 		return nil
 	}
 
