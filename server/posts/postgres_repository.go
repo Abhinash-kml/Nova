@@ -57,7 +57,7 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 		"id",
 		"title",
 		"body",
-		"authorid",
+		"author_id",
 		"likes",
 		"comments",
 		"created_at",

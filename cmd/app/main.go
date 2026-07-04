@@ -173,8 +173,8 @@ func main() {
 	// Setup posts module
 	{
 		postsTracer := otel.Tracer("posts-domain")
-		postsRepository := posts.NewInMemoryPostsRepository(logger, postsTracer)
-		if err = postsRepository.Seed(); err != nil {
+		postsRepository := posts.NewPostgresRepositoryFromPgxPool(postgresPool, logger, "")
+		if err = postsRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed posts repository", zap.Error(err))
 		}
 		postsService := posts.NewLocalPostsService(postsRepository, redisClient, logger, postsTracer)
