@@ -187,8 +187,9 @@ func main() {
 	// Setup comments module
 	{
 		commentsTracer := otel.Tracer("comments-tracer")
-		commentsRepository := comments.NewInMemoryCommentsRepository(logger, commentsTracer)
-		if err = commentsRepository.Seed(); err != nil {
+		commentsSeedFile := "./seeds/comments.json"
+		commentsRepository := comments.NewPostgresRepositoryFromPgxPool(postgresPool, logger, commentsSeedFile)
+		if err = commentsRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed comments repository", zap.Error(err))
 		}
 		commentsService := comments.NewLocalCommentsService(commentsRepository, redisClient, logger, commentsTracer)

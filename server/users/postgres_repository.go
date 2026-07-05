@@ -99,12 +99,9 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 		return common.ErrDbSeedingFailed
 	}
 
-	now := time.Now()
 	for i := range users {
-		id, _ := uuid.NewV7()
-		dummyAvatarUrl := "-"
-		queryBuilder = queryBuilder.Values(id, users[i].Username, users[i].DisplayName, users[i].Email, users[i].Country, users[i].State,
-			dummyAvatarUrl, users[i].LangTag, users[i].Timezone, now, now, now)
+		queryBuilder = queryBuilder.Values(users[i].Id, users[i].Username, users[i].DisplayName, users[i].Email, users[i].Country, users[i].State,
+			users[i].AvatarURL, users[i].LangTag, users[i].Timezone, users[i].CreatedAt, users[i].UpdatedAt, users[i].VerifiedAt)
 	}
 
 	// Generate query
@@ -120,6 +117,8 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 		r.logger.Error("Failed to execute query to seed users table", zap.Error(err))
 		return common.ErrDbSeedingFailed
 	}
+
+	r.logger.Info("Successfully seeded users from file", zap.Int("count", len(users)))
 
 	return nil
 }
@@ -200,6 +199,7 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 					LIMIT $2;`
 		rows, err = r.pgx.Query(ctx, rawQuery, cursor, limit)
 	}
+	defer rows.Close()
 
 	// Scan returned rows
 	var users []User
@@ -208,12 +208,12 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 		err = rows.Scan(&user.Id, &user.Username, &user.DisplayName, &user.Email, &user.Country, &user.State, &user.AvatarURL, &user.LangTag, &user.Timezone,
 			&user.CreatedAt, &user.UpdatedAt, &user.VerifiedAt)
 		if err != nil {
-
+			r.logger.Error("Failed to sca nreturned row in getall query", zap.Error(err))
+			return nil, common.TranslatePostgresError(err, r.logger)
 		}
 
 		users = append(users, user)
 	}
-	defer rows.Close()
 
 	return users, err
 }
@@ -448,7 +448,7 @@ func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UU
 	// Scan returned row
 	if err := result.Scan(&deletedId); err != nil {
 		r.logger.Error("Failed to scan result in delete query", zap.Error(err))
-		return uuid.Nil, err
+		return uuid.Nil, common.TranslatePostgresError(err, r.logger)
 	}
 
 	return deletedId, nil

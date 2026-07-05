@@ -96,11 +96,9 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 		return common.ErrDbSeedingFailed
 	}
 
-	now := time.Now()
 	for i := range posts {
-		id, _ := uuid.NewV7()
-		queryBuilder = queryBuilder.Values(id, posts[i].Title, posts[i].Body, posts[i].AuthorId, posts[i].Likes,
-			posts[i].Comments, now, now)
+		queryBuilder = queryBuilder.Values(posts[i].Id, posts[i].Title, posts[i].Body, posts[i].AuthorId, posts[i].Likes,
+			posts[i].Comments, posts[i].CreatedAt, posts[i].UpdatedAt)
 	}
 
 	// Generate query
@@ -116,6 +114,8 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 		r.logger.Error("Failed to execute query to seed posts table", zap.Error(err))
 		return common.ErrDbSeedingFailed
 	}
+
+	r.logger.Info("Successfully seeded posts from file", zap.Int("count", len(posts)))
 
 	return nil
 }

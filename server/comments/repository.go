@@ -8,8 +8,8 @@ import (
 )
 
 type CommentsRepository interface {
-	Initialize() error
-	Seed() error
+	Initialize(ctx context.Context) error
+	Seed(ctx context.Context) error
 
 	// General operations
 	Add(ctx context.Context, dto CreateDTO) (Comment, error)
