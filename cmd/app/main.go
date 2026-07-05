@@ -161,7 +161,8 @@ func main() {
 	// Setup users module
 	{
 		usersTracer := otel.Tracer("users-domain")
-		usersRepository := users.NewPostgresRepositoryFromPgxPool(postgresPool, logger)
+		usersSeedFile := "./seeds/users.json"
+		usersRepository := users.NewPostgresRepositoryFromPgxPool(postgresPool, logger, usersSeedFile)
 		if err = usersRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed users repository", zap.Error(err))
 		}
@@ -173,7 +174,8 @@ func main() {
 	// Setup posts module
 	{
 		postsTracer := otel.Tracer("posts-domain")
-		postsRepository := posts.NewPostgresRepositoryFromPgxPool(postgresPool, logger, "")
+		postsSeedFile := "./seeds/posts.json"
+		postsRepository := posts.NewPostgresRepositoryFromPgxPool(postgresPool, logger, postsSeedFile)
 		if err = postsRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed posts repository", zap.Error(err))
 		}

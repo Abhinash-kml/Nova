@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/squirrel"
@@ -22,12 +23,12 @@ type PostgresRepository struct {
 	seedfile         string
 }
 
-func NewPostgresRepositoryFromPgxPool(connection *pgxpool.Pool, l *zap.Logger, sl string) *PostgresRepository {
+func NewPostgresRepositoryFromPgxPool(connection *pgxpool.Pool, l *zap.Logger, sfp string) *PostgresRepository {
 	return &PostgresRepository{
 		logger:           l,
 		pgx:              connection,
 		statementBuilder: squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar),
-		seedfile:         sl,
+		seedfile:         sfp,
 	}
 }
 
@@ -41,9 +42,11 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 	row := r.pgx.QueryRow(ctx, existQuery)
 
 	var count int
+
+	// Scan returned row
 	if err := row.Scan(&count); err != nil {
 		r.logger.Error("Failed to scan count of rows from posts table", zap.Error(err))
-		return err
+		return common.ErrDbSeedingFailed
 	}
 
 	// Rows already exists, dont seed
@@ -64,24 +67,33 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 		"updated_at",
 	)
 
-	file, err := os.OpenFile("./seeds/posts.json", os.O_RDONLY, 0755)
+	// Check if seeds file is provided and is of json format by suffix
+	if len(r.seedfile) == 0 || !strings.HasSuffix(r.seedfile, ".json") {
+		r.logger.Error("Seeds file not provided or is not of json format. Skipping seeding")
+		return common.ErrDbSeedingFailed
+	}
+
+	// Open file
+	file, err := os.OpenFile(r.seedfile, os.O_RDONLY, 0755)
 	if err != nil {
-		r.logger.Error("Failed to open posts seeds file", zap.Error(err))
-		return fmt.Errorf("Failed to open posts's seeds file. Error: %w", err)
+		r.logger.Error("Failed to open posts seeds file", zap.String("file", r.seedfile), zap.Error(err))
+		return common.ErrDbSeedingFailed
 	}
 	defer file.Close()
 
+	// Create json decoder
 	decoder := json.NewDecoder(file)
 	if decoder == nil {
 		r.logger.Error("Failed to create json decoder. Returned nil pointer")
-		return fmt.Errorf("Failed to create json decoder. Returned nil pointer")
+		return common.ErrDbSeedingFailed
 	}
 
+	// Decode
 	var posts []Post
 	err = decoder.Decode(&posts)
 	if err != nil {
-		r.logger.Error("Failed to decode seeded users from file", zap.Error(err))
-		return fmt.Errorf("Faield to decode seeded posts from file")
+		r.logger.Error("Failed to decode seeded posts from file", zap.Error(err))
+		return common.ErrDbSeedingFailed
 	}
 
 	now := time.Now()
@@ -91,16 +103,18 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 			posts[i].Comments, now, now)
 	}
 
+	// Generate query
 	query, args, err := queryBuilder.ToSql()
 	if err != nil {
 		r.logger.Error("Failed to generate sql query with squirrel for seeding posts table", zap.Error(err))
-		return fmt.Errorf("Failed seeding posts table")
+		return common.ErrDbSeedingFailed
 	}
 
+	// Execute query
 	_, err = r.pgx.Exec(ctx, query, args...)
 	if err != nil {
 		r.logger.Error("Failed to execute query to seed posts table", zap.Error(err))
-		return fmt.Errorf("Failed seeding posts table")
+		return common.ErrDbSeedingFailed
 	}
 
 	return nil
@@ -109,13 +123,14 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 // General operations
 func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (Post, error) {
 	rawQuery := `INSERT INTO
-					posts
+					posts(id, title, body, author_id, likes, comments, created_at, updated_at)
 				VALUES ($1, $2, $3, $4, $5, $6, $7, $8);`
 
 	id, _ := uuid.NewV7()
 	likes, comments := 0, 0
 	now := time.Now()
 
+	// Execute query
 	_, err := r.pgx.Exec(ctx, rawQuery, id, dto.Title, dto.Body, dto.AuthorId, likes, comments, now, now)
 	if err != nil {
 		r.logger.Error("Failed to execute sql insert query", zap.Error(err))
@@ -136,6 +151,8 @@ func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (Post, erro
 func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) ([]Post, error) {
 	var rows pgx.Rows
 	var err error
+
+	// Create and execute query based on cursor value
 	rawQuery := `SELECT 
 					id, 
 					title, 
@@ -163,6 +180,7 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 	}
 	defer rows.Close()
 
+	// Scan returned rows
 	var posts []Post
 	for rows.Next() {
 		var post Post
@@ -198,6 +216,8 @@ func (r *PostgresRepository) GetById(ctx context.Context, id uuid.UUID) (Post, e
 					id = $1;`
 
 	var post Post
+
+	// Execute query
 	row := r.pgx.QueryRow(ctx, rawQuery, id)
 	err := row.Scan(&post.Id, &post.Title, &post.Body, &post.AuthorId, &post.Likes, &post.Comments,
 		&post.CreatedAt, &post.UpdatedAt)
@@ -225,6 +245,8 @@ func (r *PostgresRepository) GetByName(ctx context.Context, name string) (Post, 
 					title = $1;`
 
 	var post Post
+
+	// Eecute query
 	row := r.pgx.QueryRow(ctx, rawQuery, name)
 	err := row.Scan(&post.Id, &post.Title, &post.Body, &post.AuthorId, &post.Likes, &post.Comments,
 		&post.CreatedAt, &post.UpdatedAt)
@@ -237,6 +259,7 @@ func (r *PostgresRepository) GetByName(ctx context.Context, name string) (Post, 
 }
 
 func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (Post, error) {
+	// Generate dynamic update query using squirrel
 	queryBuilder := r.statementBuilder.Update("posts").Where(squirrel.Eq{"id": dto.Id})
 	for i := range dto.Updates {
 		queryBuilder = queryBuilder.Set(dto.Updates[i].Field, dto.Updates[i].Value)
@@ -248,6 +271,9 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (Post, e
 		return Post{}, common.TranslatePostgresError(err, r.logger)
 	}
 
+	var post Post
+
+	// Begin transaction
 	tx, err := r.pgx.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
 		r.logger.Error("Failed to begin transaction in update query", zap.Error(err))
@@ -255,13 +281,14 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (Post, e
 	}
 	defer tx.Rollback(ctx)
 
+	// Lock row inside transaction
 	_, err = tx.Exec(ctx, "SELECT id FROM posts WHERE id = $1 FOR UPDATE;", dto.Id)
 	if err != nil {
 		r.logger.Error("Failed to lock row for update in transaction", zap.Error(err))
 		return Post{}, common.TranslatePostgresError(err, r.logger)
 	}
 
-	var post Post
+	// Execute query
 	row := tx.QueryRow(ctx, query, args...)
 	err = row.Scan(&post.Id, &post.Title, &post.Body, &post.AuthorId, &post.Likes, &post.Comments,
 		&post.CreatedAt, &post.UpdatedAt)
@@ -270,6 +297,7 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (Post, e
 		return Post{}, common.TranslatePostgresError(err, r.logger)
 	}
 
+	// Commit trasnsaction
 	err = tx.Commit(ctx)
 	if err != nil {
 		r.logger.Error("Failed to commit transaction in update query", zap.Error(err))
@@ -293,6 +321,11 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (Post,
 				RETURNING 
 					*;`
 
+	var post Post
+	likes, comments := 0, 0
+	now := time.Now()
+
+	// Begin transaction
 	tx, err := r.pgx.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
 		r.logger.Error("Failed to begin transaction in replace query", zap.Error(err))
@@ -300,16 +333,14 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (Post,
 	}
 	defer tx.Rollback(ctx)
 
+	// Lock row inside transaction
 	_, err = tx.Exec(ctx, "SELECT id FROM posts WHERE id = $1 FOR UPDATE;", dto.Id)
 	if err != nil {
 		r.logger.Error("Failed to lock row for replace in transaction", zap.Error(err))
 		return Post{}, common.TranslatePostgresError(err, r.logger)
 	}
 
-	var post Post
-	likes, comments := 0, 0
-	now := time.Now()
-
+	// Execute query
 	row := tx.QueryRow(ctx, rawQuery, dto.Id, dto.Title, dto.Body, likes, comments, now)
 	err = row.Scan(&post.Id, &post.Title, &post.Body, &post.AuthorId, &post.Likes, &post.Comments,
 		&post.CreatedAt, &post.UpdatedAt)
@@ -318,6 +349,7 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (Post,
 		return Post{}, common.TranslatePostgresError(err, r.logger)
 	}
 
+	// Commit transaction
 	err = tx.Commit(ctx)
 	if err != nil {
 		r.logger.Error("Failed to commit transaction in replace query", zap.Error(err))
@@ -335,9 +367,12 @@ func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UU
 				RETURNING
 					id;`
 
+	// Execute query
 	row := r.pgx.QueryRow(ctx, rawQuery, dto.Id)
 
 	var deletedId uuid.UUID
+
+	// Scan returned row
 	err := row.Scan(&deletedId)
 	if err != nil {
 		r.logger.Error("Failed to scan returned row from delete query", zap.Error(err))

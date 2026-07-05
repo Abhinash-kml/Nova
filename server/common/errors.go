@@ -20,4 +20,6 @@ var (
 
 	ErrCursorDecodeFailed = errors.New("Failed to decode cursor back to internal representation")
 	ErrCursorEncodeFailed = errors.New("Failed to encode cursor")
+
+	ErrDbSeedingFailed = errors.New("Database seeding failed")
 )
