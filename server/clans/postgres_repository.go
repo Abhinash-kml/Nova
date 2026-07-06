@@ -278,6 +278,56 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 }
 
 func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (Clan, error) {
+	// Setup query builder
+	queryBuilder := r.statementBuilder.Update("clans").Where(squirrel.Eq{"id": dto.Id})
+	for i := range dto.Updates {
+		queryBuilder = queryBuilder.Set(dto.Updates[i].Field, dto.Updates[i].Value)
+	}
+	queryBuilder = queryBuilder.Suffix("RETURNING *")
+
+	// Generate query
+	query, args, err := queryBuilder.ToSql()
+	if err != nil {
+		r.logger.Error("Failed to generate update query using squirrel", zap.Error(err))
+		return Clan{}, common.TranslatePostgresError(err, r.logger)
+	}
+
+	var clan Clan
+
+	// Begin transaction
+	tx, err := r.pgx.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
+	if err != nil {
+		r.logger.Error("Failed to begin transaction in update query", zap.Error(err))
+		return Clan{}, common.TranslatePostgresError(err, r.logger)
+	}
+	defer tx.Rollback(ctx)
+
+	// Lock row in transaction
+	_, err = tx.Exec(ctx, "SELECT name FROM clans WHERE id = $1 FOR UPDATE;", dto.Id)
+	if err != nil {
+		r.logger.Error("Failed to lock row for update in transaction", zap.Error(err))
+		return Clan{}, common.TranslatePostgresError(err, r.logger)
+	}
+
+	// Execute query
+	row := r.pgx.QueryRow(ctx, query, args...)
+
+	// Scan returned row
+	err = row.Scan(&clan.Id, &clan.Name, &clan.Tag, &clan.Description, &clan.LeaderId, &clan.ColeaderId,
+		&clan.Level, &clan.Members, &clan.MaxMembers, &clan.IsLocked, &clan.CreatedAt, &clan.UpdatedAt)
+	if err != nil {
+		r.logger.Error("Failed to scan returned row from update query", zap.Error(err))
+		return Clan{}, common.TranslatePostgresError(err, r.logger)
+	}
+
+	// Commit transaction
+	err = tx.Commit(ctx)
+	if err != nil {
+		r.logger.Error("Failed to commit transaction in update query", zap.Error(err))
+		return Clan{}, common.TranslatePostgresError(err, r.logger)
+	}
+
+	return clan, nil
 
 }
 
