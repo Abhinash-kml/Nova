@@ -21,6 +21,7 @@ type Clan struct {
 	Members     []uuid.UUID `json:"members" redis:"members"`
 	MaxMembers  int         `json:"max_members" redis:"max_members"`
 	IsLocked    bool        `json:"is_locked" redis:"locked"`
+	CreatedAt   time.Time   `json:"created_at" redis:"created_at"`
 	UpdatedAt   time.Time   `json:"updated_at" redis:"updated_at"`
 }
 
