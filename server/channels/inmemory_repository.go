@@ -32,21 +32,21 @@ func (r *InMemoryChannelsRepository) Seed() error {
 	return nil
 }
 
-func (r *InMemoryChannelsRepository) GetAll(ctx context.Context, cursor int, limit int) ([]ChannelDTO, error) {
+func (r *InMemoryChannelsRepository) GetAll(ctx context.Context, cursor int, limit int) ([]Channel, error) {
 	_, span := r.tracer.Start(ctx, "channels.repository.getall")
 	defer span.End()
 
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	var out []ChannelDTO
+	var out []Channel
 	for index := range r.channels {
-		current := ChannelDTO{
-			Id:               r.channels[index].Id,
-			Name:             r.channels[index].Name,
-			IsPersistant:     r.channels[index].IsPersistant,
-			TotalSubscribers: len(r.channels[index].Subscribers),
-			ProcessInterval:  r.channels[index].ProcessInterval,
+		current := Channel{
+			Id:              r.channels[index].Id,
+			Name:            r.channels[index].Name,
+			IsPersistant:    r.channels[index].IsPersistant,
+			Subscribers:     r.channels[index].Subscribers,
+			ProcessInterval: r.channels[index].ProcessInterval,
 		}
 		out = append(out, current)
 	}
@@ -54,7 +54,7 @@ func (r *InMemoryChannelsRepository) GetAll(ctx context.Context, cursor int, lim
 	return out, nil
 }
 
-func (r *InMemoryChannelsRepository) GetById(ctx context.Context, id uuid.UUID) (ChannelDTO, error) {
+func (r *InMemoryChannelsRepository) GetById(ctx context.Context, id uuid.UUID) (Channel, error) {
 	_, span := r.tracer.Start(ctx, "channels.repository.getbyid")
 	defer span.End()
 
@@ -63,20 +63,20 @@ func (r *InMemoryChannelsRepository) GetById(ctx context.Context, id uuid.UUID) 
 
 	for index := range r.channels {
 		if r.channels[index].Id == id {
-			return ChannelDTO{
-				Id:               r.channels[index].Id,
-				Name:             r.channels[index].Name,
-				IsPersistant:     r.channels[index].IsPersistant,
-				TotalSubscribers: len(r.channels[index].Subscribers),
-				ProcessInterval:  r.channels[index].ProcessInterval,
+			return Channel{
+				Id:              r.channels[index].Id,
+				Name:            r.channels[index].Name,
+				IsPersistant:    r.channels[index].IsPersistant,
+				Subscribers:     r.channels[index].Subscribers,
+				ProcessInterval: r.channels[index].ProcessInterval,
 			}, nil
 		}
 	}
 
-	return ChannelDTO{}, common.ErrResourceNotFound
+	return Channel{}, common.ErrResourceNotFound
 }
 
-func (r *InMemoryChannelsRepository) Add(ctx context.Context, dto CreateDTO) (ChannelDTO, error) {
+func (r *InMemoryChannelsRepository) Add(ctx context.Context, dto CreateDTO) (Channel, error) {
 	_, span := r.tracer.Start(ctx, "channels.repository.add")
 	defer span.End()
 
@@ -85,7 +85,7 @@ func (r *InMemoryChannelsRepository) Add(ctx context.Context, dto CreateDTO) (Ch
 
 	processInterval, err := time.ParseDuration(dto.ProcessInterval)
 	if err != nil {
-		return ChannelDTO{}, fmt.Errorf("Failed to parse provided duration. Error: %w", err)
+		return Channel{}, fmt.Errorf("Failed to parse provided duration. Error: %w", err)
 	}
 
 	id := uuid.New()
@@ -96,7 +96,7 @@ func (r *InMemoryChannelsRepository) Add(ctx context.Context, dto CreateDTO) (Ch
 		ProcessInterval: processInterval,
 	})
 
-	return ChannelDTO{
+	return Channel{
 		Id:              id,
 		Name:            dto.Name,
 		IsPersistant:    dto.IsPersistant,
@@ -104,7 +104,7 @@ func (r *InMemoryChannelsRepository) Add(ctx context.Context, dto CreateDTO) (Ch
 	}, nil
 }
 
-func (r *InMemoryChannelsRepository) Modify(ctx context.Context, dto UpdateDTO) (ChannelDTO, error) {
+func (r *InMemoryChannelsRepository) Modify(ctx context.Context, dto UpdateDTO) (Channel, error) {
 	_, span := r.tracer.Start(ctx, "channels.repository.modify")
 	defer span.End()
 
@@ -113,15 +113,15 @@ func (r *InMemoryChannelsRepository) Modify(ctx context.Context, dto UpdateDTO) 
 
 	channelId, err := uuid.Parse(dto.Id)
 	if err != nil {
-		return ChannelDTO{}, fmt.Errorf("Failed to parse provided uuid. Error: %w", err)
+		return Channel{}, fmt.Errorf("Failed to parse provided uuid. Error: %w", err)
 	}
 
 	procesInterval, err := time.ParseDuration(dto.ProcessInterval)
 	if err != nil {
-		return ChannelDTO{}, fmt.Errorf("Failed to parse provided process interval. Error: %w", err)
+		return Channel{}, fmt.Errorf("Failed to parse provided process interval. Error: %w", err)
 	}
 
-	var channel ChannelDTO
+	var channel Channel
 	for index := range r.channels {
 		if r.channels[index].Id == channelId {
 			r.channels[index].IsPersistant = *dto.IsPersistant

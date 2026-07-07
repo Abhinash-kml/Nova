@@ -11,10 +11,10 @@ import (
 
 type Service interface {
 	// General operations
-	GetAll(ctx context.Context, cursor int, limit int) ([]ChannelDTO, error)
-	GetById(ctx context.Context, id uuid.UUID) (ChannelDTO, error)
-	Add(ctx context.Context, dto CreateDTO) (ChannelDTO, error)
-	Modify(ctx context.Context, dto UpdateDTO) (ChannelDTO, error)
+	GetAll(ctx context.Context, cursor int, limit int) ([]Channel, error)
+	GetById(ctx context.Context, id uuid.UUID) (Channel, error)
+	Add(ctx context.Context, dto CreateDTO) (Channel, error)
+	Modify(ctx context.Context, dto UpdateDTO) (Channel, error)
 	Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error)
 
 	// Bulk operations
@@ -37,28 +37,28 @@ func NewLocalChannelService(r Repository, l *zap.Logger, t trace.Tracer) *LocalC
 	}
 }
 
-func (s *LocalChannelsService) GetAll(ctx context.Context, cursor int, limit int) ([]ChannelDTO, error) {
+func (s *LocalChannelsService) GetAll(ctx context.Context, cursor int, limit int) ([]Channel, error) {
 	ctx, span := s.tracer.Start(ctx, "channels.service.getall")
 	defer span.End()
 
 	return s.repo.GetAll(ctx, cursor, limit)
 }
 
-func (s *LocalChannelsService) GetById(ctx context.Context, id uuid.UUID) (ChannelDTO, error) {
+func (s *LocalChannelsService) GetById(ctx context.Context, id uuid.UUID) (Channel, error) {
 	ctx, span := s.tracer.Start(ctx, "channels.service.getbyid")
 	defer span.End()
 
 	return s.repo.GetById(ctx, id)
 }
 
-func (s *LocalChannelsService) Add(ctx context.Context, dto CreateDTO) (ChannelDTO, error) {
+func (s *LocalChannelsService) Add(ctx context.Context, dto CreateDTO) (Channel, error) {
 	ctx, span := s.tracer.Start(ctx, "channels.service.add")
 	defer span.End()
 
 	return s.repo.Add(ctx, dto)
 }
 
-func (s *LocalChannelsService) Modify(ctx context.Context, dto UpdateDTO) (ChannelDTO, error) {
+func (s *LocalChannelsService) Modify(ctx context.Context, dto UpdateDTO) (Channel, error) {
 	ctx, span := s.tracer.Start(ctx, "channels.service.modify")
 	defer span.End()
 

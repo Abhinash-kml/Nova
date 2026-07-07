@@ -8,14 +8,14 @@ import (
 )
 
 type Repository interface {
-	Initialize() error
-	Seed() error
+	Initialize(ctx context.Context) error
+	Seed(ctx context.Context) error
 
 	// General operations
-	GetAll(ctx context.Context, cursor int, limit int) ([]ChannelDTO, error)
-	GetById(ctx context.Context, id uuid.UUID) (ChannelDTO, error)
-	Add(ctx context.Context, dto CreateDTO) (ChannelDTO, error)
-	Modify(ctx context.Context, dto UpdateDTO) (ChannelDTO, error)
+	GetAll(ctx context.Context, cursor int, limit int) ([]Channel, error)
+	GetById(ctx context.Context, id uuid.UUID) (Channel, error)
+	Add(ctx context.Context, dto CreateDTO) (Channel, error)
+	Modify(ctx context.Context, dto UpdateDTO) (Channel, error)
 	Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error)
 
 	// Bulk operations

@@ -1,28 +1,21 @@
 package channels
 
 import (
-	"context"
-	"sync"
 	"time"
 
-	"github.com/abhinash-kml/nova/server/realtime"
 	"github.com/google/uuid"
-	"go.uber.org/zap"
 )
 
 type Channel struct {
-	Id                uuid.UUID `json:"id"`
-	Name              string    `json:"name"`
-	IsPersistant      bool
-	Stream            chan ChannelMessage `json:"stream"`
-	PersistantMessage chan ChannelMessage
-	Subscribers       map[uuid.UUID]bool
-	ProcessInterval   time.Duration
-	ctx               context.Context
-	cancel            context.CancelFunc
-	hubChannel        chan realtime.Envelope
-	logger            *zap.Logger
-	mu                sync.RWMutex
+	Id              uuid.UUID     `json:"id"`
+	Name            string        `json:"name"`
+	IsPersistant    bool          `json:"is_persistent"`
+	ProcessInterval time.Duration `json:"process_interval"`
+	Subscribers     uint64        `json:"subscribers"`
+	CreatedBy       uuid.UUID     `json:"created_by"`
+	CreatedAt       time.Time     `json:"created_at"`
+	Updatedby       uuid.UUID     `json:"updated_by"`
+	UpdatedAt       time.Time     `json:"updated_at"`
 }
 
 type ChannelMessage struct {
