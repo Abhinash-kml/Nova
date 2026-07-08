@@ -200,8 +200,9 @@ func main() {
 	// Setup clans module
 	{
 		clansTracer := otel.Tracer("clans-tracer")
-		clansRepository := clans.NewInMemoryClanRepository(logger, clansTracer)
-		if err = clansRepository.Seed(); err != nil {
+		clansSeedsFile := "./seeds/clans.json"
+		clansRepository := clans.NewPostgresRepositoryFromPgxPool(postgresPool, logger, clansSeedsFile)
+		if err = clansRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed clans repository", zap.Error(err))
 		}
 		clansService := clans.NewLocalClansService(clansRepository, redisClient, logger, clansTracer)
@@ -212,14 +213,22 @@ func main() {
 	// Setup channels module
 	{
 		channelsTracer := otel.Tracer("channels-tracer")
-		channelsRepository := channels.NewInMemoryChannelsRepository(logger, channelsTracer)
-		if err = channelsRepository.Seed(); err != nil {
+		channelsSeedFile := "./seeds/channels.json"
+		channelsRepository := channels.NewPostgresRepositoryFromPgxPool(postgresPool, logger, channelsSeedFile)
+		if err = channelsRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed channels repository", zap.Error(err))
 		}
 		channelsService := channels.NewLocalChannelService(channelsRepository, logger, channelsTracer)
 		channelsController := channels.NewController(channelsService, logger, channelsTracer)
 		channels.SetupRoutes(globalRouter, channelsController)
 	}
+
+	// Setup leaderboard module
+	{
+
+	}
+
+	// Setup realtime module
 
 	// Create http api server & start it
 	server := apiserver.New(globalCtx, config.HttpServer, globalRouter, logger)
