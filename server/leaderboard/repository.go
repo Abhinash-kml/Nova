@@ -15,7 +15,7 @@ type Repository interface {
 	Delete(ctx context.Context, dto DeleteDTO) (Leaderboard, error)
 
 	// Score operations
-	GetScore(ctx context.Context, dto GetScoreDTO) (LeaderboardScoreDTO, error)
+	GetScore(ctx context.Context, dto GetScoreDTO) (ScoreDTO, error)
 	UpdateScore(ctx context.Context, dto UpdateScoreDTO) error
 	DeleteScore(ctx context.Context, dto DeleteScoreDTO) error
 }

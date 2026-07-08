@@ -14,6 +14,11 @@ type GetDTO struct {
 	LeaderboardId
 }
 
+type GetAllDTO struct {
+	Cursor string `form:"cursor" binding:"required"`
+	Limit  int    `form:"limit" binding:"required,gte=10,lte=20"`
+}
+
 type CreateDTO struct {
 	Name      string `json:"name"`
 	Type      string `json:"type"`
@@ -26,7 +31,7 @@ type DeleteDTO struct {
 
 // To be finalized
 type ModifyDTO struct {
-	Leaderboard
+	LeaderboardId
 }
 
 type Score struct {
@@ -38,16 +43,18 @@ type GetScoreDTO struct {
 	LeaderboardId
 }
 
-type LeaderboardScoreDTO struct {
+type ScoreDTO struct {
 	Scores []Score `json:"scores"`
 }
 
 type UpdateOptions struct {
-	AggregateType string `uri:"type" binding:"required,oneof=incr decr best set"`
+	AggregateType string `uri:"operator" binding:"required,oneof=incr decr best set"`
 }
 
 type UpdateScoreDTO struct {
 	LeaderboardId
+	UpdateOptions
+	ScoreDTO
 }
 
 type ModifyScoreDTO struct {
