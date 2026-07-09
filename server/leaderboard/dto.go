@@ -20,23 +20,29 @@ type GetAllDTO struct {
 }
 
 type CreateDTO struct {
-	Name      string `json:"name"`
-	Type      string `json:"type"`
-	CreatedBy string `json:"created_by"`
+	Name            string `json:"name" binding:"required"`
+	Type            string `json:"type" binding:"required"`
+	ProcessInterval int    `json:"process_interval" binding:"required"`
+	CreatedBy       string `json:"created_by" binding:"required"`
 }
 
 type DeleteDTO struct {
 	LeaderboardId
 }
 
-// To be finalized
+type LeaderboardModifications struct {
+	Type            string `json:"type" binding:"required"`
+	ProcessInterval int    `json:"process_interval" binding:"required"`
+}
+
 type ModifyDTO struct {
 	LeaderboardId
+	LeaderboardModifications
 }
 
 type Score struct {
-	Id    uuid.UUID `json:"id"`
-	Score uint      `json:"score"`
+	Id    uuid.UUID `json:"id" binding:"required"`
+	Score uint      `json:"score" binding:"required"`
 }
 
 type GetScoreDTO struct {
@@ -44,7 +50,7 @@ type GetScoreDTO struct {
 }
 
 type ScoreDTO struct {
-	Scores []Score `json:"scores"`
+	Scores []Score `json:"scores" binding:"required"`
 }
 
 type UpdateOptions struct {

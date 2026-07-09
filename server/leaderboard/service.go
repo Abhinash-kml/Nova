@@ -22,14 +22,16 @@ type Service interface {
 }
 
 type LocalService struct {
-	logger *zap.Logger
-	repo   Repository
+	logger    *zap.Logger
+	metaRepo  MetadataRepository
+	scoreRepo ScoreRepository
 }
 
-func NewLocalRepository(l *zap.Logger, r Repository) *LocalService {
+func NewLocalService(l *zap.Logger, mr MetadataRepository, sr ScoreRepository) *LocalService {
 	return &LocalService{
-		logger: l,
-		repo:   r,
+		logger:    l,
+		metaRepo:  mr,
+		scoreRepo: sr,
 	}
 }
 
@@ -38,35 +40,35 @@ func (s *LocalService) GetAll(ctx context.Context, cursor int, limit int) ([]Lea
 	ctx, span := tracer.Start(ctx, "leaderboard.service.getall")
 	defer span.End()
 
-	return s.repo.GetAll(ctx, cursor, limit)
+	return s.metaRepo.GetAll(ctx, cursor, limit)
 }
 
 func (s *LocalService) Get(ctx context.Context, id uuid.UUID) (Leaderboard, error) {
 	ctx, span := tracer.Start(ctx, "leaderboard.service.get")
 	defer span.End()
 
-	return s.repo.Get(ctx, id)
+	return s.metaRepo.Get(ctx, id)
 }
 
 func (s *LocalService) Create(ctx context.Context, dto CreateDTO) (Leaderboard, error) {
 	ctx, span := tracer.Start(ctx, "leaderboard.service.create")
 	defer span.End()
 
-	return s.repo.Create(ctx, dto)
+	return s.metaRepo.Create(ctx, dto)
 }
 
 func (s *LocalService) Modify(ctx context.Context, dto ModifyDTO) (Leaderboard, error) {
 	ctx, span := tracer.Start(ctx, "leaderboard.service.modify")
 	defer span.End()
 
-	return s.repo.Modify(ctx, dto)
+	return s.metaRepo.Modify(ctx, dto)
 }
 
 func (s *LocalService) Delete(ctx context.Context, dto DeleteDTO) (Leaderboard, error) {
 	ctx, span := tracer.Start(ctx, "leaderboard.service.delete")
 	defer span.End()
 
-	return s.repo.Delete(ctx, dto)
+	return s.metaRepo.Delete(ctx, dto)
 }
 
 // Score operations
@@ -74,19 +76,19 @@ func (s *LocalService) GetScore(ctx context.Context, dto GetScoreDTO) (ScoreDTO,
 	ctx, span := tracer.Start(ctx, "leaderboard.service.getscore")
 	defer span.End()
 
-	return s.repo.GetScore(ctx, dto)
+	return s.scoreRepo.GetScore(ctx, dto)
 }
 
 func (s *LocalService) UpdateScore(ctx context.Context, dto UpdateScoreDTO) error {
 	ctx, span := tracer.Start(ctx, "leaderboard.service.updatescore")
 	defer span.End()
 
-	return s.repo.UpdateScore(ctx, dto)
+	return s.scoreRepo.UpdateScore(ctx, dto)
 }
 
 func (s *LocalService) DeleteScore(ctx context.Context, dto DeleteScoreDTO) error {
 	ctx, span := tracer.Start(ctx, "leaderboard.service.deletescore")
 	defer span.End()
 
-	return s.repo.DeleteScore(ctx, dto)
+	return s.scoreRepo.DeleteScore(ctx, dto)
 }
