@@ -53,6 +53,7 @@ func (r *PostgresMetaRepository) GetAll(ctx context.Context, cursor int, limit i
 		r.logger.Error("Failed to execute getall query", zap.Error(err))
 		return nil, common.TranslatePostgresError(err, r.logger)
 	}
+	defer rows.Close()
 
 	var leaderboards []Leaderboard
 
