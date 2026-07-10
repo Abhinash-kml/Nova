@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
@@ -31,16 +30,14 @@ type Service interface {
 type LocalPostsService struct {
 	repo   PostsRepository
 	logger *zap.Logger
-	tracer trace.Tracer
 	cache  *redis.Client
 }
 
-func NewLocalPostsService(repository PostsRepository, r *redis.Client, l *zap.Logger, t trace.Tracer) *LocalPostsService {
+func NewLocalPostsService(repository PostsRepository, r *redis.Client, l *zap.Logger) *LocalPostsService {
 	return &LocalPostsService{
 		repo:   repository,
 		cache:  r,
 		logger: l,
-		tracer: t,
 	}
 }
 

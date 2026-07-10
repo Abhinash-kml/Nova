@@ -5,7 +5,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel"
 )
+
+var tracer = otel.Tracer("posts-tracer")
 
 const PostPrefix = "post:"
 

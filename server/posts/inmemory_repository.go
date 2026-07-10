@@ -12,7 +12,6 @@ import (
 
 	"github.com/abhinash-kml/nova/server/common"
 	"github.com/google/uuid"
-	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
@@ -20,11 +19,10 @@ type InMemoryPostsRepository struct {
 	posts  []Post
 	logger *zap.Logger
 	mu     sync.RWMutex
-	tracer trace.Tracer
 }
 
-func NewInMemoryPostsRepository(l *zap.Logger, t trace.Tracer) *InMemoryPostsRepository {
-	return &InMemoryPostsRepository{logger: l, tracer: t}
+func NewInMemoryPostsRepository(l *zap.Logger) *InMemoryPostsRepository {
+	return &InMemoryPostsRepository{logger: l}
 }
 
 // INFO: Not needed as its in-memory
@@ -58,7 +56,7 @@ func (r *InMemoryPostsRepository) Seed() error {
 }
 
 func (r *InMemoryPostsRepository) Add(ctx context.Context, dto CreateDTO) (Post, error) {
-	_, span := r.tracer.Start(ctx, "posts.repository.add")
+	_, span := tracer.Start(ctx, "posts.repository.add")
 	defer span.End()
 
 	r.mu.Lock()
@@ -81,7 +79,7 @@ func (r *InMemoryPostsRepository) Add(ctx context.Context, dto CreateDTO) (Post,
 }
 
 func (r *InMemoryPostsRepository) GetAll(ctx context.Context, cursor, count int) ([]Post, error) {
-	_, span := r.tracer.Start(ctx, "posts.repository.getall")
+	_, span := tracer.Start(ctx, "posts.repository.getall")
 	defer span.End()
 
 	r.mu.RLock()
@@ -100,7 +98,7 @@ func (r *InMemoryPostsRepository) GetAll(ctx context.Context, cursor, count int)
 
 // TODO: Impelement this
 func (r *InMemoryPostsRepository) GetAllByAttribute(ctx context.Context, attribute string) ([]Post, error) {
-	_, span := r.tracer.Start(ctx, "posts.repository.getbyattribute")
+	_, span := tracer.Start(ctx, "posts.repository.getbyattribute")
 	defer span.End()
 
 	// Attribute based filtering logic goes here
@@ -109,7 +107,7 @@ func (r *InMemoryPostsRepository) GetAllByAttribute(ctx context.Context, attribu
 }
 
 func (r *InMemoryPostsRepository) GetById(ctx context.Context, id uuid.UUID) (Post, error) {
-	_, span := r.tracer.Start(ctx, "posts.repository.getbyid")
+	_, span := tracer.Start(ctx, "posts.repository.getbyid")
 	defer span.End()
 
 	r.mu.RLock()
@@ -125,7 +123,7 @@ func (r *InMemoryPostsRepository) GetById(ctx context.Context, id uuid.UUID) (Po
 }
 
 func (r *InMemoryPostsRepository) GetByName(ctx context.Context, name string) (Post, error) {
-	_, span := r.tracer.Start(ctx, "posts.repository.getbyname")
+	_, span := tracer.Start(ctx, "posts.repository.getbyname")
 	defer span.End()
 
 	r.mu.RLock()
@@ -141,7 +139,7 @@ func (r *InMemoryPostsRepository) GetByName(ctx context.Context, name string) (P
 }
 
 func (r *InMemoryPostsRepository) Update(ctx context.Context, dto UpdateDTO) (Post, error) {
-	_, span := r.tracer.Start(ctx, "posts.repository.update")
+	_, span := tracer.Start(ctx, "posts.repository.update")
 	defer span.End()
 
 	parsedId, _ := uuid.Parse(dto.Id)
@@ -180,7 +178,7 @@ func (r *InMemoryPostsRepository) Update(ctx context.Context, dto UpdateDTO) (Po
 }
 
 func (r *InMemoryPostsRepository) Replace(ctx context.Context, dto ReplaceDTO) (Post, error) {
-	_, span := r.tracer.Start(ctx, "posts.repository.replace")
+	_, span := tracer.Start(ctx, "posts.repository.replace")
 	defer span.End()
 
 	parsedId, _ := uuid.Parse(dto.Id)
@@ -209,7 +207,7 @@ func (r *InMemoryPostsRepository) Replace(ctx context.Context, dto ReplaceDTO) (
 }
 
 func (r *InMemoryPostsRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
-	_, span := r.tracer.Start(ctx, "posts.repository.delete")
+	_, span := tracer.Start(ctx, "posts.repository.delete")
 	defer span.End()
 
 	oldLen := len(r.posts)
@@ -234,7 +232,7 @@ func (r *InMemoryPostsRepository) Delete(ctx context.Context, dto DeleteDTO) (uu
 }
 
 func (r *InMemoryPostsRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {
-	_, span := r.tracer.Start(ctx, "posts.repository.bulkcreate")
+	_, span := tracer.Start(ctx, "posts.repository.bulkcreate")
 	defer span.End()
 
 	results := make([]common.BulkOpResult, 0, len(dto.Posts))
@@ -259,7 +257,7 @@ func (r *InMemoryPostsRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO
 }
 
 func (r *InMemoryPostsRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
-	_, span := r.tracer.Start(ctx, "posts.repository.bulkmodify")
+	_, span := tracer.Start(ctx, "posts.repository.bulkmodify")
 	defer span.End()
 
 	results := make([]common.BulkOpResult, 0, len(dto.Updates))
@@ -284,7 +282,7 @@ func (r *InMemoryPostsRepository) BulkModify(ctx context.Context, dto BulkModify
 }
 
 func (r *InMemoryPostsRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
-	_, span := r.tracer.Start(ctx, "posts.repository.bulkdelete")
+	_, span := tracer.Start(ctx, "posts.repository.bulkdelete")
 	defer span.End()
 
 	results := make([]common.BulkOpResult, 0, len(dto.Posts))

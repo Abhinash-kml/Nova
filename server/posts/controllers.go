@@ -10,26 +10,23 @@ import (
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
 type Controller struct {
 	service Service
 	logger  *zap.Logger
-	tracer  trace.Tracer
 }
 
-func NewController(s Service, l *zap.Logger, t trace.Tracer) *Controller {
+func NewController(s Service, l *zap.Logger) *Controller {
 	return &Controller{
 		service: s,
 		logger:  l,
-		tracer:  t,
 	}
 }
 
 func (c *Controller) GetAll(ctx *gin.Context) {
-	sctx, span := c.tracer.Start(ctx.Request.Context(), "posts.controller.getall")
+	sctx, span := tracer.Start(ctx.Request.Context(), "posts.controller.getall")
 	defer span.End()
 
 	var dto GetAllDTO
@@ -61,7 +58,7 @@ func (c *Controller) GetAll(ctx *gin.Context) {
 }
 
 func (c *Controller) Get(ctx *gin.Context) {
-	sctx, span := c.tracer.Start(ctx.Request.Context(), "posts.controller.get")
+	sctx, span := tracer.Start(ctx.Request.Context(), "posts.controller.get")
 	defer span.End()
 
 	var dto GetDTO
@@ -89,7 +86,7 @@ func (c *Controller) Get(ctx *gin.Context) {
 }
 
 func (c *Controller) Create(ctx *gin.Context) {
-	sctx, span := c.tracer.Start(ctx.Request.Context(), "posts.controller.create")
+	sctx, span := tracer.Start(ctx.Request.Context(), "posts.controller.create")
 	defer span.End()
 
 	var dto CreateDTO
@@ -113,7 +110,7 @@ func (c *Controller) Create(ctx *gin.Context) {
 }
 
 func (c *Controller) Modify(ctx *gin.Context) {
-	sctx, span := c.tracer.Start(ctx.Request.Context(), "posts.controller.modify")
+	sctx, span := tracer.Start(ctx.Request.Context(), "posts.controller.modify")
 	defer span.End()
 
 	var dto UpdateDTO
@@ -146,7 +143,7 @@ func (c *Controller) Modify(ctx *gin.Context) {
 }
 
 func (c *Controller) Delete(ctx *gin.Context) {
-	sctx, span := c.tracer.Start(ctx.Request.Context(), "posts.controller.delete")
+	sctx, span := tracer.Start(ctx.Request.Context(), "posts.controller.delete")
 	defer span.End()
 
 	var dto DeleteDTO
@@ -181,7 +178,7 @@ func (c *Controller) Delete(ctx *gin.Context) {
 }
 
 func (c *Controller) Replace(ctx *gin.Context) {
-	sctx, span := c.tracer.Start(ctx.Request.Context(), "posts.controller.replace")
+	sctx, span := tracer.Start(ctx.Request.Context(), "posts.controller.replace")
 	defer span.End()
 
 	var dto ReplaceDTO
@@ -214,7 +211,7 @@ func (c *Controller) Replace(ctx *gin.Context) {
 }
 
 func (c *Controller) BulkAdd(ctx *gin.Context) {
-	sctx, span := c.tracer.Start(ctx.Request.Context(), "posts.controller.bulkadd")
+	sctx, span := tracer.Start(ctx.Request.Context(), "posts.controller.bulkadd")
 	defer span.End()
 
 	var dto BulkCreateDTO
@@ -264,7 +261,7 @@ func (c *Controller) BulkAdd(ctx *gin.Context) {
 }
 
 func (c *Controller) BulkModify(ctx *gin.Context) {
-	sctx, span := c.tracer.Start(ctx.Request.Context(), "posts.controller.bulkmodify")
+	sctx, span := tracer.Start(ctx.Request.Context(), "posts.controller.bulkmodify")
 	defer span.End()
 
 	var dto BulkModifyDTO
@@ -314,7 +311,7 @@ func (c *Controller) BulkModify(ctx *gin.Context) {
 }
 
 func (c *Controller) BulkDelete(ctx *gin.Context) {
-	sctx, span := c.tracer.Start(ctx.Request.Context(), "posts.controller.bulkdelete")
+	sctx, span := tracer.Start(ctx.Request.Context(), "posts.controller.bulkdelete")
 	defer span.End()
 
 	var dto BulkDeleteDTO
