@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
@@ -30,42 +29,40 @@ type Service interface {
 type LocalCommentsService struct {
 	repo   CommentsRepository
 	logger *zap.Logger
-	tracer trace.Tracer
 	cache  *redis.Client
 }
 
-func NewLocalCommentsService(repository CommentsRepository, r *redis.Client, l *zap.Logger, t trace.Tracer) *LocalCommentsService {
+func NewLocalCommentsService(repository CommentsRepository, r *redis.Client, l *zap.Logger) *LocalCommentsService {
 	return &LocalCommentsService{
 		repo:   repository,
 		cache:  r,
 		logger: l,
-		tracer: t,
 	}
 }
 
 func (s *LocalCommentsService) Add(ctx context.Context, dto CreateDTO) (Comment, error) {
-	ctx, span := s.tracer.Start(ctx, "comments.service.add")
+	ctx, span := tracer.Start(ctx, "comments.service.add")
 	defer span.End()
 
 	return s.repo.Add(ctx, dto)
 }
 
 func (s *LocalCommentsService) GetAll(ctx context.Context, cursor, count int) ([]Comment, error) {
-	ctx, span := s.tracer.Start(ctx, "comments.service.")
+	ctx, span := tracer.Start(ctx, "comments.service.")
 	defer span.End()
 
 	return s.repo.GetAll(ctx, cursor, count)
 }
 
 func (s *LocalCommentsService) GetAllByAttribute(ctx context.Context, attribute string) ([]Comment, error) {
-	ctx, span := s.tracer.Start(ctx, "comments.service.getallbyattribute")
+	ctx, span := tracer.Start(ctx, "comments.service.getallbyattribute")
 	defer span.End()
 
 	return s.repo.GetAllByAttribute(ctx, attribute)
 }
 
 func (s *LocalCommentsService) GetById(ctx context.Context, id uuid.UUID) (Comment, error) {
-	ctx, span := s.tracer.Start(ctx, "comments.service.getbyid")
+	ctx, span := tracer.Start(ctx, "comments.service.getbyid")
 	defer span.End()
 
 	key := CommentPrefix + id.String()
@@ -104,7 +101,7 @@ func (s *LocalCommentsService) GetById(ctx context.Context, id uuid.UUID) (Comme
 }
 
 func (s *LocalCommentsService) Update(ctx context.Context, dto UpdateDTO) (Comment, error) {
-	ctx, span := s.tracer.Start(ctx, "comments.service.update")
+	ctx, span := tracer.Start(ctx, "comments.service.update")
 	defer span.End()
 
 	// Update repository first
@@ -129,7 +126,7 @@ func (s *LocalCommentsService) Update(ctx context.Context, dto UpdateDTO) (Comme
 }
 
 func (s *LocalCommentsService) Replace(ctx context.Context, dto ReplaceDTO) (Comment, error) {
-	ctx, span := s.tracer.Start(ctx, "comments.service.replace")
+	ctx, span := tracer.Start(ctx, "comments.service.replace")
 	defer span.End()
 
 	// Update repository first
@@ -154,7 +151,7 @@ func (s *LocalCommentsService) Replace(ctx context.Context, dto ReplaceDTO) (Com
 }
 
 func (s *LocalCommentsService) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
-	ctx, span := s.tracer.Start(ctx, "comments.service.delete")
+	ctx, span := tracer.Start(ctx, "comments.service.delete")
 	defer span.End()
 
 	// Delete in repo
@@ -179,21 +176,21 @@ func (s *LocalCommentsService) Delete(ctx context.Context, dto DeleteDTO) (uuid.
 }
 
 func (s *LocalCommentsService) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {
-	ctx, span := s.tracer.Start(ctx, "comments.service.bulkadd")
+	ctx, span := tracer.Start(ctx, "comments.service.bulkadd")
 	defer span.End()
 
 	return s.repo.BulkAdd(ctx, dto)
 }
 
 func (s *LocalCommentsService) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
-	ctx, span := s.tracer.Start(ctx, "comments.service.bulkmodify")
+	ctx, span := tracer.Start(ctx, "comments.service.bulkmodify")
 	defer span.End()
 
 	return s.repo.BulkModify(ctx, dto)
 }
 
 func (s *LocalCommentsService) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
-	ctx, span := s.tracer.Start(ctx, "comments.service.bulkdelete")
+	ctx, span := tracer.Start(ctx, "comments.service.bulkdelete")
 	defer span.End()
 
 	return s.repo.BulkDelete(ctx, dto)

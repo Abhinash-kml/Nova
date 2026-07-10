@@ -5,7 +5,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel"
 )
+
+var tracer = otel.Tracer("comments-tracer")
 
 const CommentPrefix = "comment:"
 

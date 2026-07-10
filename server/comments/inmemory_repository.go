@@ -12,7 +12,6 @@ import (
 
 	"github.com/abhinash-kml/nova/server/common"
 	"github.com/google/uuid"
-	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
@@ -20,11 +19,10 @@ type InMemoryCommentsRepository struct {
 	comments []Comment
 	logger   *zap.Logger
 	mu       sync.RWMutex
-	tracer   trace.Tracer
 }
 
-func NewInMemoryCommentsRepository(l *zap.Logger, t trace.Tracer) *InMemoryCommentsRepository {
-	return &InMemoryCommentsRepository{logger: l, tracer: t}
+func NewInMemoryCommentsRepository(l *zap.Logger) *InMemoryCommentsRepository {
+	return &InMemoryCommentsRepository{logger: l}
 }
 
 // INFO: Not required as its in-memory
@@ -59,7 +57,7 @@ func (r *InMemoryCommentsRepository) Seed() error {
 }
 
 func (r *InMemoryCommentsRepository) Add(ctx context.Context, dto CreateDTO) (Comment, error) {
-	_, span := r.tracer.Start(ctx, "comments.repository.add")
+	_, span := tracer.Start(ctx, "comments.repository.add")
 	defer span.End()
 
 	r.mu.Lock()
@@ -80,7 +78,7 @@ func (r *InMemoryCommentsRepository) Add(ctx context.Context, dto CreateDTO) (Co
 }
 
 func (r *InMemoryCommentsRepository) GetAll(ctx context.Context, cursor, count int) ([]Comment, error) {
-	_, span := r.tracer.Start(ctx, "comments.repository.getall")
+	_, span := tracer.Start(ctx, "comments.repository.getall")
 	defer span.End()
 
 	r.mu.RLock()
@@ -99,7 +97,7 @@ func (r *InMemoryCommentsRepository) GetAll(ctx context.Context, cursor, count i
 
 // TODO: Implement this
 func (r *InMemoryCommentsRepository) GetAllByAttribute(ctx context.Context, attribute string) ([]Comment, error) {
-	_, span := r.tracer.Start(ctx, "comments.repository.getallbyattribute")
+	_, span := tracer.Start(ctx, "comments.repository.getallbyattribute")
 	defer span.End()
 
 	// Filter by attribute logic goes here
@@ -108,7 +106,7 @@ func (r *InMemoryCommentsRepository) GetAllByAttribute(ctx context.Context, attr
 }
 
 func (r *InMemoryCommentsRepository) GetById(ctx context.Context, id uuid.UUID) (Comment, error) {
-	_, span := r.tracer.Start(ctx, "comments.repository.getbyid")
+	_, span := tracer.Start(ctx, "comments.repository.getbyid")
 	defer span.End()
 
 	r.mu.RLock()
@@ -124,7 +122,7 @@ func (r *InMemoryCommentsRepository) GetById(ctx context.Context, id uuid.UUID) 
 }
 
 func (r *InMemoryCommentsRepository) Update(ctx context.Context, dto UpdateDTO) (Comment, error) {
-	_, span := r.tracer.Start(ctx, "comments.repository.update")
+	_, span := tracer.Start(ctx, "comments.repository.update")
 	defer span.End()
 
 	parsedId, _ := uuid.Parse(dto.Id)
@@ -149,7 +147,7 @@ func (r *InMemoryCommentsRepository) Update(ctx context.Context, dto UpdateDTO) 
 }
 
 func (r *InMemoryCommentsRepository) Replace(ctx context.Context, dto ReplaceDTO) (Comment, error) {
-	_, span := r.tracer.Start(ctx, "comments.repository.replace")
+	_, span := tracer.Start(ctx, "comments.repository.replace")
 	defer span.End()
 
 	parsedId, _ := uuid.Parse(dto.Id)
@@ -174,7 +172,7 @@ func (r *InMemoryCommentsRepository) Replace(ctx context.Context, dto ReplaceDTO
 }
 
 func (r *InMemoryCommentsRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
-	_, span := r.tracer.Start(ctx, "comments.repository.delete")
+	_, span := tracer.Start(ctx, "comments.repository.delete")
 	defer span.End()
 
 	oldLen := len(r.comments)
@@ -199,7 +197,7 @@ func (r *InMemoryCommentsRepository) Delete(ctx context.Context, dto DeleteDTO) 
 }
 
 func (r *InMemoryCommentsRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {
-	_, span := r.tracer.Start(ctx, "comments.repository.bulkadd")
+	_, span := tracer.Start(ctx, "comments.repository.bulkadd")
 	defer span.End()
 
 	results := make([]common.BulkOpResult, 0, len(dto.Comments))
@@ -224,7 +222,7 @@ func (r *InMemoryCommentsRepository) BulkAdd(ctx context.Context, dto BulkCreate
 }
 
 func (r *InMemoryCommentsRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
-	_, span := r.tracer.Start(ctx, "comments.repository.bulkmodify")
+	_, span := tracer.Start(ctx, "comments.repository.bulkmodify")
 	defer span.End()
 
 	results := make([]common.BulkOpResult, 0, len(dto.Updates))
@@ -249,7 +247,7 @@ func (r *InMemoryCommentsRepository) BulkModify(ctx context.Context, dto BulkMod
 }
 
 func (r *InMemoryCommentsRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
-	_, span := r.tracer.Start(ctx, "comments.repository.bulkdelete")
+	_, span := tracer.Start(ctx, "comments.repository.bulkdelete")
 	defer span.End()
 
 	results := make([]common.BulkOpResult, 0, len(dto.Comments))
