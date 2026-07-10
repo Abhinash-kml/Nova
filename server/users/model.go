@@ -5,7 +5,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel"
 )
+
+var tracer = otel.Tracer("users-tracer")
 
 const UserPrefix = "user:"
 

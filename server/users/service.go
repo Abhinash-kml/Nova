@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
@@ -31,42 +30,40 @@ type Service interface {
 type LocalUsersService struct {
 	repo   UsersRepository
 	logger *zap.Logger
-	tracer trace.Tracer
 	cache  *redis.Client
 }
 
-func NewLocalUsersService(repository UsersRepository, r *redis.Client, l *zap.Logger, t trace.Tracer) *LocalUsersService {
+func NewLocalUsersService(repository UsersRepository, r *redis.Client, l *zap.Logger) *LocalUsersService {
 	return &LocalUsersService{
 		repo:   repository,
 		cache:  r,
 		logger: l,
-		tracer: t,
 	}
 }
 
 func (s *LocalUsersService) Add(ctx context.Context, user CreateDTO) (User, error) {
-	ctx, span := s.tracer.Start(ctx, "users.service.add")
+	ctx, span := tracer.Start(ctx, "users.service.add")
 	defer span.End()
 
 	return s.repo.Add(ctx, user)
 }
 
 func (s *LocalUsersService) GetAll(ctx context.Context, cursor, count int) ([]User, error) {
-	ctx, span := s.tracer.Start(ctx, "users.service.getall")
+	ctx, span := tracer.Start(ctx, "users.service.getall")
 	defer span.End()
 
 	return s.repo.GetAll(ctx, cursor, count)
 }
 
 func (s *LocalUsersService) GetAllByAttribute(ctx context.Context, attribute string) ([]User, error) {
-	ctx, span := s.tracer.Start(ctx, "users.service.getallbyattribute")
+	ctx, span := tracer.Start(ctx, "users.service.getallbyattribute")
 	defer span.End()
 
 	return s.repo.GetAllByAttribute(ctx, attribute)
 }
 
 func (s *LocalUsersService) GetById(ctx context.Context, id uuid.UUID) (User, error) {
-	ctx, span := s.tracer.Start(ctx, "users.service.getbyid")
+	ctx, span := tracer.Start(ctx, "users.service.getbyid")
 	defer span.End()
 
 	key := UserPrefix + id.String()
@@ -104,7 +101,7 @@ func (s *LocalUsersService) GetById(ctx context.Context, id uuid.UUID) (User, er
 }
 
 func (s *LocalUsersService) GetByName(ctx context.Context, name string) (User, error) {
-	ctx, span := s.tracer.Start(ctx, "users.service.getbyname")
+	ctx, span := tracer.Start(ctx, "users.service.getbyname")
 	defer span.End()
 
 	// Get from cache
@@ -114,7 +111,7 @@ func (s *LocalUsersService) GetByName(ctx context.Context, name string) (User, e
 }
 
 func (s *LocalUsersService) Update(ctx context.Context, dto UpdateDTO) (User, error) {
-	ctx, span := s.tracer.Start(ctx, "users.service.update")
+	ctx, span := tracer.Start(ctx, "users.service.update")
 	defer span.End()
 
 	// Update repository first
@@ -139,7 +136,7 @@ func (s *LocalUsersService) Update(ctx context.Context, dto UpdateDTO) (User, er
 }
 
 func (s *LocalUsersService) Replace(ctx context.Context, dto ReplaceDTO) (User, error) {
-	ctx, span := s.tracer.Start(ctx, "users.service.replace")
+	ctx, span := tracer.Start(ctx, "users.service.replace")
 	defer span.End()
 
 	// Update repository first
@@ -164,7 +161,7 @@ func (s *LocalUsersService) Replace(ctx context.Context, dto ReplaceDTO) (User, 
 }
 
 func (s *LocalUsersService) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
-	ctx, span := s.tracer.Start(ctx, "users.service.delete")
+	ctx, span := tracer.Start(ctx, "users.service.delete")
 	defer span.End()
 
 	// Delete in repo
@@ -189,21 +186,21 @@ func (s *LocalUsersService) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUI
 }
 
 func (s *LocalUsersService) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {
-	ctx, span := s.tracer.Start(ctx, "users.service.bulkadd")
+	ctx, span := tracer.Start(ctx, "users.service.bulkadd")
 	defer span.End()
 
 	return s.repo.BulkAdd(ctx, dto)
 }
 
 func (s *LocalUsersService) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
-	ctx, span := s.tracer.Start(ctx, "users.service.bulkmodify")
+	ctx, span := tracer.Start(ctx, "users.service.bulkmodify")
 	defer span.End()
 
 	return s.repo.BulkModify(ctx, dto)
 }
 
 func (s *LocalUsersService) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
-	ctx, span := s.tracer.Start(ctx, "users.service.bulkdelete")
+	ctx, span := tracer.Start(ctx, "users.service.bulkdelete")
 	defer span.End()
 
 	return s.repo.BulkDelete(ctx, dto)
