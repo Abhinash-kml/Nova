@@ -9,7 +9,6 @@ import (
 
 	"github.com/abhinash-kml/nova/server/common"
 	"github.com/google/uuid"
-	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
@@ -17,11 +16,10 @@ type InMemoryChannelsRepository struct {
 	channels []Channel
 	logger   *zap.Logger
 	mu       sync.RWMutex
-	tracer   trace.Tracer
 }
 
-func NewInMemoryChannelsRepository(l *zap.Logger, t trace.Tracer) *InMemoryChannelsRepository {
-	return &InMemoryChannelsRepository{logger: l, tracer: t}
+func NewInMemoryChannelsRepository(l *zap.Logger) *InMemoryChannelsRepository {
+	return &InMemoryChannelsRepository{logger: l}
 }
 
 func (r *InMemoryChannelsRepository) Initialize() error {
@@ -33,7 +31,7 @@ func (r *InMemoryChannelsRepository) Seed() error {
 }
 
 func (r *InMemoryChannelsRepository) GetAll(ctx context.Context, cursor int, limit int) ([]Channel, error) {
-	_, span := r.tracer.Start(ctx, "channels.repository.getall")
+	_, span := tracer.Start(ctx, "channels.repository.getall")
 	defer span.End()
 
 	r.mu.RLock()
@@ -55,7 +53,7 @@ func (r *InMemoryChannelsRepository) GetAll(ctx context.Context, cursor int, lim
 }
 
 func (r *InMemoryChannelsRepository) GetById(ctx context.Context, id uuid.UUID) (Channel, error) {
-	_, span := r.tracer.Start(ctx, "channels.repository.getbyid")
+	_, span := tracer.Start(ctx, "channels.repository.getbyid")
 	defer span.End()
 
 	r.mu.RLock()
@@ -77,7 +75,7 @@ func (r *InMemoryChannelsRepository) GetById(ctx context.Context, id uuid.UUID) 
 }
 
 func (r *InMemoryChannelsRepository) Add(ctx context.Context, dto CreateDTO) (Channel, error) {
-	_, span := r.tracer.Start(ctx, "channels.repository.add")
+	_, span := tracer.Start(ctx, "channels.repository.add")
 	defer span.End()
 
 	r.mu.Lock()
@@ -105,7 +103,7 @@ func (r *InMemoryChannelsRepository) Add(ctx context.Context, dto CreateDTO) (Ch
 }
 
 func (r *InMemoryChannelsRepository) Modify(ctx context.Context, dto UpdateDTO) (Channel, error) {
-	_, span := r.tracer.Start(ctx, "channels.repository.modify")
+	_, span := tracer.Start(ctx, "channels.repository.modify")
 	defer span.End()
 
 	r.mu.Lock()
@@ -139,7 +137,7 @@ func (r *InMemoryChannelsRepository) Modify(ctx context.Context, dto UpdateDTO) 
 }
 
 func (r *InMemoryChannelsRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
-	_, span := r.tracer.Start(ctx, "channels.repository.delete")
+	_, span := tracer.Start(ctx, "channels.repository.delete")
 	defer span.End()
 
 	r.mu.Lock()
@@ -168,7 +166,7 @@ func (r *InMemoryChannelsRepository) Delete(ctx context.Context, dto DeleteDTO) 
 
 // Bulk operations (left out for future implementation if needed)
 func (r *InMemoryChannelsRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {
-	_, span := r.tracer.Start(ctx, "channels.repository.bulkadd")
+	_, span := tracer.Start(ctx, "channels.repository.bulkadd")
 	defer span.End()
 
 	results := make([]common.BulkOpResult, 0, len(dto.Channels))
@@ -193,14 +191,14 @@ func (r *InMemoryChannelsRepository) BulkAdd(ctx context.Context, dto BulkCreate
 }
 
 func (r *InMemoryChannelsRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
-	_, span := r.tracer.Start(ctx, "channels.repository.bulkmodify")
+	_, span := tracer.Start(ctx, "channels.repository.bulkmodify")
 	defer span.End()
 
 	return []common.BulkOpResult{}, nil
 }
 
 func (r *InMemoryChannelsRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
-	_, span := r.tracer.Start(ctx, "channels.repository.bulkdelete")
+	_, span := tracer.Start(ctx, "channels.repository.bulkdelete")
 	defer span.End()
 
 	results := make([]common.BulkOpResult, 0, len(dto.Channels))
