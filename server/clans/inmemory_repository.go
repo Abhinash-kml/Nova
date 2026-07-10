@@ -13,7 +13,6 @@ import (
 
 	"github.com/abhinash-kml/nova/server/common"
 	"github.com/google/uuid"
-	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
@@ -21,11 +20,10 @@ type InMemoryClansRepository struct {
 	clans  []Clan
 	logger *zap.Logger
 	mu     sync.RWMutex
-	tracer trace.Tracer
 }
 
-func NewInMemoryClanRepository(l *zap.Logger, t trace.Tracer) *InMemoryClansRepository {
-	return &InMemoryClansRepository{logger: l, tracer: t}
+func NewInMemoryClanRepository(l *zap.Logger) *InMemoryClansRepository {
+	return &InMemoryClansRepository{logger: l}
 }
 
 func (r *InMemoryClansRepository) Initialize() error {
@@ -58,7 +56,7 @@ func (r *InMemoryClansRepository) Seed() error {
 }
 
 func (r *InMemoryClansRepository) GetById(ctx context.Context, id uuid.UUID) (Clan, error) {
-	_, span := r.tracer.Start(ctx, "clans.repository.getbyid")
+	_, span := tracer.Start(ctx, "clans.repository.getbyid")
 	defer span.End()
 
 	r.mu.RLock()
@@ -74,7 +72,7 @@ func (r *InMemoryClansRepository) GetById(ctx context.Context, id uuid.UUID) (Cl
 }
 
 func (r *InMemoryClansRepository) GetByName(ctx context.Context, name string) (Clan, error) {
-	_, span := r.tracer.Start(ctx, "clans.repository.getbyname")
+	_, span := tracer.Start(ctx, "clans.repository.getbyname")
 	defer span.End()
 
 	r.mu.RLock()
@@ -90,7 +88,7 @@ func (r *InMemoryClansRepository) GetByName(ctx context.Context, name string) (C
 }
 
 func (r *InMemoryClansRepository) GetAll(ctx context.Context, cursor, limit int) ([]Clan, error) {
-	_, span := r.tracer.Start(ctx, "clans.repository.getall")
+	_, span := tracer.Start(ctx, "clans.repository.getall")
 	defer span.End()
 
 	r.mu.RLock()
@@ -105,7 +103,7 @@ func (r *InMemoryClansRepository) GetAll(ctx context.Context, cursor, limit int)
 }
 
 func (r *InMemoryClansRepository) Add(ctx context.Context, dto CreateDTO) (Clan, error) {
-	_, span := r.tracer.Start(ctx, "clans.repository.add")
+	_, span := tracer.Start(ctx, "clans.repository.add")
 	defer span.End()
 
 	r.mu.Lock()
@@ -130,7 +128,7 @@ func (r *InMemoryClansRepository) Add(ctx context.Context, dto CreateDTO) (Clan,
 }
 
 func (r *InMemoryClansRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
-	_, span := r.tracer.Start(ctx, "clans.repository.delete")
+	_, span := tracer.Start(ctx, "clans.repository.delete")
 	defer span.End()
 
 	beforeLen := len(r.clans)
@@ -157,7 +155,7 @@ func (r *InMemoryClansRepository) Delete(ctx context.Context, dto DeleteDTO) (uu
 
 // TODO: Implement this
 func (r *InMemoryClansRepository) Update(ctx context.Context, dto UpdateDTO) (Clan, error) {
-	_, span := r.tracer.Start(ctx, "clans.repository.update")
+	_, span := tracer.Start(ctx, "clans.repository.update")
 	defer span.End()
 
 	parsedId, _ := uuid.Parse(dto.Id)
@@ -204,7 +202,7 @@ func (r *InMemoryClansRepository) Update(ctx context.Context, dto UpdateDTO) (Cl
 }
 
 func (r *InMemoryClansRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {
-	_, span := r.tracer.Start(ctx, "clans.repository.bulkadd")
+	_, span := tracer.Start(ctx, "clans.repository.bulkadd")
 	defer span.End()
 
 	results := make([]common.BulkOpResult, 0, len(dto.Clans))
@@ -229,7 +227,7 @@ func (r *InMemoryClansRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO
 }
 
 func (r *InMemoryClansRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
-	_, span := r.tracer.Start(ctx, "clans.repository.bulkmodify")
+	_, span := tracer.Start(ctx, "clans.repository.bulkmodify")
 	defer span.End()
 
 	results := make([]common.BulkOpResult, 0, len(dto.Updates))
@@ -254,7 +252,7 @@ func (r *InMemoryClansRepository) BulkModify(ctx context.Context, dto BulkModify
 }
 
 func (r *InMemoryClansRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
-	_, span := r.tracer.Start(ctx, "clans.repository.bulkdelete")
+	_, span := tracer.Start(ctx, "clans.repository.bulkdelete")
 	defer span.End()
 
 	results := make([]common.BulkOpResult, 0, len(dto.Clans))

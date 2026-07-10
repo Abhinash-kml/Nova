@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
@@ -29,21 +28,19 @@ type Service interface {
 type LocalClansService struct {
 	repo   ClansRepository
 	logger *zap.Logger
-	tracer trace.Tracer
 	cache  *redis.Client
 }
 
-func NewLocalClansService(repo ClansRepository, r *redis.Client, l *zap.Logger, t trace.Tracer) *LocalClansService {
+func NewLocalClansService(repo ClansRepository, r *redis.Client, l *zap.Logger) *LocalClansService {
 	return &LocalClansService{
 		repo:   repo,
 		cache:  r,
 		logger: l,
-		tracer: t,
 	}
 }
 
 func (s *LocalClansService) GetById(ctx context.Context, id uuid.UUID) (Clan, error) {
-	ctx, span := s.tracer.Start(ctx, "clans.service.getbyid")
+	ctx, span := tracer.Start(ctx, "clans.service.getbyid")
 	defer span.End()
 
 	key := ClanPrefix + id.String()
@@ -83,7 +80,7 @@ func (s *LocalClansService) GetById(ctx context.Context, id uuid.UUID) (Clan, er
 }
 
 func (s *LocalClansService) GetByName(ctx context.Context, name string) (Clan, error) {
-	ctx, span := s.tracer.Start(ctx, "clans.service.getbyname")
+	ctx, span := tracer.Start(ctx, "clans.service.getbyname")
 	defer span.End()
 
 	// Caching logic
@@ -92,21 +89,21 @@ func (s *LocalClansService) GetByName(ctx context.Context, name string) (Clan, e
 }
 
 func (s *LocalClansService) GetAll(ctx context.Context, cursor, limit int) ([]Clan, error) {
-	ctx, span := s.tracer.Start(ctx, "clans.service.getall")
+	ctx, span := tracer.Start(ctx, "clans.service.getall")
 	defer span.End()
 
 	return s.repo.GetAll(ctx, cursor, limit)
 }
 
 func (s *LocalClansService) Add(ctx context.Context, dto CreateDTO) (Clan, error) {
-	ctx, span := s.tracer.Start(ctx, "clans.service.add")
+	ctx, span := tracer.Start(ctx, "clans.service.add")
 	defer span.End()
 
 	return s.repo.Add(ctx, dto)
 }
 
 func (s *LocalClansService) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
-	ctx, span := s.tracer.Start(ctx, "clans.service.delete")
+	ctx, span := tracer.Start(ctx, "clans.service.delete")
 	defer span.End()
 
 	// Delete in repo
@@ -131,7 +128,7 @@ func (s *LocalClansService) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUI
 }
 
 func (s *LocalClansService) Update(ctx context.Context, dto UpdateDTO) (Clan, error) {
-	ctx, span := s.tracer.Start(ctx, "clans.service.update")
+	ctx, span := tracer.Start(ctx, "clans.service.update")
 	defer span.End()
 
 	// Update repository first
@@ -156,21 +153,21 @@ func (s *LocalClansService) Update(ctx context.Context, dto UpdateDTO) (Clan, er
 }
 
 func (s *LocalClansService) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {
-	ctx, span := s.tracer.Start(ctx, "clans.service.bulkadd")
+	ctx, span := tracer.Start(ctx, "clans.service.bulkadd")
 	defer span.End()
 
 	return s.repo.BulkAdd(ctx, dto)
 }
 
 func (s *LocalClansService) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
-	ctx, span := s.tracer.Start(ctx, "clans.service.bulkmodify")
+	ctx, span := tracer.Start(ctx, "clans.service.bulkmodify")
 	defer span.End()
 
 	return s.repo.BulkModify(ctx, dto)
 }
 
 func (s *LocalClansService) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
-	ctx, span := s.tracer.Start(ctx, "clans.service.bulkdelete")
+	ctx, span := tracer.Start(ctx, "clans.service.bulkdelete")
 	defer span.End()
 
 	return s.repo.BulkDelete(ctx, dto)
