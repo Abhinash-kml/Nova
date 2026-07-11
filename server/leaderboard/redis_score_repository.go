@@ -119,3 +119,8 @@ func (r *RedisRepository) DeleteScore(ctx context.Context, dto DeleteScoreDTO) e
 
 	return nil
 }
+
+func (r *RedisRepository) CreateNewAndLoad(ctx context.Context, leaderbaord Leaderboard, scores []Score) error {
+
+	return nil
+}

@@ -7,12 +7,16 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
-var tracer = otel.Tracer("leaderboard-tracer")
+var (
+	tracer            = otel.Tracer("leaderboard-tracer")
+	leaderboardPrefix = "leaderboard:"
+)
 
 type Leaderboard struct {
 	Id              uuid.UUID `json:"id"`
 	Name            string    `json:"name"`
 	Type            string    `json:"type"`
+	Stat            string    `json:"stat"`
 	ProcessInterval int       `json:"process_interval"`
 	CreatedBy       uuid.UUID `json:"created_by"`
 	CreatedAt       time.Time `json:"created_at"`

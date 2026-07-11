@@ -22,6 +22,7 @@ type GetAllDTO struct {
 type CreateDTO struct {
 	Name            string `json:"name" binding:"required"`
 	Type            string `json:"type" binding:"required"`
+	Stat            string `json:"stat" binding:"required"`
 	ProcessInterval int    `json:"process_interval" binding:"required"`
 	CreatedBy       string `json:"created_by" binding:"required"`
 }

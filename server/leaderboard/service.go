@@ -15,6 +15,11 @@ type Service interface {
 	Modify(ctx context.Context, dto ModifyDTO) (Leaderboard, error)
 	Delete(ctx context.Context, dto DeleteDTO) (Leaderboard, error)
 
+	// Event handlers & listeners
+	ListenForEvents(ctx context.Context)
+	HandleLeaderboardCreate(ctx context.Context, payload LeaderboardCreatedEventPayload)
+	HandleLeaderboardDelete(ctx context.Context, payload LeaderboardDeletedEventPayload)
+
 	// Score operations
 	GetScore(ctx context.Context, dto GetScoreDTO) (ScoreDTO, error)
 	UpdateScore(ctx context.Context, dto UpdateScoreDTO) error
@@ -22,17 +27,27 @@ type Service interface {
 }
 
 type LocalService struct {
-	logger    *zap.Logger
-	metaRepo  MetadataRepository
-	scoreRepo ScoreRepository
+	logger     *zap.Logger
+	metaRepo   MetadataRepository
+	scoreRepo  ScoreRepository
+	eventsChan chan Event
+	ctx        context.Context
+	cancel     context.CancelFunc
 }
 
-func NewLocalService(l *zap.Logger, mr MetadataRepository, sr ScoreRepository) *LocalService {
-	return &LocalService{
-		logger:    l,
-		metaRepo:  mr,
-		scoreRepo: sr,
+func NewLocalService(ctx context.Context, l *zap.Logger, mr MetadataRepository, sr ScoreRepository) (*LocalService, chan Event) {
+	channel := make(chan Event, 100)
+	ctx, cancelFunc := context.WithCancel(ctx)
+	service := &LocalService{
+		logger:     l,
+		metaRepo:   mr,
+		scoreRepo:  sr,
+		eventsChan: channel,
+		ctx:        ctx,
+		cancel:     cancelFunc,
 	}
+
+	return service, channel
 }
 
 // General operations
@@ -69,6 +84,31 @@ func (s *LocalService) Delete(ctx context.Context, dto DeleteDTO) (Leaderboard, 
 	defer span.End()
 
 	return s.metaRepo.Delete(ctx, dto)
+}
+
+// Events related
+func (s *LocalService) ListenForEvents() {
+	for {
+		select {
+		case event := <-s.eventsChan:
+			switch event.Type() {
+			case "created":
+				s.HandleLeaderboardCreate(event.Payload().(LeaderboardCreatedEventPayload))
+			case "deleted":
+				s.HandleLeaderboardDelete(event.Payload().(LeaderboardDeletedEventPayload))
+			}
+		case <-s.ctx.Done():
+			close(s.eventsChan)
+		}
+	}
+}
+
+func (s *LocalService) HandleLeaderboardCreate(payload LeaderboardCreatedEventPayload) {
+
+}
+
+func (s *LocalService) HandleLeaderboardDelete(payload LeaderboardDeletedEventPayload) {
+
 }
 
 // Score operations

@@ -12,14 +12,16 @@ import (
 )
 
 type PostgresMetaRepository struct {
-	logger *zap.Logger
-	pgx    *pgxpool.Pool
+	logger    *zap.Logger
+	pgx       *pgxpool.Pool
+	scoreRepo ScoreRepository
 }
 
-func NewPostgresMetaRepository(p *pgxpool.Pool, l *zap.Logger) *PostgresMetaRepository {
+func NewPostgresMetaRepository(p *pgxpool.Pool, l *zap.Logger, srepo ScoreRepository) *PostgresMetaRepository {
 	return &PostgresMetaRepository{
-		pgx:    p,
-		logger: l,
+		pgx:       p,
+		logger:    l,
+		scoreRepo: srepo,
 	}
 }
 
@@ -31,6 +33,7 @@ func (r *PostgresMetaRepository) GetAll(ctx context.Context, cursor int, limit i
 					id,
 					name,
 					type,
+					stat,
 					process_interval,
 					created_by,
 					created_at
@@ -76,6 +79,7 @@ func (r *PostgresMetaRepository) Get(ctx context.Context, id uuid.UUID) (Leaderb
 					id,
 					name,
 					type,
+					stat,
 					process_interval,
 					created_by,
 					created_at
@@ -102,28 +106,33 @@ func (r *PostgresMetaRepository) Get(ctx context.Context, id uuid.UUID) (Leaderb
 
 func (r *PostgresMetaRepository) Create(ctx context.Context, dto CreateDTO) (Leaderboard, error) {
 	rawQuery := `INSERT INTO
-					leaderboards(id, name, type, process_interval, created_by, created_at)
-				VALUES($1, $2, $3, $4, $5, $6);`
+					leaderboards(id, name, type, stat, process_interval, created_by, created_at)
+				VALUES($1, $2, $3, $4, $5, $6, $7);`
 
 	id, _ := uuid.NewV7()
 	now := time.Now()
 
 	// Execute query
-	_, err := r.pgx.Exec(ctx, rawQuery, id, dto.Name, dto.Type, dto.ProcessInterval, dto.CreatedBy, now)
+	_, err := r.pgx.Exec(ctx, rawQuery, id, dto.Name, dto.Stat, dto.Type, dto.ProcessInterval, dto.CreatedBy, now)
 	if err != nil {
 		r.logger.Error("Failed to execute insert query", zap.Error(err))
 		return Leaderboard{}, common.TranslatePostgresError(err, r.logger)
 	}
 	createdBy, _ := uuid.Parse(dto.CreatedBy)
 
-	return Leaderboard{
+	temp := Leaderboard{
 		Id:              id,
 		Name:            dto.Name,
 		Type:            dto.Type,
 		ProcessInterval: dto.ProcessInterval,
 		CreatedBy:       createdBy,
 		CreatedAt:       now,
-	}, nil
+	}
+
+	// Load from postgres and add into redis
+	// r.scoreRepo.CreateNewAndLoad(ctx, temp, scores)
+
+	return temp, nil
 }
 
 func (r *PostgresMetaRepository) Modify(ctx context.Context, dto ModifyDTO) (Leaderboard, error) {
