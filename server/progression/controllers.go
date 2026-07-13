@@ -29,6 +29,13 @@ func (c *Controller) Update(ctx *gin.Context) {
 
 	var dto UpdateDTO
 
+	if err := ctx.ShouldBindUri(&dto.UserId); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		utils.SendProblemDetails(ctx, err)
+		return
+	}
+
 	if err := ctx.ShouldBindUri(&dto.ProgressionId); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -37,7 +44,7 @@ func (c *Controller) Update(ctx *gin.Context) {
 	}
 
 	span.SetAttributes(
-		attribute.Int("userid", dto.UserId),
+		attribute.String("userid", dto.Id),
 		attribute.Int("statid", dto.StatId),
 	)
 
