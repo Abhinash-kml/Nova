@@ -42,21 +42,21 @@ func NewLocalPostsService(repository PostsRepository, r *redis.Client, l *zap.Lo
 }
 
 func (s *LocalPostsService) Add(ctx context.Context, dto CreateDTO) (Post, error) {
-	ctx, span := s.tracer.Start(ctx, "posts.service.add")
+	ctx, span := tracer.Start(ctx, "posts.service.add")
 	defer span.End()
 
 	return s.repo.Add(ctx, dto)
 }
 
 func (s *LocalPostsService) GetAll(ctx context.Context, cursor, count int) ([]Post, error) {
-	ctx, span := s.tracer.Start(ctx, "posts.service.getall")
+	ctx, span := tracer.Start(ctx, "posts.service.getall")
 	defer span.End()
 
 	return s.repo.GetAll(ctx, cursor, count)
 }
 
 func (s *LocalPostsService) GetAllByAttribute(ctx context.Context, attribute string) ([]Post, error) {
-	ctx, span := s.tracer.Start(ctx, "posts.service.getallbyattribute")
+	ctx, span := tracer.Start(ctx, "posts.service.getallbyattribute")
 	defer span.End()
 
 	return s.repo.GetAllByAttribute(ctx, attribute)
@@ -64,7 +64,7 @@ func (s *LocalPostsService) GetAllByAttribute(ctx context.Context, attribute str
 
 // INFO: Buggy due to uuid parsing
 func (s *LocalPostsService) GetById(ctx context.Context, id uuid.UUID) (Post, error) {
-	ctx, span := s.tracer.Start(ctx, "posts.service.getbyid")
+	ctx, span := tracer.Start(ctx, "posts.service.getbyid")
 	defer span.End()
 
 	key := PostPrefix + id.String()
@@ -102,14 +102,14 @@ func (s *LocalPostsService) GetById(ctx context.Context, id uuid.UUID) (Post, er
 }
 
 func (s *LocalPostsService) GetByName(ctx context.Context, name string) (Post, error) {
-	ctx, span := s.tracer.Start(ctx, "posts.service.getbyname")
+	ctx, span := tracer.Start(ctx, "posts.service.getbyname")
 	defer span.End()
 
 	return s.repo.GetByName(ctx, name)
 }
 
 func (s *LocalPostsService) Update(ctx context.Context, dto UpdateDTO) (Post, error) {
-	ctx, span := s.tracer.Start(ctx, "posts.service.update")
+	ctx, span := tracer.Start(ctx, "posts.service.update")
 	defer span.End()
 
 	// Update repository first
@@ -134,7 +134,7 @@ func (s *LocalPostsService) Update(ctx context.Context, dto UpdateDTO) (Post, er
 }
 
 func (s *LocalPostsService) Replace(ctx context.Context, dto ReplaceDTO) (Post, error) {
-	ctx, span := s.tracer.Start(ctx, "posts.service.replace")
+	ctx, span := tracer.Start(ctx, "posts.service.replace")
 	defer span.End()
 
 	// Update repository first
@@ -159,7 +159,7 @@ func (s *LocalPostsService) Replace(ctx context.Context, dto ReplaceDTO) (Post, 
 }
 
 func (s *LocalPostsService) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
-	ctx, span := s.tracer.Start(ctx, "posts.service.delete")
+	ctx, span := tracer.Start(ctx, "posts.service.delete")
 	defer span.End()
 
 	// Delete from repository first
@@ -184,21 +184,21 @@ func (s *LocalPostsService) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUI
 }
 
 func (s *LocalPostsService) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {
-	ctx, span := s.tracer.Start(ctx, "posts.service.bulkadd")
+	ctx, span := tracer.Start(ctx, "posts.service.bulkadd")
 	defer span.End()
 
 	return s.repo.BulkAdd(ctx, dto)
 }
 
 func (s *LocalPostsService) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
-	ctx, span := s.tracer.Start(ctx, "posts.service.bulkmodify")
+	ctx, span := tracer.Start(ctx, "posts.service.bulkmodify")
 	defer span.End()
 
 	return s.repo.BulkModify(ctx, dto)
 }
 
 func (s *LocalPostsService) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
-	ctx, span := s.tracer.Start(ctx, "posts.service.bulkdelete")
+	ctx, span := tracer.Start(ctx, "posts.service.bulkdelete")
 	defer span.End()
 
 	return s.repo.BulkDelete(ctx, dto)
