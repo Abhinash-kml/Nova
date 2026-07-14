@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS stats(
-    id SERIAL,
+    id SERIAL PRIMARY KEY UNIQUE,
     key VARCHAR(64) UNIQUE,
     name VARCHAR(64) UNIQUE,
     description TEXT,

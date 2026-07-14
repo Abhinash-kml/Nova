@@ -87,15 +87,15 @@ func (s *LocalService) Delete(ctx context.Context, dto DeleteDTO) (Leaderboard, 
 }
 
 // Events related
-func (s *LocalService) ListenForEvents() {
+func (s *LocalService) ListenForEvents(ctx context.Context) {
 	for {
 		select {
 		case event := <-s.eventsChan:
 			switch event.Type() {
 			case "created":
-				s.HandleLeaderboardCreate(event.Payload().(LeaderboardCreatedEventPayload))
+				s.HandleLeaderboardCreate(ctx, event.Payload().(LeaderboardCreatedEventPayload))
 			case "deleted":
-				s.HandleLeaderboardDelete(event.Payload().(LeaderboardDeletedEventPayload))
+				s.HandleLeaderboardDelete(ctx, event.Payload().(LeaderboardDeletedEventPayload))
 			}
 		case <-s.ctx.Done():
 			close(s.eventsChan)
@@ -103,11 +103,11 @@ func (s *LocalService) ListenForEvents() {
 	}
 }
 
-func (s *LocalService) HandleLeaderboardCreate(payload LeaderboardCreatedEventPayload) {
+func (s *LocalService) HandleLeaderboardCreate(ctx context.Context, payload LeaderboardCreatedEventPayload) {
 
 }
 
-func (s *LocalService) HandleLeaderboardDelete(payload LeaderboardDeletedEventPayload) {
+func (s *LocalService) HandleLeaderboardDelete(ctx context.Context, payload LeaderboardDeletedEventPayload) {
 
 }
 

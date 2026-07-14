@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS achievements(
-    id SERIAL,
-    key VARCHAR(64),
+    id SERIAL UNIQUE,
+    key VARCHAR(64) UNIQUE,
     name VARCHAR(64),
     description TEXT
 );

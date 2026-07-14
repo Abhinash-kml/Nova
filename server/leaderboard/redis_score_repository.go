@@ -9,19 +9,19 @@ import (
 	"go.uber.org/zap"
 )
 
-type RedisRepository struct {
+type RedisScoreRepository struct {
 	logger  *zap.Logger
 	rclient *redis.Client
 }
 
-func NewRedisReposiory(l *zap.Logger, c *redis.Client) *RedisRepository {
-	return &RedisRepository{
+func NewRedisScoreRepository(l *zap.Logger, c *redis.Client) *RedisScoreRepository {
+	return &RedisScoreRepository{
 		rclient: c,
 		logger:  l,
 	}
 }
 
-func (r *RedisRepository) GetScore(ctx context.Context, dto GetScoreDTO) (ScoreDTO, error) {
+func (r *RedisScoreRepository) GetScore(ctx context.Context, dto GetScoreDTO) (ScoreDTO, error) {
 	result, err := r.rclient.ZRevRangeWithScores(ctx, dto.Id, 0, 99).Result()
 	if err != nil {
 		return ScoreDTO{}, err
@@ -43,7 +43,7 @@ func (r *RedisRepository) GetScore(ctx context.Context, dto GetScoreDTO) (ScoreD
 	return scores, nil
 }
 
-func (r *RedisRepository) UpdateScore(ctx context.Context, dto UpdateScoreDTO) error {
+func (r *RedisScoreRepository) UpdateScore(ctx context.Context, dto UpdateScoreDTO) error {
 	if dto.AggregateType == "best" || dto.AggregateType == "set" {
 		members := make([]redis.Z, len(dto.Scores))
 		for i := range members {
@@ -105,7 +105,7 @@ func (r *RedisRepository) UpdateScore(ctx context.Context, dto UpdateScoreDTO) e
 	return nil
 }
 
-func (r *RedisRepository) DeleteScore(ctx context.Context, dto DeleteScoreDTO) error {
+func (r *RedisScoreRepository) DeleteScore(ctx context.Context, dto DeleteScoreDTO) error {
 	leaderboardId := dto.LeaderboardId.Id
 	userId := dto.UserId.Id
 	_, err := r.rclient.ZRem(ctx, leaderboardId, userId).Result()
@@ -120,7 +120,7 @@ func (r *RedisRepository) DeleteScore(ctx context.Context, dto DeleteScoreDTO) e
 	return nil
 }
 
-func (r *RedisRepository) CreateNewAndLoad(ctx context.Context, leaderbaord Leaderboard, scores []Score) error {
+func (r *RedisScoreRepository) CreateNewAndLoad(ctx context.Context, leaderbaord Leaderboard, scores []Score) error {
 
 	return nil
 }

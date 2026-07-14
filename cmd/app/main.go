@@ -16,6 +16,7 @@ import (
 	"github.com/abhinash-kml/nova/server/comments"
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/abhinash-kml/nova/server/infra"
+	"github.com/abhinash-kml/nova/server/leaderboard"
 	"github.com/abhinash-kml/nova/server/observability"
 	"github.com/abhinash-kml/nova/server/posts"
 	"github.com/abhinash-kml/nova/server/users"
@@ -27,7 +28,6 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/contrib/bridges/otelzap"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
-	"go.opentelemetry.io/otel"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -160,72 +160,75 @@ func main() {
 
 	// Setup users module
 	{
-		usersTracer := otel.Tracer("users-domain")
 		usersSeedFile := "./seeds/users.json"
 		usersRepository := users.NewPostgresRepositoryFromPgxPool(postgresPool, logger, usersSeedFile)
 		if err = usersRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed users repository", zap.Error(err))
 		}
-		usersService := users.NewLocalUsersService(usersRepository, redisClient, logger, usersTracer)
-		usersController := users.NewController(usersService, logger, usersTracer)
+		usersService := users.NewLocalUsersService(usersRepository, redisClient, logger)
+		usersController := users.NewController(usersService, logger)
 		users.SetupRoutes(globalRouter, usersController)
 	}
 
 	// Setup posts module
 	{
-		postsTracer := otel.Tracer("posts-domain")
 		postsSeedFile := "./seeds/posts.json"
 		postsRepository := posts.NewPostgresRepositoryFromPgxPool(postgresPool, logger, postsSeedFile)
 		if err = postsRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed posts repository", zap.Error(err))
 		}
-		postsService := posts.NewLocalPostsService(postsRepository, redisClient, logger, postsTracer)
-		postsController := posts.NewController(postsService, logger, postsTracer)
+		postsService := posts.NewLocalPostsService(postsRepository, redisClient, logger)
+		postsController := posts.NewController(postsService, logger)
 		posts.SetupRoutes(globalRouter, postsController)
 	}
 
 	// Setup comments module
 	{
-		commentsTracer := otel.Tracer("comments-tracer")
 		commentsSeedFile := "./seeds/comments.json"
 		commentsRepository := comments.NewPostgresRepositoryFromPgxPool(postgresPool, logger, commentsSeedFile)
 		if err = commentsRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed comments repository", zap.Error(err))
 		}
-		commentsService := comments.NewLocalCommentsService(commentsRepository, redisClient, logger, commentsTracer)
-		commentsController := comments.NewController(commentsService, logger, commentsTracer)
+		commentsService := comments.NewLocalCommentsService(commentsRepository, redisClient, logger)
+		commentsController := comments.NewController(commentsService, logger)
 		comments.SetupRoutes(globalRouter, commentsController)
 	}
 
 	// Setup clans module
 	{
-		clansTracer := otel.Tracer("clans-tracer")
 		clansSeedsFile := "./seeds/clans.json"
 		clansRepository := clans.NewPostgresRepositoryFromPgxPool(postgresPool, logger, clansSeedsFile)
 		if err = clansRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed clans repository", zap.Error(err))
 		}
-		clansService := clans.NewLocalClansService(clansRepository, redisClient, logger, clansTracer)
-		clansController := clans.NewController(clansService, logger, clansTracer)
+		clansService := clans.NewLocalClansService(clansRepository, redisClient, logger)
+		clansController := clans.NewController(clansService, logger)
 		clans.SetupRoutes(globalRouter, clansController)
 	}
 
 	// Setup channels module
 	{
-		channelsTracer := otel.Tracer("channels-tracer")
 		channelsSeedFile := "./seeds/channels.json"
 		channelsRepository := channels.NewPostgresRepositoryFromPgxPool(postgresPool, logger, channelsSeedFile)
 		if err = channelsRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed channels repository", zap.Error(err))
 		}
-		channelsService := channels.NewLocalChannelService(channelsRepository, logger, channelsTracer)
-		channelsController := channels.NewController(channelsService, logger, channelsTracer)
+		channelsService := channels.NewLocalChannelService(channelsRepository, logger)
+		channelsController := channels.NewController(channelsService, logger)
 		channels.SetupRoutes(globalRouter, channelsController)
 	}
 
+	// Setup stats module
+
+	// Setup player progression module
+
 	// Setup leaderboard module
 	{
-
+		leaderboardScoreRepo := leaderboard.NewRedisScoreRepository(logger, redisClient)
+		leaderderboardMetaRepo := leaderboard.NewPostgresMetaRepository(postgresPool, logger, leaderboardScoreRepo)
+		leaderboardService, _ := leaderboard.NewLocalService(globalCtx, logger, leaderderboardMetaRepo, leaderboardScoreRepo)
+		leaderboardController := leaderboard.NewController(leaderboardService, logger)
+		leaderboard.SetupRoutes(globalRouter, leaderboardController)
 	}
 
 	// Setup realtime module
