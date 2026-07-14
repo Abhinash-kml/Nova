@@ -14,8 +14,10 @@ type GetAllDTO struct {
 }
 
 type CreateDTO struct {
-	Name       string `json:"name" binding:"required"`
-	StartValue int    `json:"startvalue" binding:"required"`
+	Key         string `json:"key" binding:"required"`
+	Name        string `json:"name" binding:"required"`
+	Description string `json:"description" binding:"required"`
+	StartValue  int    `json:"startvalue" binding:"required"`
 }
 
 type UpdateDTO struct {

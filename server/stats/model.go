@@ -12,15 +12,18 @@ var tracer = otel.Tracer("stats-tracer")
 const StatsPrefix = "stats:"
 
 type Stats struct {
-	Id         int       `json:"id" redis:"id"`
-	Name       string    `json:"name" redis:"name"`
-	StartValue int       `json:"startvalue" redis:"startvalue"`
-	CreatedAt  time.Time `json:"createdat" redis:"createdat"`
+	Id          int       `json:"id" redis:"id"`
+	Key         string    `json:"key" redis:"key"`
+	Name        string    `json:"name" redis:"name"`
+	Description string    `json:"description" redis:"description"`
+	StartValue  int       `json:"startvalue" redis:"startvalue"`
+	CreatedAt   time.Time `json:"createdat" redis:"createdat"`
 }
 
-func New(id int, name string, startvalue int) Stats {
+func New(id int, name string, key string, startvalue int) Stats {
 	return Stats{
 		Id:         id,
+		Key:        key,
 		Name:       name,
 		StartValue: startvalue,
 		CreatedAt:  time.Now(),

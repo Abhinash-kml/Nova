@@ -37,12 +37,14 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 
 func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (Stats, error) {
 	rawQuery := `INSERT INTO
-					stats(name, startvalue, created_at)
-				VALUES ($1, $2, $3)
+					stats(key, name, description, start_value, created_at)
+				VALUES ($1, $2, $3, $4, $5)
 				RETURNING 
-					id, 
-					name, 
-					startvalue, 
+					id,
+					key, 
+					name,
+					description, 
+					start_value, 
 					created_at;`
 
 	var stat Stats
@@ -51,12 +53,16 @@ func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (Stats, err
 	err := r.pgx.QueryRow(
 		ctx,
 		rawQuery,
+		dto.Key,
 		dto.Name,
+		dto.Description,
 		dto.StartValue,
 		now,
 	).Scan(
 		&stat.Id,
+		&stat.Key,
 		&stat.Name,
+		&stat.Description,
 		&stat.StartValue,
 		&stat.CreatedAt,
 	)
@@ -75,8 +81,10 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 
 	rawQuery := `SELECT
 					id,
+					key,
 					name,
-					startvalue,
+					description,
+					start_value,
 					created_at
 				FROM stats`
 
@@ -109,7 +117,9 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 
 		err = rows.Scan(
 			&stat.Id,
+			&stat.Key,
 			&stat.Name,
+			&stat.Description,
 			&stat.StartValue,
 			&stat.CreatedAt,
 		)
@@ -128,8 +138,10 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 func (r *PostgresRepository) GetById(ctx context.Context, id int) (Stats, error) {
 	rawQuery := `SELECT
 					id,
+					key,
 					name,
-					startvalue,
+					description,
+					start_value,
 					created_at
 				FROM 
 					stats
@@ -144,7 +156,9 @@ func (r *PostgresRepository) GetById(ctx context.Context, id int) (Stats, error)
 		id,
 	).Scan(
 		&stat.Id,
+		&stat.Key,
 		&stat.Name,
+		&stat.Description,
 		&stat.StartValue,
 		&stat.CreatedAt,
 	)
@@ -167,10 +181,10 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (Stats, 
 	}
 
 	if dto.StartValue != nil {
-		queryBuilder = queryBuilder.Set("startvalue", *dto.StartValue)
+		queryBuilder = queryBuilder.Set("start_value", *dto.StartValue)
 	}
 
-	queryBuilder = queryBuilder.Suffix("RETURNING id, name, startvalue, created_at")
+	queryBuilder = queryBuilder.Suffix("RETURNING id, key, name, description, start_value, created_at")
 
 	query, args, err := queryBuilder.ToSql()
 	if err != nil {
@@ -205,7 +219,9 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (Stats, 
 
 	err = result.Scan(
 		&stat.Id,
+		&stat.Key,
 		&stat.Name,
+		&stat.Description,
 		&stat.StartValue,
 		&stat.CreatedAt,
 	)
@@ -229,11 +245,11 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (Stats
 					stats
 				SET
 					name = $2,
-					startvalue = $3
+					start_value = $3
 				WHERE
 					id = $1
 				RETURNING
-					id, name, startvalue, created_at;`
+					id, name, start_value, created_at;`
 
 	var stat Stats
 
