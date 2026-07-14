@@ -100,9 +100,18 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 	}
 
 	for i := range clans {
-		queryBuilder = queryBuilder.Values(clans[i].Id, clans[i].Name, clans[i].Tag, clans[i].Description,
-			clans[i].LeaderId, clans[i].ColeaderId, clans[i].Level, clans[i].MaxMembers, clans[i].IsLocked,
-			clans[i].CreatedAt, clans[i].UpdatedAt)
+		queryBuilder = queryBuilder.Values(clans[i].Id,
+			clans[i].Name,
+			clans[i].Tag,
+			clans[i].Description,
+			clans[i].LeaderId,
+			clans[i].ColeaderId,
+			clans[i].Level,
+			clans[i].Members,
+			clans[i].MaxMembers,
+			clans[i].IsLocked,
+			clans[i].CreatedAt,
+			clans[i].UpdatedAt)
 	}
 
 	// Generate query

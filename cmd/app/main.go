@@ -19,6 +19,8 @@ import (
 	"github.com/abhinash-kml/nova/server/leaderboard"
 	"github.com/abhinash-kml/nova/server/observability"
 	"github.com/abhinash-kml/nova/server/posts"
+	"github.com/abhinash-kml/nova/server/progression"
+	"github.com/abhinash-kml/nova/server/stats"
 	"github.com/abhinash-kml/nova/server/users"
 	"github.com/gin-contrib/cors"
 	ginzap "github.com/gin-contrib/zap"
@@ -219,8 +221,23 @@ func main() {
 	}
 
 	// Setup stats module
-
+	{
+		statsSeedFile := "./seeds/stats.json"
+		statsRepository := stats.NewPostgresRepositoryFromPgxPool(postgresPool, logger, statsSeedFile)
+		if err = statsRepository.Seed(context.Background()); err != nil {
+			logger.Error("Failed to seed stats repository", zap.Error(err))
+		}
+		statsService := stats.NewService(statsRepository, logger)
+		statsController := stats.NewController(statsService, logger)
+		stats.SetupRoutes(globalRouter, statsController)
+	}
 	// Setup player progression module
+	{
+		progressionRepository := progression.NewPostgresRepositoryFromPgxPool(postgresPool, logger)
+		progressionService := progression.NewService(progressionRepository, logger)
+		progressionController := progression.NewController(progressionService, logger)
+		progression.SetupRoutes(globalRouter, progressionController)
+	}
 
 	// Setup leaderboard module
 	{
@@ -230,6 +247,8 @@ func main() {
 		leaderboardController := leaderboard.NewController(leaderboardService, logger)
 		leaderboard.SetupRoutes(globalRouter, leaderboardController)
 	}
+
+	// Setup social module
 
 	// Setup realtime module
 

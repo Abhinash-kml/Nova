@@ -398,5 +398,105 @@
     "comments": 40,
     "created_at": "2025-04-30T10:30:00Z",
     "updated_at": "2025-04-30T13:00:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440021",
+    "title": "Seed Post 041",
+    "body": "Seed post created to satisfy the referenced comment relationship.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440041",
+    "likes": 0,
+    "comments": 1,
+    "created_at": "2025-04-30T08:00:00Z",
+    "updated_at": "2025-04-30T08:00:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440023",
+    "title": "Seed Post 042",
+    "body": "Seed post created to satisfy the referenced comment relationship.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440042",
+    "likes": 0,
+    "comments": 1,
+    "created_at": "2025-04-30T08:00:00Z",
+    "updated_at": "2025-04-30T08:00:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440025",
+    "title": "Seed Post 043",
+    "body": "Seed post created to satisfy the referenced comment relationship.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440043",
+    "likes": 0,
+    "comments": 1,
+    "created_at": "2025-04-30T08:00:00Z",
+    "updated_at": "2025-04-30T08:00:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440027",
+    "title": "Seed Post 044",
+    "body": "Seed post created to satisfy the referenced comment relationship.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440044",
+    "likes": 0,
+    "comments": 1,
+    "created_at": "2025-04-30T08:00:00Z",
+    "updated_at": "2025-04-30T08:00:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440029",
+    "title": "Seed Post 045",
+    "body": "Seed post created to satisfy the referenced comment relationship.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440045",
+    "likes": 0,
+    "comments": 1,
+    "created_at": "2025-04-30T08:00:00Z",
+    "updated_at": "2025-04-30T08:00:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440031",
+    "title": "Seed Post 046",
+    "body": "Seed post created to satisfy the referenced comment relationship.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440046",
+    "likes": 0,
+    "comments": 1,
+    "created_at": "2025-04-30T08:00:00Z",
+    "updated_at": "2025-04-30T08:00:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440033",
+    "title": "Seed Post 047",
+    "body": "Seed post created to satisfy the referenced comment relationship.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440047",
+    "likes": 0,
+    "comments": 1,
+    "created_at": "2025-04-30T08:00:00Z",
+    "updated_at": "2025-04-30T08:00:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440035",
+    "title": "Seed Post 048",
+    "body": "Seed post created to satisfy the referenced comment relationship.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440048",
+    "likes": 0,
+    "comments": 1,
+    "created_at": "2025-04-30T08:00:00Z",
+    "updated_at": "2025-04-30T08:00:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440038",
+    "title": "Seed Post 049",
+    "body": "Seed post created to satisfy the referenced comment relationship.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440049",
+    "likes": 0,
+    "comments": 1,
+    "created_at": "2025-04-30T08:00:00Z",
+    "updated_at": "2025-04-30T08:00:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440040",
+    "title": "Seed Post 050",
+    "body": "Seed post created to satisfy the referenced comment relationship.",
+    "author_id": "550e8400-e29b-41d4-a716-446655440050",
+    "likes": 0,
+    "comments": 1,
+    "created_at": "2025-04-30T08:00:00Z",
+    "updated_at": "2025-04-30T08:00:00Z"
   }
 ]
