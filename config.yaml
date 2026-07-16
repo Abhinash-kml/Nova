@@ -51,3 +51,11 @@ authentication:
     expires_in:
     issuer:
     audience:
+
+seeds:
+  users: "./seeds/users.json"
+  posts: "./seeds/posts.json"
+  comments: "./seeds/comments.json"
+  clans: "./seeds/clans.json"
+  channels: "./seeds/channels.json"
+  stats: "./seeds/stats.json"

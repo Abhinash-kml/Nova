@@ -162,8 +162,7 @@ func main() {
 
 	// Setup users module
 	{
-		usersSeedFile := "./seeds/users.json"
-		usersRepository := users.NewPostgresRepositoryFromPgxPool(postgresPool, logger, usersSeedFile)
+		usersRepository := users.NewPostgresRepositoryFromPgxPool(postgresPool, logger, config.SeedsConfig.Users)
 		if err = usersRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed users repository", zap.Error(err))
 		}
@@ -174,8 +173,7 @@ func main() {
 
 	// Setup posts module
 	{
-		postsSeedFile := "./seeds/posts.json"
-		postsRepository := posts.NewPostgresRepositoryFromPgxPool(postgresPool, logger, postsSeedFile)
+		postsRepository := posts.NewPostgresRepositoryFromPgxPool(postgresPool, logger, config.SeedsConfig.Posts)
 		if err = postsRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed posts repository", zap.Error(err))
 		}
@@ -186,8 +184,7 @@ func main() {
 
 	// Setup comments module
 	{
-		commentsSeedFile := "./seeds/comments.json"
-		commentsRepository := comments.NewPostgresRepositoryFromPgxPool(postgresPool, logger, commentsSeedFile)
+		commentsRepository := comments.NewPostgresRepositoryFromPgxPool(postgresPool, logger, config.SeedsConfig.Comments)
 		if err = commentsRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed comments repository", zap.Error(err))
 		}
@@ -198,8 +195,7 @@ func main() {
 
 	// Setup clans module
 	{
-		clansSeedsFile := "./seeds/clans.json"
-		clansRepository := clans.NewPostgresRepositoryFromPgxPool(postgresPool, logger, clansSeedsFile)
+		clansRepository := clans.NewPostgresRepositoryFromPgxPool(postgresPool, logger, config.SeedsConfig.Clans)
 		if err = clansRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed clans repository", zap.Error(err))
 		}
@@ -210,8 +206,7 @@ func main() {
 
 	// Setup channels module
 	{
-		channelsSeedFile := "./seeds/channels.json"
-		channelsRepository := channels.NewPostgresRepositoryFromPgxPool(postgresPool, logger, channelsSeedFile)
+		channelsRepository := channels.NewPostgresRepositoryFromPgxPool(postgresPool, logger, config.SeedsConfig.Channels)
 		if err = channelsRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed channels repository", zap.Error(err))
 		}
@@ -222,8 +217,7 @@ func main() {
 
 	// Setup stats module
 	{
-		statsSeedFile := "./seeds/stats.json"
-		statsRepository := stats.NewPostgresRepositoryFromPgxPool(postgresPool, logger, statsSeedFile)
+		statsRepository := stats.NewPostgresRepositoryFromPgxPool(postgresPool, logger, config.SeedsConfig.Stats)
 		if err = statsRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed stats repository", zap.Error(err))
 		}

@@ -9,6 +9,7 @@ type Config struct {
 	Redis         RedisConfig         `mapstructure:"redis"`
 	Postgres      PostgresConfig      `mapstructure:"postgres"`
 	AuthToken     AuthTokenConfig     `mapstructure:"authentication"`
+	SeedsConfig   SeedsConfig         `mapstructure:"seeds"`
 }
 
 type HttpServerConfig struct {
@@ -80,4 +81,13 @@ type TokenConfig struct {
 	ExpiresIn int64  `mapstructure:"expires_in"`
 	Issuer    string `mapstructure:"issuer"`
 	Audience  string `mapstructure:"audience"`
+}
+
+type SeedsConfig struct {
+	Users    string `mapstructure:"users"`
+	Posts    string `mapstructure:"posts"`
+	Comments string `mapstructure:"comments"`
+	Clans    string `mapstructure:"clans"`
+	Channels string `mapstructure:"channels"`
+	Stats    string `mapstructure:"stats"`
 }

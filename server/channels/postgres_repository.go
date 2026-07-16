@@ -96,7 +96,14 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 	}
 
 	for i := range channels {
-		queryBuilder = queryBuilder.Values(channels[i].Id, channels[i].Name, channels[i].IsPersistant, channels[i].CreatedBy, channels[i].CreatedAt)
+		queryBuilder = queryBuilder.Values(channels[i].Id,
+			channels[i].Name,
+			channels[i].IsPersistant,
+			channels[i].ProcessInterval,
+			channels[i].CreatedBy,
+			channels[i].CreatedAt,
+			channels[i].UpdatedBy,
+			channels[i].UpdatedAt)
 	}
 
 	// Generate query

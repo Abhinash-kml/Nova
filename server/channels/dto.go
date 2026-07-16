@@ -54,7 +54,9 @@ type ChannelDTO struct {
 	Subscribers     uint64        `json:"total_subscribers"`
 	ProcessInterval time.Duration `json:"process_interval"`
 	CreatedBy       uuid.UUID     `json:"created_by"`
-	CreatedAt       uuid.UUID     `json:"created_at"`
+	CreatedAt       time.Time     `json:"created_at"`
+	UpdatedBy       uuid.UUID     `json:"updated_by"`
+	UpdatedAt       time.Time     `json:"updated_at"`
 }
 
 type BulkCreateDTO struct {
