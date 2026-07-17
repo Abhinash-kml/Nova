@@ -45,6 +45,8 @@ func main() {
 	var configFileType string
 	var configFileSeparator = "."
 	var configFile string
+	var migrateDirection string
+	var migratetionSteps int
 
 	// --- Parse flags ---
 
@@ -52,11 +54,17 @@ func main() {
 	configFileBase = *flag.String("config", "config", "Specify config file to be used")
 
 	// Parse config file type flag
-	configFileType = *flag.String("configtype", "yaml", "Specify default cofnig file type")
+	configFileType = *flag.String("configtype", "yaml", "Specify default config file type [ yaml | json ]")
 
 	// Parse deployment environment flag
-	deploymentEnvironment := flag.String("deployment", "local", "Specify default deployment environment")
+	deploymentEnvironment := flag.String("deployment", "local", "Specify default deployment environment [ local | staging | production ]")
 	configFile = configFileBase + configFileSeparator + *deploymentEnvironment
+
+	// Parse migration flag
+	migrateDirection = *flag.String("migrate", "none", "Specify migrate direction [ up | down | none ]")
+
+	// Parse migration steps
+	migratetionSteps = *flag.Int("steps", 1, "Specify steps for migrations [ default = 1 ]")
 
 	// 1. Load configs
 	config.Initialize(configFile, configFileType, "./")
@@ -172,7 +180,7 @@ func main() {
 	}
 
 	// Run migrations
-	err = migrationManager.MigrateWithLock(context.Background())
+	err = migrationManager.MigrateWithLock(context.Background(), migrateDirection, migratetionSteps)
 	if err != nil {
 		logger.Fatal("Failed to run migrations with lock & rollback", zap.Error(err))
 	}

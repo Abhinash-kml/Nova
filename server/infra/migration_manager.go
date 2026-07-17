@@ -133,7 +133,7 @@ func (mm *MigrationManager) Close() error {
 	return dbErr
 }
 
-func (mm *MigrationManager) MigrateWithLock(ctx context.Context) error {
+func (mm *MigrationManager) MigrateWithLock(ctx context.Context, direction string, steps int) error {
 	const lockId = 1245 //  TODO: Add configs for these
 
 	// Acquire advisory lock
@@ -154,10 +154,23 @@ func (mm *MigrationManager) MigrateWithLock(ctx context.Context) error {
 	}()
 
 	// Run migrations
-	return mm.MigrateWithRollback()
+	if steps < 0 {
+		steps = -steps
+	}
+
+	switch direction {
+	case "up":
+		err = mm.MigrateWithRollback(steps)
+	case "down":
+		err = mm.MigrateWithRollback(-steps)
+	case "none":
+		return nil
+	}
+
+	return err
 }
 
-func (mm *MigrationManager) MigrateWithRollback() error {
+func (mm *MigrationManager) MigrateWithRollback(steps int) error {
 	defer mm.migrate.Close()
 
 	mm.logger.Info("Starting migration with version", zap.Uint("version", mm.startVersion))
