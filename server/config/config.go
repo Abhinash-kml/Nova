@@ -1,10 +1,10 @@
 package config
 
 import (
+	"log"
 	"sync"
 
 	"github.com/spf13/viper"
-	"go.uber.org/zap"
 )
 
 var (
@@ -26,10 +26,10 @@ func Load() bool {
 	once.Do(func() {
 		var configs Config
 		if err := viper.ReadInConfig(); err != nil {
-			zap.L().Fatal("Failed to configs", zap.Error(err))
+			log.Fatalf("Failed to read configs. Error: %s", err)
 		}
 		if err := viper.Unmarshal(&configs); err != nil {
-			zap.L().Fatal("Faild to unmarshall configs", zap.Error(err))
+			log.Fatalf("Failed to unmarshall configs. Error: %s", err)
 		}
 
 		instance = &configs

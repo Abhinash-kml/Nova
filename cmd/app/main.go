@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -39,52 +40,31 @@ func main() {
 	globalCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	// Perform our task
+	// Variables for configs
+	var configFileBase string
+	var configFileType string
+	var configFileSeparator = "."
+	var configFile string
+
+	// --- Parse flags ---
+
+	// Parse config file name
+	configFileBase = *flag.String("config", "config", "Specify config file to be used")
+
+	// Parse config file type flag
+	configFileType = *flag.String("configtype", "yaml", "Specify default cofnig file type")
+
+	// Parse deployment environment flag
+	deploymentEnvironment := flag.String("deployment", "local", "Specify default deployment environment")
+	configFile = configFileBase + configFileSeparator + *deploymentEnvironment
 
 	// 1. Load configs
-	config.Initialize("config", "yaml", "./")
+	config.Initialize(configFile, configFileType, "./")
 	if !config.Load() {
 		log.Fatal("Failed to load configs....")
 	}
+	log.Printf("Loaded configs from file: %s", configFile+configFileSeparator+configFileType)
 	config := config.GetInstance()
-
-	// Create & redis client instance
-	redisClient := infra.NewRedis(redis.Options{
-		Addr:     config.Redis.Address,
-		DB:       config.Redis.Database,
-		Username: config.Redis.Username,
-		Password: config.Redis.Password,
-	})
-
-	err := redisotel.InstrumentTracing(redisClient)
-	if err != nil {
-		panic("Failed to setup redis otel tracing")
-	}
-	err = redisotel.InstrumentMetrics(redisClient)
-	if err != nil {
-		panic("Failed to setup redis otel metric")
-	}
-
-	// Create & connect postgres instance
-	postgresDsn := fmt.Sprintf("postgresql://%s:%s@%s/%s?sslmode=disable",
-		config.Postgres.Username,
-		config.Postgres.Password,
-		config.Postgres.Address,
-		config.Postgres.Database)
-	postgresPool := infra.NewPostgressPgxPool(globalCtx, postgresDsn)
-
-	// Ping redis to test connection
-	result, err := redisClient.Ping(context.Background()).Result()
-	if err != nil {
-		fmt.Println("Failed to ping connected redis. Error:", err)
-	}
-	fmt.Println("Redis ping result:", result)
-
-	// Ping postgres to test connection
-	err = postgresPool.Ping(context.Background())
-	if err != nil {
-		fmt.Println("Failed to ping connected postgres client. Error:", err)
-	}
 
 	// Open file for writing logs
 	file, err := os.OpenFile("./logs/temp.log", os.O_CREATE|os.O_APPEND, 0755)
@@ -96,6 +76,7 @@ func main() {
 	// Setup opentelemetry
 	shutdownFunc, err := observability.SetupOTelSDK(globalCtx)
 	if err != nil {
+
 		log.Fatal("Failed to setup opentelemtry for observability. Error: %w", err)
 	}
 	// Call shutdown func for proper cleanup so we dont leak anything
@@ -118,13 +99,48 @@ func main() {
 	logger := zap.New(teeCore)
 	defer logger.Sync()
 
-	logger.Sugar().Infof("Current Time: %w", time.Now())
+	logger.Sugar().Infof("Server started at: %w", time.Now())
+
+	// Create & redis client instance
+	redisClient := infra.NewRedis(redis.Options{
+		Addr:     config.Redis.Address,
+		DB:       config.Redis.Database,
+		Username: config.Redis.Username,
+		Password: config.Redis.Password,
+	})
+
+	// Create & connect postgres instance
+	postgresDsn := fmt.Sprintf("postgresql://%s:%s@%s/%s?sslmode=disable",
+		config.Postgres.Username,
+		config.Postgres.Password,
+		config.Postgres.Address,
+		config.Postgres.Database)
+	postgresPool := infra.NewPostgressPgxPool(globalCtx, postgresDsn)
+
+	// Ping redis to test connection
+	result, err := redisClient.Ping(context.Background()).Result()
+	if err != nil {
+		fmt.Println("Failed to ping connected redis. Error:", err)
+	}
+	fmt.Println("Redis ping result:", result)
+
+	// Ping postgres to test connection
+	err = postgresPool.Ping(context.Background())
+	if err != nil {
+		fmt.Println("Failed to ping connected postgres client. Error:", err)
+	}
+
+	// Setup redis instrumentation
+	err = redisotel.InstrumentTracing(redisClient)
+	if err != nil {
+		panic("Failed to setup redis otel tracing")
+	}
 
 	// Create gin router engine
 	globalRouter := gin.New()
 
-	// Setup cors middleware
-	globalRouter.Use(cors.New(cors.Config{
+	// Create and use CORS middleware
+	corsMiddleware := cors.New(cors.Config{
 		AllowAllOrigins: true,
 		// AllowOrigins: []string{""}, // Only in production
 		AllowMethods:     []string{"GET", "POST", "PATCH", "PUT", "DELETE"},
@@ -136,9 +152,10 @@ func main() {
 		// AllowOriginFunc: func(origin string) bool {
 		// return origin == ""
 		// },
-	}))
+	})
+	globalRouter.Use(corsMiddleware)
 
-	// Setup olelgin metrics middleware
+	// Setup Otelgin metrics middleware
 	globalRouter.Use(otelgin.Middleware("nova-server"))
 
 	// Setup logging middleware
