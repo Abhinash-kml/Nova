@@ -14,14 +14,6 @@ var (
 	ErrFailedToExchangeCode  = errors.New("failed to exchange auth code for token")
 )
 
-type UnifiedProfile struct {
-	Provider  string
-	Id        string
-	Name      string
-	Email     string
-	AvatalUrl string
-}
-
 type UnifiedToken struct {
 	Type string
 	Raw  string
@@ -61,7 +53,7 @@ func (s *SocialAuthEngine) CompleteAuthWithCode(ctx context.Context, providerNam
 	}
 
 	// Exchange routing payload code for base tokens
-	token, err := provider.ExchangeCode(ctx, code)
+	token, err := provider.ExchangeCodeForToken(ctx, code)
 	if err != nil {
 		return nil, ErrFailedToExchangeCode
 	}

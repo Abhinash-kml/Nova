@@ -36,27 +36,27 @@ func (g Google) Name() string {
 	return "google"
 }
 
-func (g *Google) ExchangeCode(ctx context.Context, code string) (*oauth2.Token, error) {
-	return g.oauth2Config.Exchange(ctx, code)
+func (g *Google) ExchangeAuthCodeForToken(ctx context.Context, code string) (auth.TokenResponse, error) {
+	t, err := g.oauth2Config.Exchange(ctx, code)
+	if err != nil {
+		return auth.TokenResponse{}, err
+	}
+
+	response := auth.TokenResponse{
+		Token:   *t,
+		IdToken: t.Extra("id_token").(string),
+		Scopes:  t.Extra("scope").(string),
+	}
+
+	return response, nil
 }
 
-func (g *Google) GetProfile(ctx context.Context, token *oauth2.Token) (*auth.UnifiedProfile, error) {
-	rawIDToken, ok := token.Extra("id_token").(string)
-	if !ok {
-		return nil, fmt.Errorf("no id token found in token response")
-	}
+func (g *Google) GetProfile(ctx context.Context, token auth.TokenResponse) (*auth.UnifiedProfile, error) {
+	// Make request to provider endpoint to get profile info
+	// Main fields = id, name, email, avatar_url
 
-	claims, err := g.verifyIdToken(ctx, rawIDToken)
-	if err != nil {
-		return nil, fmt.Errorf("google id token verification failed: %w", err)
-	}
-
-	return &auth.UnifiedProfile{
-		Provider: g.Name(),
-		Id:       claims.Subject,
-		Name:     claims.Name,
-		Email:    claims.Email,
-	}, nil
+	profile := auth.AutheticatedUserProfile{}
+	return profile, nil
 }
 
 func (g *Google) ValidateAndFetch(ctx context.Context, t auth.UnifiedToken) (*auth.UnifiedProfile, error) {
