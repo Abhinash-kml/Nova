@@ -1,3 +1,6 @@
 *.exe
 \logs\*
 *.log
+\cmd\test
+\cmd\test\*
+\cmd\test\**
