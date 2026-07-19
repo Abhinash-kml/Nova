@@ -3,6 +3,7 @@ package users
 import (
 	"net/http"
 
+	"github.com/abhinash-kml/nova/server/auth"
 	"github.com/abhinash-kml/nova/server/common"
 	"github.com/abhinash-kml/nova/server/utils"
 	"github.com/gin-gonic/gin"
@@ -361,9 +362,26 @@ func (c *Controller) BulkDelete(ctx *gin.Context) {
 }
 
 func (c *Controller) Login(ctx *gin.Context) {
-	// 550e8400-e29b-41d4-a716-446655440001
-	// 550e8400-e29b-41d4-a716-446655440002
-	// 550e8400-e29b-41d4-a716-446655440003
+	sctx, span := tracer.Start(ctx, "user.controller.login")
+	defer span.End()
+
+	var loginRequest auth.LoginRequest
+
+	err := ctx.ShouldBindBodyWith(&loginRequest, binding.JSON)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		utils.SendProblemDetails(ctx, err)
+	}
+
+	loginResponse, err := c.service.Login(sctx, loginRequest)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		utils.SendProblemDetails(ctx, err)
+	}
+
+	ctx.JSON(http.StatusOK, loginResponse)
 }
 
 func (c *Controller) Refresh(ctx *gin.Context) {

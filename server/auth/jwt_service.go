@@ -27,41 +27,6 @@ var (
 	ErrInvalidTokenType = errors.New("invalid token type")
 )
 
-type CustomClaims struct {
-	Role         string `json:"role"`
-	TokenVersion int    `json:"token_version"`
-	TokenType    int    `json:"token_type"` // 1 - Access | 2 - Refresh
-	jwt.RegisteredClaims
-}
-
-type RefreshTokenData struct {
-	Id        string
-	UserId    string
-	Version   int
-	CreatedAt time.Time
-	ExpiresAt time.Time
-	IsRevoked bool
-}
-
-type TokenPair struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-}
-
-type SuccessfulResponse struct {
-	AccessToken  string    `json:"access_token"`
-	TokenType    string    `json:"token_type"`
-	ExpiresIn    time.Time `json:"expires_in"`
-	RefreshToken string    `json:"refresh_token"`
-	Scope        []string  `json:"scope,omitempty"`
-}
-
-type UnSuccessfulResponse struct {
-	Error            string `json:"error"` // invalid_request, invalid_client, invalid_grant, invalid_scope, unauthorised_client, unsupported_grant
-	ErrorDescription string `json:"error_description,omitempty"`
-	ErrorUri         string `json:"error_uri,omitempty"`
-}
-
 type JwtService struct {
 	config *config.AuthTokenConfig
 	store  TokenStore
@@ -78,7 +43,7 @@ func (js *JwtService) GenerateAccessToken(ctx context.Context, userid, role stri
 	now := time.Now()
 	tokenID := uuid.New().String()
 
-	claims := CustomClaims{
+	claims := NovaClaims{
 		Role:         role,
 		TokenVersion: version,
 		TokenType:    1,
@@ -108,7 +73,7 @@ func (js *JwtService) GenerateRefreshToken(ctx context.Context, userid string) (
 	tokenID := uuid.New().String()
 	expiresAt := now.Add(time.Duration(js.config.RefreshToken.ExpiresIn))
 
-	claims := CustomClaims{
+	claims := NovaClaims{
 		TokenType: 2,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ID:        tokenID,
@@ -152,8 +117,8 @@ func (js *JwtService) GenerateTokenPair(ctx context.Context, userid, role string
 	}, nil
 }
 
-func (js *JwtService) ValidateAccessToken(ctx context.Context, tokenString string) (*CustomClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(token *jwt.Token) (any, error) {
+func (js *JwtService) ValidateAccessToken(ctx context.Context, tokenString string) (*NovaClaims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &NovaClaims{}, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
@@ -170,7 +135,7 @@ func (js *JwtService) ValidateAccessToken(ctx context.Context, tokenString strin
 		return nil, fmt.Errorf("%w: %v", ErrInvalidToken, err)
 	}
 
-	claims, ok := token.Claims.(*CustomClaims)
+	claims, ok := token.Claims.(*NovaClaims)
 	if !ok || !token.Valid {
 		return nil, ErrInvalidClaims
 	}
@@ -209,7 +174,7 @@ func (js *JwtService) ValidateRefreshToken(ctx context.Context, tokenString stri
 // Check if it exists in store, revoke if it does
 // Generate new token pair
 func (js *JwtService) RefreshTokens(ctx context.Context, refreshTokenString, role string) (*TokenPair, error) {
-	token, err := jwt.ParseWithClaims(refreshTokenString, &CustomClaims{}, func(token *jwt.Token) (any, error) {
+	token, err := jwt.ParseWithClaims(refreshTokenString, &NovaClaims{}, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
@@ -225,7 +190,7 @@ func (js *JwtService) RefreshTokens(ctx context.Context, refreshTokenString, rol
 	}
 
 	// Assert that claims is of our custom type & valid
-	claims, ok := token.Claims.(*CustomClaims)
+	claims, ok := token.Claims.(*NovaClaims)
 	if !ok || !token.Valid {
 		return nil, ErrInvalidClaims
 	}
@@ -263,12 +228,12 @@ func (js *JwtService) RefreshTokens(ctx context.Context, refreshTokenString, rol
 
 // Add token to the blacklist
 func (js *JwtService) RevokeAccessToken(ctx context.Context, tokenString string) error {
-	token, _, err := jwt.NewParser().ParseUnverified(tokenString, &CustomClaims{})
+	token, _, err := jwt.NewParser().ParseUnverified(tokenString, &NovaClaims{})
 	if err != nil {
 		return fmt.Errorf("failed to parse tokne %w", err)
 	}
 
-	claims, ok := token.Claims.(*CustomClaims)
+	claims, ok := token.Claims.(*NovaClaims)
 	if !ok {
 		return fmt.Errorf("parsed token does not contain custom claims")
 	}

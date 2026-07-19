@@ -9,34 +9,29 @@ import (
 	"golang.org/x/oauth2"
 )
 
-type Claims struct {
-	Subject string `json:"sub"`
-	Name    string `json:"name"`
-	Email   string `json:"email"`
-}
-
-type Google struct {
+type GoogleProvider struct {
 	oauth2Config *oauth2.Config
 	verifier     *oidc.IDTokenVerifier
 }
 
-func NewGoogle(ctx context.Context, clientID string) (*Google, error) {
-	provider, err := oidc.NewProvider(ctx, "https://google.com")
+func NewGoogleProvider(ctx context.Context, clientID string) (*GoogleProvider, error) {
+	provider, err := oidc.NewProvider(ctx, "https://accounts.google.com")
 	if err != nil {
 		return nil, err
 	}
-	return &Google{
+
+	return &GoogleProvider{
 		verifier: provider.Verifier(
 			&oidc.Config{ClientID: clientID},
 		),
 	}, nil
 }
 
-func (g Google) Name() string {
+func (g GoogleProvider) Name() string {
 	return "google"
 }
 
-func (g *Google) ExchangeAuthCodeForToken(ctx context.Context, code string) (auth.TokenResponse, error) {
+func (g *GoogleProvider) Authenticate(ctx context.Context, code string) (auth.TokenResponse, error) {
 	t, err := g.oauth2Config.Exchange(ctx, code)
 	if err != nil {
 		return auth.TokenResponse{}, err
@@ -51,42 +46,23 @@ func (g *Google) ExchangeAuthCodeForToken(ctx context.Context, code string) (aut
 	return response, nil
 }
 
-func (g *Google) GetProfile(ctx context.Context, token auth.TokenResponse) (*auth.UnifiedProfile, error) {
+func (g *GoogleProvider) GetProfile(ctx context.Context, token auth.TokenResponse) (auth.UnifiedUserProfile, error) {
 	// Make request to provider endpoint to get profile info
 	// Main fields = id, name, email, avatar_url
 
-	profile := auth.AutheticatedUserProfile{}
+	profile := auth.UnifiedUserProfile{}
 	return profile, nil
 }
 
-func (g *Google) ValidateAndFetch(ctx context.Context, t auth.UnifiedToken) (*auth.UnifiedProfile, error) {
-	if t.Type != "id" {
-		return nil, fmt.Errorf("google login requires an ide token")
-	}
-
-	claims, err := g.verifyIdToken(ctx, t.Raw)
-	if err != nil {
-		return nil, fmt.Errorf("google id token verfication failed: %w", err)
-	}
-
-	return &auth.UnifiedProfile{
-		Provider: g.Name(),
-		Id:       claims.Subject,
-		Name:     claims.Name,
-		Email:    claims.Email,
-	}, nil
-
-}
-
-func (g *Google) verifyIdToken(ctx context.Context, t string) (*Claims, error) {
+func (g *GoogleProvider) verifyIdToken(ctx context.Context, idToken string) (*auth.GoogleProfile, error) {
 	// Verify offline
-	token, err := g.verifier.Verify(ctx, t)
+	response, err := g.verifier.Verify(ctx, idToken)
 	if err != nil {
 		return nil, fmt.Errorf("invalid google id token signature: %w", err)
 	}
 
-	var claims Claims
-	if err := token.Claims(&claims); err != nil {
+	var claims auth.GoogleProfile
+	if err := response.Claims(&claims); err != nil {
 		return nil, err
 	}
 

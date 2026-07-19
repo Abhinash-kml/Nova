@@ -1,6 +1,52 @@
 package auth
 
-import "golang.org/x/oauth2"
+import (
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/oauth2"
+)
+
+type NovaClaims struct {
+	Role         string `json:"role"`
+	TokenVersion int    `json:"token_version"`
+	TokenType    int    `json:"token_type"` // 1 - Access | 2 - Refresh
+	jwt.RegisteredClaims
+}
+
+type RefreshTokenData struct {
+	Id        string
+	UserId    string
+	Version   int
+	CreatedAt time.Time
+	ExpiresAt time.Time
+	IsRevoked bool
+}
+
+type TokenPair struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+}
+
+type SuccessfulResponse struct {
+	AccessToken  string    `json:"access_token"`
+	TokenType    string    `json:"token_type"`
+	ExpiresIn    time.Time `json:"expires_in"`
+	RefreshToken string    `json:"refresh_token"`
+	Scope        string    `json:"scope,omitempty"`
+}
+
+type LoginRequest struct {
+	Provider string `json:"provider"`
+	Code     string `json:"code"`
+}
+
+type LoginResponse struct {
+	Success       bool                `json:"success"`
+	Reason        string              `json:"reason"`
+	PartialUserId string              `json:"partial_id,omitempty"`
+	Data          *SuccessfulResponse `json:"data,omitempty"`
+}
 
 type TokenResponse struct {
 	oauth2.Token
@@ -9,11 +55,11 @@ type TokenResponse struct {
 }
 
 type UnifiedUserProfile struct {
-	Provider  string
-	Id        string
-	Name      string
-	Email     string
-	AvatalUrl string
+	Provider    string `json:"provider"`
+	UserId      string `json:"userid"`
+	DisplayName string `json:"name"`
+	Email       string `json:"email"`
+	AvatarUrl   string `json:"avatar_url"`
 }
 
 type GoogleProfile struct {
