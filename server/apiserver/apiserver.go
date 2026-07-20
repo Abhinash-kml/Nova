@@ -56,34 +56,34 @@ func (s *HttpServer) Start() error {
 		s.errChan <- s.internalServer.ListenAndServe()
 	}()
 
-	for {
-		select {
-		case <-time.After(time.Second * 2):
-			// Execute after start hooks in separate goroutine to prevent blocking
-			go func() {
-				for _, function := range s.afterStartHooks {
-					err := function(context.Background())
-					if err != nil {
-						// Handle in some way
-						s.logger.Error("Failed to execute after start hooks", zap.Error(err))
-					}
+	select {
+	case <-time.After(time.Second * 2):
+		// Execute after start hooks in separate goroutine to prevent blocking
+		go func() {
+			for _, function := range s.afterStartHooks {
+				err := function(context.Background())
+				if err != nil {
+					// Handle in some way
+					s.logger.Error("Failed to execute after start hooks", zap.Error(err))
 				}
-			}()
+			}
+		}()
 
-			// Monitor for errors in errChan after successful server start
-			go func() {
-				err := <-s.errChan
-				if err != nil && err != http.ErrServerClosed {
-					s.logger.Error("Server crashed after start", zap.Error(err))
-				}
-			}()
+		// Monitor for errors in errChan after successful server start
+		go func() {
+			err := <-s.errChan
+			if err != nil && err != http.ErrServerClosed {
+				s.logger.Error("Server crashed after start", zap.Error(err))
+			}
+		}()
 
-			// Start listening for termination
-			go s.listenForTermination()
-		case err := <-s.errChan: // Server failed within 2 secs
-			return err
-		}
+		// Start listening for termination
+		go s.listenForTermination()
+	case err := <-s.errChan: // Server failed within 2 secs
+		return err
 	}
+
+	return nil
 }
 
 func (s *HttpServer) Stop(ctx context.Context) {
@@ -93,7 +93,7 @@ func (s *HttpServer) Stop(ctx context.Context) {
 func (s *HttpServer) listenForTermination() {
 	<-s.ctx.Done() // This will block untill context is done
 	s.logger.Info("Server terminated as a result of context completion")
-	s.Stop(context.Background())
+	s.Stop(s.ctx)
 }
 
 func (s *HttpServer) AddBeforeStartHook(function Hook) {

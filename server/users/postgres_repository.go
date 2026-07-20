@@ -2,7 +2,9 @@ package users
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -452,6 +454,131 @@ func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UU
 	}
 
 	return deletedId, nil
+}
+
+// Operations
+func (r *PostgresRepository) FindOrCreateUserFromSocialProfile(ctx context.Context, socialProvider, socialUserId string) (uuid.UUID, bool, error) {
+	// Check if user with social provider id exists
+	exists, err := r.CheckIfUserWithSocialProviderIdExists(ctx, socialUserId, socialProvider)
+	if err != nil {
+		r.logger.Error("Failed to check for existance of user in FindOrCreateUserFromSocialProfile")
+		return uuid.Nil, false, common.TranslatePostgresError(err, r.logger)
+	}
+
+	var user User
+
+	if !exists {
+		// 1. Create a user first in users table
+		hash := sha256.Sum256([]byte(socialUserId))
+		username := fmt.Sprintf("%x", hash)
+		newUser := CreateDTO{
+			Username: username,
+			Country:  "in",
+			State:    "wb",
+			LangTag:  "en-IN",
+			Timezone: "India/Kolkata",
+		}
+
+		user, err := r.Add(ctx, newUser)
+		if err != nil {
+			r.logger.Error("Failed to create new user in findorcreateuserfromsocialprofile", zap.Error(err))
+			return uuid.Nil, false, common.TranslatePostgresError(err, r.logger)
+		}
+
+		// 2. Add mapping of new user with the social provider id
+		err = r.MapUserWithSocialProvider(ctx, user.Id, socialUserId, socialProvider)
+		if err != nil {
+			return uuid.Nil, false, common.TranslatePostgresError(err, r.logger)
+		}
+
+		// Created
+		return user.Id, true, nil
+	}
+
+	// Get existing user
+	user, _ = r.GetBySocialProfileId(ctx, socialProvider, socialUserId)
+
+	// Not crerated
+	return user.Id, false, nil
+}
+
+func (r *PostgresRepository) CheckIfUserWithSocialProviderIdExists(ctx context.Context, socialUserid, socialProvider string) (bool, error) {
+	query := `SELECT EXISTS (SELECT provider_id FROM user_mappings WHERE provider_id = $1);`
+
+	var exists bool
+	row := r.pgx.QueryRow(ctx, query, socialUserid)
+	if err := row.Scan(&exists); err != nil {
+		r.logger.Error("Failed to scan row in CheckIfUserWithSocialProviderIdExists query", zap.Error(err))
+		return false, err
+	}
+
+	return exists, nil
+}
+
+func (r *PostgresRepository) MapUserWithSocialProvider(ctx context.Context, userId uuid.UUID, providerUserId, provider string) error {
+	mappingQuery := `INSERT INTO 
+						user_mappings(user_id, provider_id, provider) 
+					VALUES
+						($1, $2, $3);`
+
+	_, err := r.pgx.Exec(ctx, mappingQuery, userId, providerUserId, provider)
+	if err != nil {
+		r.logger.Error("Failed to add mapping for new user in MapUserWithSocialProvider", zap.Error(err))
+		return err
+	}
+
+	return nil
+}
+
+func (r *PostgresRepository) GetBySocialProfileId(ctx context.Context, provider, socialUserId string) (User, error) {
+	query := `SELECT
+								id, 
+								username, 
+								displayname, 
+								email, 
+								country, 
+								state, 
+								avatar_url, 
+								lang_tag, 
+								timezone, 
+								created_at, 
+								updated_at, 
+								verified_at, 
+								disabled_at
+							FROM 
+								users u
+							INNER JOIN
+								user_mappings m
+							ON
+								u.id = m.user_id
+							WHERE
+								m.provider_id = $1
+							AND
+								m.provider = $2;`
+	var user User
+	var disabledAt *time.Time
+
+	row := r.pgx.QueryRow(ctx, query, socialUserId, provider)
+	err := row.Scan(&user.Id, &user.Username, &user.DisplayName, &user.Email, &user.Country, &user.State, &user.AvatarURL, &user.LangTag, &user.Timezone,
+		&user.CreatedAt, &user.UpdatedAt, &user.VerifiedAt, &disabledAt)
+	if err != nil {
+		r.logger.Error("Failed to scan row in getbyid query", zap.Error(err))
+		return User{}, common.TranslatePostgresError(err, r.logger)
+	}
+
+	if disabledAt != nil && !disabledAt.IsZero() {
+		user.DisabledAt = *disabledAt
+	}
+
+	return user, nil
+}
+
+func (r *PostgresRepository) CheckIfUserExistsInDatabase(ctx context.Context, userId string) bool {
+	return false
+}
+
+func (r *PostgresRepository) CheckIfUserIsBanned(ctx context.Context, userId uuid.UUID) bool {
+	return false
 }
 
 // Bulk operations - subject to change for improvement (dont use these queries right now)

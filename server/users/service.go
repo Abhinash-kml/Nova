@@ -30,9 +30,9 @@ type Service interface {
 	Refresh(ctx context.Context, refreshToken string) (auth.SuccessfulResponse, error)
 
 	// Operations
-	FindOrCreateUserFromSocialProfile(ctx context.Context, provider, socialUserId string) (User, bool, error)
-	CheckIfUserExistsInDatabase(userId string) bool
-	CheckIfUserIsBanned(userId uuid.UUID) bool
+	FindOrCreateUserFromSocialProfile(ctx context.Context, provider, socialUserId string) (uuid.UUID, bool, error)
+	CheckIfUserExistsInDatabase(ctx context.Context, userId string) bool
+	CheckIfUserIsBanned(ctx context.Context, userId uuid.UUID) bool
 
 	// Bulk operations
 	BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error)
@@ -52,6 +52,7 @@ func NewLocalUsersService(repository UsersRepository, r *redis.Client, l *zap.Lo
 		repo:   repository,
 		cache:  r,
 		logger: l,
+		config: c,
 	}
 }
 
@@ -210,49 +211,46 @@ func (s *LocalUsersService) Login(ctx context.Context, loginRequest auth.LoginRe
 		return auth.LoginResponse{}, errors.Join(auth.ErrLoginFailed, err)
 	}
 
-	// 2. Atomic Find or Create pattern (Fixes the TOCTOU concurrency race)
-	// This method should execute a single query (e.g., an UPSERT or a transaction block)
-	user, createdRightNow, err := s.FindOrCreateUserFromSocialProfile(ctx, loginRequest.Provider, profile.UserId)
+	// 2. Atomic Find user if exists else create a new one on spot
+	userId, createdRightNow, err := s.FindOrCreateUserFromSocialProfile(ctx, loginRequest.Provider, profile.UserId)
 	if err != nil {
 		return auth.LoginResponse{}, errors.Join(auth.ErrLoginFailed, err)
 	}
 
 	// 3. User exists -> Check if account is banned
 	if !createdRightNow {
-		isBanned := s.CheckIfUserIsBanned(user.Id)
+		isBanned := s.CheckIfUserIsBanned(ctx, userId)
 		if isBanned {
 			return auth.LoginResponse{
-				Success: false,
-				Reason:  "banned",
+				Status: "failed",
+				Reason: "banned",
 			}, nil
 		}
 	}
 
 	// 4. Generate system access tokens
-	tokenPair, err := auth.GetJwtService().GenerateTokenPair(ctx, user.Id.String(), "player")
+	tokenPair, err := auth.GetJwtService().GenerateTokenPair(ctx, userId.String(), "player")
 	if err != nil {
 		// Fix: Join the error so internal telemetry logs the root cause
+		s.logger.Error("Token generation failed", zap.Error(err))
 		return auth.LoginResponse{}, errors.Join(auth.ErrLoginFailed, err)
 	}
 
 	tokens := auth.SuccessfulResponse{
 		AccessToken:  tokenPair.AccessToken,
-		TokenType:    "access_token",
+		TokenType:    "Bearer",
 		ExpiresIn:    time.Now().Add(time.Duration(s.config.AuthToken.AccessToken.ExpiresIn)), // Fixed cast typo
 		RefreshToken: tokenPair.RefreshToken,
 		Scope:        "", //s.config.AuthToken.AccessToken.Scopes
 	}
 
 	response := auth.LoginResponse{
-		Success:       true,
-		Reason:        "",
-		PartialUserId: "-",
-		Data:          &tokens,
+		Status: "success",
+		Reason: "",
+		Tokens: &tokens,
 	}
-
-	// 5. Track dynamic user creation state
 	if createdRightNow {
-		response.PartialUserId = user.Id.String()
+		response.Status = "created"
 	}
 
 	return response, nil
@@ -262,16 +260,25 @@ func (s *LocalUsersService) Refresh(ctx context.Context, refreshToken string) (a
 	return auth.SuccessfulResponse{}, nil
 }
 
-func (s *LocalUsersService) CheckIfUserExistsInDatabase(userId string) bool {
-	return true
+func (s *LocalUsersService) CheckIfUserExistsInDatabase(ctx context.Context, userId string) bool {
+	ctx, span := tracer.Start(ctx, "users.service.checkifuserexistsindatabase")
+	defer span.End()
+
+	return s.repo.CheckIfUserExistsInDatabase(ctx, userId)
 }
 
-func (s *LocalUsersService) FindOrCreateUserFromSocialProfile(ctx context.Context, provider, socialUserId string) (User, bool, error) {
-	return User{}, true, nil
+func (s *LocalUsersService) FindOrCreateUserFromSocialProfile(ctx context.Context, provider, socialUserId string) (uuid.UUID, bool, error) {
+	ctx, span := tracer.Start(ctx, "users.service.findorcreateuserfromsocialprofile")
+	defer span.End()
+
+	return s.repo.FindOrCreateUserFromSocialProfile(ctx, provider, socialUserId)
 }
 
-func (s *LocalUsersService) CheckIfUserIsBanned(userId uuid.UUID) bool {
-	return true
+func (s *LocalUsersService) CheckIfUserIsBanned(ctx context.Context, userId uuid.UUID) bool {
+	ctx, span := tracer.Start(ctx, "users.service.checkifuserisbanned")
+	defer span.End()
+
+	return s.repo.CheckIfUserIsBanned(ctx, userId)
 }
 
 func (s *LocalUsersService) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {

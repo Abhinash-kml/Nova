@@ -42,10 +42,9 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	Success       bool                `json:"success"`
-	Reason        string              `json:"reason"`
-	PartialUserId string              `json:"partial_id,omitempty"`
-	Data          *SuccessfulResponse `json:"data,omitempty"`
+	Status string              `json:"status"`
+	Reason string              `json:"reason,omitempty"`
+	Tokens *SuccessfulResponse `json:"tokens,omitempty"`
 }
 
 type TokenResponse struct {

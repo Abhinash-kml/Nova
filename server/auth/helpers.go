@@ -2,6 +2,8 @@ package auth
 
 import (
 	"fmt"
+	"math/rand"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -45,11 +47,12 @@ func NormalizeDiscord(p DiscordProfile) UnifiedUserProfile {
 
 	if p.Avatar != "" {
 		// Discord CDN formats avatars using the User ID and Avatar Hash string
-		AvatarUrl = fmt.Sprintf("https://discordapp.com", p.ID, p.Avatar)
+		AvatarUrl = "https://cdn.discordapp.com/avatars/" + p.ID + p.Avatar + ".png"
 	} else {
 		// Fallback to Discord default avatar based on their username migration setup
 		// If legacy discriminator exists, use modulo 5, otherwise use the standard snowflake shifts
-		AvatarUrl = "https://discordapp.com"
+		rand := rand.Intn(5-0+1) + 0
+		AvatarUrl = "https://cdn.discordapp.com/embed/avatars/" + strconv.Itoa(rand) + "png"
 	}
 
 	name := p.GlobalName

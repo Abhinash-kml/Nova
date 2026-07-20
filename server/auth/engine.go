@@ -27,6 +27,9 @@ type Provider interface {
 
 	// Get unified profile from provider
 	GetProfile(ctx context.Context, token TokenResponse) (UnifiedUserProfile, error)
+
+	// Get generated Auth URl
+	AuthURL() string
 }
 
 type SocialAuthEngine struct {
@@ -63,12 +66,20 @@ func (s *SocialAuthEngine) CompleteAuthentication(ctx context.Context, providerN
 	return provider.GetProfile(ctx, tokenResponse)
 }
 
-func GetSocialAuthEngine() *SocialAuthEngine {
+// Should only be called once
+func SetDefaultAuthEngine(e *SocialAuthEngine) {
 	eonce.Do(func() {
+		engine = e
+	})
+}
+
+// Returns the global auth engine, sets up one if its nil
+func GetSocialAuthEngine() *SocialAuthEngine {
+	if engine == nil {
 		engine = &SocialAuthEngine{
 			providers: make(map[string]Provider, 10),
 		}
-	})
+	}
 
 	return engine
 }

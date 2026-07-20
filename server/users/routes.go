@@ -14,8 +14,8 @@ func SetupRoutes(router *gin.Engine, c *Controller) {
 		group.DELETE("/:id", c.Delete)
 
 		// Auth route
-		group.GET("/login", c.Login)
-		group.GET("/refresh", c.Refresh)
+		group.POST("/login", c.Login)
+		group.POST("/refresh", c.Refresh)
 
 		// Bulk operations
 		group.POST("/bulk", c.BulkAdd)

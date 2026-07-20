@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/abhinash-kml/nova/server/apiserver"
+	"github.com/abhinash-kml/nova/server/auth"
+	"github.com/abhinash-kml/nova/server/auth/providers"
 	"github.com/abhinash-kml/nova/server/channels"
 	"github.com/abhinash-kml/nova/server/clans"
 	"github.com/abhinash-kml/nova/server/comments"
@@ -35,21 +37,17 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-func main() {
-	// Listen for interrupt & kill signal
-	globalCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
+// Variables for configs
+var (
+	configFileBase      string
+	configFileType      string
+	configFileSeparator = "."
+	configFile          string
+	migrateDirection    string
+	migratetionSteps    int
+)
 
-	// Variables for configs
-	var configFileBase string
-	var configFileType string
-	var configFileSeparator = "."
-	var configFile string
-	var migrateDirection string
-	var migratetionSteps int
-
-	// --- Parse flags ---
-
+func init() {
 	// Parse config file name
 	configFileBase = *flag.String("config", "config", "Specify config file to be used")
 
@@ -61,10 +59,26 @@ func main() {
 	configFile = configFileBase + configFileSeparator + *deploymentEnvironment
 
 	// Parse migration flag
-	migrateDirection = *flag.String("migrate", "none", "Specify migrate direction [ up | down | none ]")
+	migrateDirection = *flag.String("migrate", "up", "Specify migrate direction [ up | down | none ]")
 
 	// Parse migration steps
 	migratetionSteps = *flag.Int("steps", 1, "Specify steps for migrations [ default = 1 ]")
+}
+
+func main() {
+	// Listen for interrupt & kill signal
+	globalCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	// --- Parse flags ---
+	flag.Parse()
+	if flag.Parsed() {
+		fmt.Println("Parsed all cli flags")
+	}
+	flag.Usage()
+
+	fmt.Println("Migrate flag", migrateDirection)
+	fmt.Println("Migrate steps", migratetionSteps)
 
 	// 1. Load configs
 	config.Initialize(configFile, configFileType, "./")
@@ -185,13 +199,32 @@ func main() {
 		logger.Fatal("Failed to run migrations with lock & rollback", zap.Error(err))
 	}
 
+	// Setup Auth module
+	globalRouter.GET("/token", func(ctx *gin.Context) {
+		code := ctx.Query("code")
+		logger.Info("Auth Code", zap.String("Value", code))
+		ctx.Status(200)
+	})
+	engine := auth.NewSocialAuthEngine()
+	auth.SetDefaultAuthEngine(engine)
+	googleProvider, err := providers.NewGoogleProvider(context.Background(), "", "", "", []string{""})
+	if err != nil {
+		logger.Fatal("Failed to create google oauth provider", zap.Error(err))
+	}
+	authURL := googleProvider.AuthURL()
+	logger.Info("Google Auth", zap.String("URL", authURL))
+	engine.Register(googleProvider)
+
+	redisAuthStore := auth.NewRedisAuthStore(redisClient)
+	auth.SetupJwtService(&config.AuthToken, redisAuthStore, logger)
+
 	// Setup users module
 	{
 		usersRepository := users.NewPostgresRepositoryFromPgxPool(postgresPool, logger, config.SeedsConfig.Users)
 		if err = usersRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed users repository", zap.Error(err))
 		}
-		usersService := users.NewLocalUsersService(usersRepository, redisClient, logger)
+		usersService := users.NewLocalUsersService(usersRepository, redisClient, logger, config)
 		usersController := users.NewController(usersService, logger)
 		users.SetupRoutes(globalRouter, usersController)
 	}
@@ -280,7 +313,7 @@ func main() {
 
 	// Block untill our signal is trigerred
 	<-globalCtx.Done()
-
+	shutdownFunc(context.Background())
 	// Call stop() to immeaditely stop downstream services
 	stop()
 	postgresPool.Close()

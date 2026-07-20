@@ -7,8 +7,8 @@ import (
 
 func main() {
 	// Operations
-	PerformOAuthGoogleLibrary()
-	// PerformOAuthGoogleCustom()
+	// PerformOAuthGoogleLibrary()
+	PerformOAuthGoogleCustom()
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt)

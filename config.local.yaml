@@ -1,6 +1,7 @@
 app_name: "nova backend"
 
 http:
+  address: :8000
   readtimeout: 10
   writetimeout: 2
   idletimeout: 10
@@ -42,15 +43,15 @@ postgres:
   
 authentication:
   access:
-    secret:
-    expires_in:
-    issuer:
-    audience:
-  refresh:
-    secret:
-    expires_in:
-    issuer:
-    audience:
+    secret: "meow-meow"
+    expires_in: 30000
+    issuer: "neo"
+    audience: "api-server"
+  refresh: 
+    secret: "meow-meow"
+    expires_in: 7200000
+    issuer: "neo"
+    audience: "api-server"
 
 seeds:
   users: "./seeds/users.json"

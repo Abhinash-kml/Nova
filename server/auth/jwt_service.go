@@ -60,7 +60,7 @@ func (js *JwtService) GenerateAccessToken(ctx context.Context, userid, role stri
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
 
-	tokenString, err := token.SignedString(js.config.AccessToken.Secret)
+	tokenString, err := token.SignedString([]byte(js.config.AccessToken.Secret))
 	if err != nil {
 		return "", err
 	}
@@ -87,7 +87,7 @@ func (js *JwtService) GenerateRefreshToken(ctx context.Context, userid string) (
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
-	signedString, err := token.SignedString(js.config.RefreshToken.Secret)
+	signedString, err := token.SignedString([]byte(js.config.RefreshToken.Secret))
 	if err != nil {
 		return "", fmt.Errorf("failed to sign refresh token: %w", err)
 	}

@@ -21,6 +21,11 @@ type UsersRepository interface {
 	Replace(ctx context.Context, dto ReplaceDTO) (User, error)
 	Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error)
 
+	// Operations
+	FindOrCreateUserFromSocialProfile(ctx context.Context, provider, socialUserId string) (uuid.UUID, bool, error)
+	CheckIfUserExistsInDatabase(ctx context.Context, userId string) bool
+	CheckIfUserIsBanned(ctx context.Context, userId uuid.UUID) bool
+
 	// Bulk operations
 	BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error)
 	BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error)
