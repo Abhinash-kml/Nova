@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/squirrel"
+	"github.com/abhinash-kml/nova/server/auth"
 	"github.com/abhinash-kml/nova/server/common"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -133,7 +134,6 @@ func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (User, erro
 
 	id, _ := uuid.NewV7()
 	now := time.Now()
-	dummyAvatarUrl := "-"
 
 	_, err := r.pgx.Exec(ctx, rawQuery,
 		id,
@@ -142,7 +142,7 @@ func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (User, erro
 		dto.Email,
 		dto.Country,
 		dto.State,
-		dummyAvatarUrl,
+		dto.AvatarURL,
 		dto.LangTag,
 		dto.Timezone,
 		now,
@@ -160,7 +160,7 @@ func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (User, erro
 		Email:       dto.Email,
 		Country:     dto.Country,
 		State:       dto.State,
-		AvatarURL:   dummyAvatarUrl,
+		AvatarURL:   dto.AvatarURL,
 		LangTag:     dto.LangTag,
 		Timezone:    dto.Timezone,
 		CreatedAt:   now,
@@ -457,9 +457,9 @@ func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UU
 }
 
 // Operations
-func (r *PostgresRepository) FindOrCreateUserFromSocialProfile(ctx context.Context, socialProvider, socialUserId string) (uuid.UUID, bool, error) {
+func (r *PostgresRepository) FindOrCreateUserFromSocialProfile(ctx context.Context, profile auth.UnifiedUserProfile) (uuid.UUID, bool, error) {
 	// Check if user with social provider id exists
-	exists, err := r.CheckIfUserWithSocialProviderIdExists(ctx, socialUserId, socialProvider)
+	exists, err := r.CheckIfUserWithSocialProviderIdExists(ctx, profile.UserId, profile.Provider)
 	if err != nil {
 		r.logger.Error("Failed to check for existance of user in FindOrCreateUserFromSocialProfile")
 		return uuid.Nil, false, common.TranslatePostgresError(err, r.logger)
@@ -469,14 +469,17 @@ func (r *PostgresRepository) FindOrCreateUserFromSocialProfile(ctx context.Conte
 
 	if !exists {
 		// 1. Create a user first in users table
-		hash := sha256.Sum256([]byte(socialUserId))
+		hash := sha256.Sum256([]byte(profile.UserId))
 		username := fmt.Sprintf("%x", hash)
 		newUser := CreateDTO{
-			Username: username,
-			Country:  "in",
-			State:    "wb",
-			LangTag:  "en-IN",
-			Timezone: "India/Kolkata",
+			Username:    username,
+			DisplayName: profile.DisplayName,
+			Email:       profile.Email,
+			Country:     "in",
+			State:       "wb",
+			LangTag:     "en-IN",
+			Timezone:    "India/Kolkata",
+			AvatarURL:   profile.AvatarUrl,
 		}
 
 		user, err := r.Add(ctx, newUser)
@@ -486,7 +489,7 @@ func (r *PostgresRepository) FindOrCreateUserFromSocialProfile(ctx context.Conte
 		}
 
 		// 2. Add mapping of new user with the social provider id
-		err = r.MapUserWithSocialProvider(ctx, user.Id, socialUserId, socialProvider)
+		err = r.MapUserWithSocialProvider(ctx, user.Id, profile.UserId, profile.Provider)
 		if err != nil {
 			return uuid.Nil, false, common.TranslatePostgresError(err, r.logger)
 		}
@@ -496,7 +499,7 @@ func (r *PostgresRepository) FindOrCreateUserFromSocialProfile(ctx context.Conte
 	}
 
 	// Get existing user
-	user, _ = r.GetBySocialProfileId(ctx, socialProvider, socialUserId)
+	user, _ = r.GetBySocialProfileId(ctx, profile.Provider, profile.UserId)
 
 	// Not crerated
 	return user.Id, false, nil
@@ -571,10 +574,6 @@ func (r *PostgresRepository) GetBySocialProfileId(ctx context.Context, provider,
 	}
 
 	return user, nil
-}
-
-func (r *PostgresRepository) CheckIfUserExistsInDatabase(ctx context.Context, userId string) bool {
-	return false
 }
 
 func (r *PostgresRepository) CheckIfUserIsBanned(ctx context.Context, userId uuid.UUID) bool {

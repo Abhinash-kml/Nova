@@ -362,7 +362,7 @@ func (c *Controller) BulkDelete(ctx *gin.Context) {
 }
 
 func (c *Controller) Login(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx, "user.controller.login")
+	sctx, span := tracer.Start(ctx.Request.Context(), "users.controller.login")
 	defer span.End()
 
 	var loginRequest auth.LoginRequest
@@ -385,5 +385,24 @@ func (c *Controller) Login(ctx *gin.Context) {
 }
 
 func (c *Controller) Refresh(ctx *gin.Context) {
+	sctx, span := tracer.Start(ctx.Request.Context(), "users.controller.refresh")
+	defer span.End()
 
+	var dto auth.TokenRefreshRequest
+
+	err := ctx.ShouldBindBodyWith(&dto, binding.JSON)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		utils.SendProblemDetails(ctx, err)
+	}
+
+	response, err := c.service.Refresh(sctx, dto)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		utils.SendProblemDetails(ctx, err)
+	}
+
+	ctx.JSON(http.StatusOK, response)
 }

@@ -23,6 +23,7 @@ import (
 	"github.com/abhinash-kml/nova/server/observability"
 	"github.com/abhinash-kml/nova/server/posts"
 	"github.com/abhinash-kml/nova/server/progression"
+	"github.com/abhinash-kml/nova/server/secretsmanager"
 	"github.com/abhinash-kml/nova/server/stats"
 	"github.com/abhinash-kml/nova/server/users"
 	"github.com/gin-contrib/cors"
@@ -113,7 +114,7 @@ func main() {
 	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	consoleEncoder := zapcore.NewConsoleEncoder(encoderConfig)
 	fileEncoder := zapcore.NewJSONEncoder(encoderConfig)
-	logLevel := zap.NewAtomicLevelAt(zapcore.InfoLevel)
+	logLevel := zap.NewAtomicLevelAt(zapcore.DebugLevel)
 	fileCore := zapcore.NewCore(fileEncoder, fileSyncer, logLevel)
 	stdOutCore := zapcore.NewCore(consoleEncoder, stdOutSyncer, logLevel)
 	otelLogCore := otelzap.NewCore("nova", otelzap.WithLoggerProvider(observability.LoggerProvider()))
@@ -199,21 +200,60 @@ func main() {
 		logger.Fatal("Failed to run migrations with lock & rollback", zap.Error(err))
 	}
 
-	// Setup Auth module
+	// Setup oauth callback handler
 	globalRouter.GET("/token", func(ctx *gin.Context) {
 		code := ctx.Query("code")
 		logger.Info("Auth Code", zap.String("Value", code))
 		ctx.Status(200)
 	})
+
+	// Setup secrets manager
+	smanager, err := secretsmanager.NewSecretsManager("./secrets/oauth.json")
+	if err != nil {
+		logger.Fatal("Failed to create secrets manager", zap.Error(err))
+	}
+
+	// Get google & facebook secrets
+	fbSecret, found := smanager.Get("facebook")
+	if !found {
+		log.Fatal("Secrets for facebook oauth doesnt exist")
+	}
+	googleSecret, found := smanager.Get("google")
+	if !found {
+		log.Fatal("Secrets for google oauth doesnt exist")
+	}
+
+	// Setup auth engine
 	engine := auth.NewSocialAuthEngine()
 	auth.SetDefaultAuthEngine(engine)
-	googleProvider, err := providers.NewGoogleProvider(context.Background(), "", "", "", []string{""})
+
+	googleProvider, err := providers.NewGoogleProvider(
+		context.Background(),
+		logger,
+		googleSecret.ClientID,
+		googleSecret.ClientSecret,
+		googleSecret.RedirectURI,
+		googleSecret.Scope)
 	if err != nil {
 		logger.Fatal("Failed to create google oauth provider", zap.Error(err))
 	}
+	facebookProvider, err := providers.NewFacebookProvider(
+		context.Background(),
+		logger,
+		fbSecret.ClientID,
+		fbSecret.ClientSecret,
+		fbSecret.RedirectURI,
+		fbSecret.Scope)
+	if err != nil {
+		logger.Fatal("Failed to create facebook oauth provider", zap.Error(err))
+	}
 	authURL := googleProvider.AuthURL()
 	logger.Info("Google Auth", zap.String("URL", authURL))
+	authURL = facebookProvider.AuthURL()
+	logger.Info("Facebook Auth", zap.String("URL", authURL))
 	engine.Register(googleProvider)
+	engine.Register(facebookProvider)
+	engine.List()
 
 	redisAuthStore := auth.NewRedisAuthStore(redisClient)
 	auth.SetupJwtService(&config.AuthToken, redisAuthStore, logger)

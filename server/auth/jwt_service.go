@@ -179,7 +179,7 @@ func (js *JwtService) RefreshTokens(ctx context.Context, refreshTokenString, rol
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 
-		return js.config.RefreshToken.Secret, nil
+		return []byte(js.config.RefreshToken.Secret), nil
 	},
 		jwt.WithValidMethods([]string{"HS512"}),
 		jwt.WithIssuer(js.config.RefreshToken.Issuer),

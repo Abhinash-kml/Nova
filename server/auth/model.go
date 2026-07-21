@@ -44,7 +44,23 @@ type LoginRequest struct {
 type LoginResponse struct {
 	Status string              `json:"status"`
 	Reason string              `json:"reason,omitempty"`
+	Meta   map[string]string   `json:"meta,omitempty"`
 	Tokens *SuccessfulResponse `json:"tokens,omitempty"`
+}
+
+type TokenRefreshRequest struct {
+	GrantType    string `json:"grant_type" binding:"required"`
+	RefreshToken string `json:"refresh_token" binding:"required"`
+}
+
+type FailedRefreshResponse struct {
+	Error            string `json:"error"`
+	ErrorDescription string `json:"error_description,omitempty"`
+}
+
+type TokenRefreshResponse struct {
+	Successful *SuccessfulResponse
+	Failed     *FailedRefreshResponse
 }
 
 type TokenResponse struct {

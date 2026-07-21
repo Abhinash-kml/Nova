@@ -3,8 +3,13 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
+
+	"go.opentelemetry.io/otel"
 )
+
+var tracer = otel.Tracer("auth-tracer")
 
 var (
 	ErrLoginFailed           = errors.New("login failed")
@@ -49,7 +54,17 @@ func (s *SocialAuthEngine) Register(p Provider) {
 	s.providers[p.Name()] = p
 }
 
+func (s *SocialAuthEngine) List() {
+	fmt.Println("Registered providers:")
+	for _, value := range s.providers {
+		fmt.Println(value.Name())
+	}
+}
+
 func (s *SocialAuthEngine) CompleteAuthentication(ctx context.Context, providerName string, code string) (UnifiedUserProfile, error) {
+	ctx, span := tracer.Start(ctx, "auth.engine.completeauthentication")
+	defer span.End()
+
 	provider, exists := s.providers[providerName]
 
 	if !exists {

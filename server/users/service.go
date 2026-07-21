@@ -21,17 +21,17 @@ type Service interface {
 	GetAllByAttribute(ctx context.Context, attribute string) ([]User, error)
 	GetById(ctx context.Context, id uuid.UUID) (User, error)
 	GetByName(ctx context.Context, name string) (User, error)
+	GetBySocialProfileId(ctx context.Context, provider, socialUserId string) (User, error)
 	Update(ctx context.Context, dto UpdateDTO) (User, error)
 	Replace(ctx context.Context, dto ReplaceDTO) (User, error)
 	Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error)
 
 	// Auth operations
 	Login(ctx context.Context, loginRequest auth.LoginRequest) (auth.LoginResponse, error)
-	Refresh(ctx context.Context, refreshToken string) (auth.SuccessfulResponse, error)
+	Refresh(ctx context.Context, dto auth.TokenRefreshRequest) (auth.TokenRefreshResponse, error)
 
 	// Operations
-	FindOrCreateUserFromSocialProfile(ctx context.Context, provider, socialUserId string) (uuid.UUID, bool, error)
-	CheckIfUserExistsInDatabase(ctx context.Context, userId string) bool
+	FindOrCreateUserFromSocialProfile(ctx context.Context, profile auth.UnifiedUserProfile) (uuid.UUID, bool, error)
 	CheckIfUserIsBanned(ctx context.Context, userId uuid.UUID) bool
 
 	// Bulk operations
@@ -208,13 +208,25 @@ func (s *LocalUsersService) Login(ctx context.Context, loginRequest auth.LoginRe
 	// 1. Exchange provider token for social profile validation
 	profile, err := auth.GetSocialAuthEngine().CompleteAuthentication(ctx, loginRequest.Provider, loginRequest.Code)
 	if err != nil {
-		return auth.LoginResponse{}, errors.Join(auth.ErrLoginFailed, err)
+		return auth.LoginResponse{
+			Status: "failed",
+			Reason: err.Error(),
+		}, errors.Join(auth.ErrLoginFailed, err)
 	}
 
+	s.logger.Debug("Profile", zap.String("provider", profile.Provider),
+		zap.String("display_name", profile.DisplayName),
+		zap.String("userid", profile.UserId),
+		zap.String("email", profile.Email),
+		zap.String("avatar_url", profile.AvatarUrl))
+
 	// 2. Atomic Find user if exists else create a new one on spot
-	userId, createdRightNow, err := s.FindOrCreateUserFromSocialProfile(ctx, loginRequest.Provider, profile.UserId)
+	userId, createdRightNow, err := s.FindOrCreateUserFromSocialProfile(ctx, profile)
 	if err != nil {
-		return auth.LoginResponse{}, errors.Join(auth.ErrLoginFailed, err)
+		return auth.LoginResponse{
+			Status: "failed",
+			Reason: err.Error(),
+		}, errors.Join(auth.ErrLoginFailed, err)
 	}
 
 	// 3. User exists -> Check if account is banned
@@ -224,6 +236,12 @@ func (s *LocalUsersService) Login(ctx context.Context, loginRequest auth.LoginRe
 			return auth.LoginResponse{
 				Status: "failed",
 				Reason: "banned",
+				Meta: map[string]string{
+					"on":      time.Now().String(),
+					"unlocks": time.Now().Add(time.Hour * 72).String(),
+					"reason":  "cheating",
+					"by":      "system",
+				},
 			}, nil
 		}
 	}
@@ -233,7 +251,10 @@ func (s *LocalUsersService) Login(ctx context.Context, loginRequest auth.LoginRe
 	if err != nil {
 		// Fix: Join the error so internal telemetry logs the root cause
 		s.logger.Error("Token generation failed", zap.Error(err))
-		return auth.LoginResponse{}, errors.Join(auth.ErrLoginFailed, err)
+		return auth.LoginResponse{
+			Status: "failed",
+			Reason: err.Error(),
+		}, errors.Join(auth.ErrLoginFailed, err)
 	}
 
 	tokens := auth.SuccessfulResponse{
@@ -246,7 +267,6 @@ func (s *LocalUsersService) Login(ctx context.Context, loginRequest auth.LoginRe
 
 	response := auth.LoginResponse{
 		Status: "success",
-		Reason: "",
 		Tokens: &tokens,
 	}
 	if createdRightNow {
@@ -256,22 +276,42 @@ func (s *LocalUsersService) Login(ctx context.Context, loginRequest auth.LoginRe
 	return response, nil
 }
 
-func (s *LocalUsersService) Refresh(ctx context.Context, refreshToken string) (auth.SuccessfulResponse, error) {
-	return auth.SuccessfulResponse{}, nil
+func (s *LocalUsersService) Refresh(ctx context.Context, dto auth.TokenRefreshRequest) (auth.TokenRefreshResponse, error) {
+	tokenPair, err := auth.GetJwtService().RefreshTokens(ctx, dto.RefreshToken, "player")
+	if err != nil {
+		s.logger.Error("Failed to generate token pair for refreshing tokens", zap.Error(err))
+
+		return auth.TokenRefreshResponse{
+			Failed: &auth.FailedRefreshResponse{
+				Error:            err.Error(),
+				ErrorDescription: err.Error(),
+			},
+		}, err
+	}
+
+	return auth.TokenRefreshResponse{
+		Successful: &auth.SuccessfulResponse{
+			AccessToken:  tokenPair.AccessToken,
+			TokenType:    "Bearer",
+			ExpiresIn:    time.Now().Add(time.Duration(s.config.AuthToken.AccessToken.ExpiresIn)),
+			RefreshToken: tokenPair.RefreshToken,
+			// Scope: ,
+		},
+	}, nil
 }
 
-func (s *LocalUsersService) CheckIfUserExistsInDatabase(ctx context.Context, userId string) bool {
-	ctx, span := tracer.Start(ctx, "users.service.checkifuserexistsindatabase")
+func (s *LocalUsersService) GetBySocialProfileId(ctx context.Context, provider, socialUserId string) (User, error) {
+	ctx, span := tracer.Start(ctx, "users.service.getbysocialprofileid")
 	defer span.End()
 
-	return s.repo.CheckIfUserExistsInDatabase(ctx, userId)
+	return s.repo.GetBySocialProfileId(ctx, provider, socialUserId)
 }
 
-func (s *LocalUsersService) FindOrCreateUserFromSocialProfile(ctx context.Context, provider, socialUserId string) (uuid.UUID, bool, error) {
+func (s *LocalUsersService) FindOrCreateUserFromSocialProfile(ctx context.Context, profile auth.UnifiedUserProfile) (uuid.UUID, bool, error) {
 	ctx, span := tracer.Start(ctx, "users.service.findorcreateuserfromsocialprofile")
 	defer span.End()
 
-	return s.repo.FindOrCreateUserFromSocialProfile(ctx, provider, socialUserId)
+	return s.repo.FindOrCreateUserFromSocialProfile(ctx, profile)
 }
 
 func (s *LocalUsersService) CheckIfUserIsBanned(ctx context.Context, userId uuid.UUID) bool {

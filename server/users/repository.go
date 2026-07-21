@@ -3,6 +3,7 @@ package users
 import (
 	"context"
 
+	"github.com/abhinash-kml/nova/server/auth"
 	"github.com/abhinash-kml/nova/server/common"
 	"github.com/google/uuid"
 )
@@ -17,13 +18,14 @@ type UsersRepository interface {
 	GetAllByAttribute(ctx context.Context, attribute string) ([]User, error)
 	GetById(ctx context.Context, id uuid.UUID) (User, error)
 	GetByName(ctx context.Context, name string) (User, error)
+	GetBySocialProfileId(ctx context.Context, provider, socialUserId string) (User, error)
+
 	Update(ctx context.Context, dto UpdateDTO) (User, error)
 	Replace(ctx context.Context, dto ReplaceDTO) (User, error)
 	Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error)
 
 	// Operations
-	FindOrCreateUserFromSocialProfile(ctx context.Context, provider, socialUserId string) (uuid.UUID, bool, error)
-	CheckIfUserExistsInDatabase(ctx context.Context, userId string) bool
+	FindOrCreateUserFromSocialProfile(ctx context.Context, profile auth.UnifiedUserProfile) (uuid.UUID, bool, error)
 	CheckIfUserIsBanned(ctx context.Context, userId uuid.UUID) bool
 
 	// Bulk operations

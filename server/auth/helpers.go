@@ -1,12 +1,14 @@
 package auth
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/oauth2"
 )
 
 func ExtractToken(c *gin.Context) (string, error) {
@@ -20,7 +22,10 @@ func ExtractToken(c *gin.Context) (string, error) {
 }
 
 // NormalizeGoogle converts a Google profile into the unified structure
-func NormalizeGoogle(p GoogleProfile) UnifiedUserProfile {
+func NormalizeGoogle(ctx context.Context, p GoogleProfile) UnifiedUserProfile {
+	ctx, span := tracer.Start(ctx, "auth.normalizegoogle")
+	defer span.End()
+
 	return UnifiedUserProfile{
 		Provider:    "google",
 		UserId:      p.Sub,
@@ -31,7 +36,10 @@ func NormalizeGoogle(p GoogleProfile) UnifiedUserProfile {
 }
 
 // NormalizeFacebook converts a Facebook nested profile into the unified structure
-func NormalizeFacebook(p FacebookProfile) UnifiedUserProfile {
+func NormalizeFacebook(ctx context.Context, p FacebookProfile) UnifiedUserProfile {
+	ctx, span := tracer.Start(ctx, "auth.normalizefacebook")
+	defer span.End()
+
 	return UnifiedUserProfile{
 		Provider:    "facebook",
 		UserId:      p.ID,
@@ -42,7 +50,10 @@ func NormalizeFacebook(p FacebookProfile) UnifiedUserProfile {
 }
 
 // NormalizeDiscord constructs the Discord CDN URL from the hash string
-func NormalizeDiscord(p DiscordProfile) UnifiedUserProfile {
+func NormalizeDiscord(ctx context.Context, p DiscordProfile) UnifiedUserProfile {
+	ctx, span := tracer.Start(ctx, "auth.normalizediscord")
+	defer span.End()
+
 	AvatarUrl := ""
 
 	if p.Avatar != "" {
@@ -70,7 +81,10 @@ func NormalizeDiscord(p DiscordProfile) UnifiedUserProfile {
 }
 
 // NormalizeTwitter normalizes Twitter/X profile layouts
-func NormalizeTwitter(p TwitterProfile) UnifiedUserProfile {
+func NormalizeTwitter(ctx context.Context, p TwitterProfile) UnifiedUserProfile {
+	ctx, span := tracer.Start(ctx, "auth.normalizetwittter")
+	defer span.End()
+
 	// Twitter v2 API returns a standard size URL (often '_normal.jpg').
 	// You can replace '_normal' with '_400x400' to fetch a higher resolution image.
 	AvatarUrl := p.Data.ProfileImageURL
@@ -85,7 +99,10 @@ func NormalizeTwitter(p TwitterProfile) UnifiedUserProfile {
 }
 
 // NormalizeApple normalizes the initial token payload for Apple Sign-In
-func NormalizeApple(claims AppleClaims, firstName string, lastName string) UnifiedUserProfile {
+func NormalizeApple(ctx context.Context, claims AppleClaims, firstName string, lastName string) UnifiedUserProfile {
+	ctx, span := tracer.Start(ctx, "auth.normalizeapple")
+	defer span.End()
+
 	displayName := fmt.Sprintf("%s %s", firstName, lastName)
 	if firstName == "" && lastName == "" {
 		displayName = claims.Email // Fallback if name wasn't provided or this isn't the first login
@@ -98,4 +115,36 @@ func NormalizeApple(claims AppleClaims, firstName string, lastName string) Unifi
 		Email:       claims.Email,
 		AvatarUrl:   "", // Apple does not provide or host profile avatars
 	}
+}
+
+func ExtractScopesStr(tok *oauth2.Token) string {
+	if tok == nil {
+		return ""
+	}
+
+	// Check standard "scope", then provider-specific "granted_scopes"
+	keys := []string{"scope", "granted_scopes"}
+
+	for _, key := range keys {
+		if val := tok.Extra(key); val != nil {
+			if scopeStr, ok := val.(string); ok && scopeStr != "" {
+				// Normalize: Replace commas with spaces if a provider uses comma-separation
+				if strings.Contains(scopeStr, ",") {
+					parts := strings.Split(scopeStr, ",")
+					var cleaned []string
+					for _, p := range parts {
+						if trimmed := strings.TrimSpace(p); trimmed != "" {
+							cleaned = append(cleaned, trimmed)
+						}
+					}
+					return strings.Join(cleaned, " ")
+				}
+
+				// Standard space-separated scopes: Trim extra whitespace and return
+				return strings.Join(strings.Fields(scopeStr), " ")
+			}
+		}
+	}
+
+	return ""
 }

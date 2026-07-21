@@ -1,5 +1,7 @@
 package users
 
+import "time"
+
 type UserId struct {
 	Id string `uri:"id" json:"id" binding:"required,uuid"`
 }
@@ -25,6 +27,7 @@ type CreateDTO struct {
 	State       string `json:"state" binding:"required"`
 	LangTag     string `json:"lang_tag" binding:"required"`
 	Timezone    string `json:"time_zone" binding:"required"`
+	AvatarURL   string `json:"avatar_url" binding:"required"`
 }
 
 type FieldUpdate struct {
@@ -60,6 +63,13 @@ type ReplaceDTO struct {
 type DeleteDTO struct {
 	UserId
 	DeleteOptions
+}
+
+type BanDetailsDTO struct {
+	By     string    `json:"by"`
+	Reason string    `json:"reason"`
+	On     time.Time `json:"on"`
+	Till   time.Time `json:"till"`
 }
 
 type BulkCreateDTO struct {

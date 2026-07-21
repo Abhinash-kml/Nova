@@ -4,3 +4,9 @@
 \cmd\test
 \cmd\test\*
 \cmd\test\**
+
+# Ignore everything inside the secrets directory recursively
+secrets/**/*
+
+# Do NOT ignore .gitkeep files inside the secrets directory structure
+!secrets/**/.gitkeep
