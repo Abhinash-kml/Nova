@@ -36,7 +36,15 @@ func (c *Controller) GetAll(ctx *gin.Context) {
 		return
 	}
 
-	stats, err := c.service.GetAll(sctx, dto.Cursor, dto.Limit)
+	cursor, err := utils.DecodeCursor(dto.Cursor)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		utils.SendProblemDetails(ctx, err)
+		return
+	}
+
+	stats, err := c.service.GetAll(sctx, cursor, dto.Limit)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())

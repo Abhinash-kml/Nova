@@ -2,9 +2,7 @@ package leaderboard
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
@@ -28,14 +26,14 @@ func (r *RedisScoreRepository) GetScore(ctx context.Context, dto GetScoreDTO) (S
 	}
 
 	scores := ScoreDTO{
-		Scores: make([]Score, 0, len(result)),
+		Scores: make([]Score, len(result)),
 	}
 
 	for i := range result {
-		id, _ := uuid.Parse(fmt.Sprintf("%v", result[i].Member))
-
 		scores.Scores[i] = Score{
-			Id:    id,
+			UserId: UserId{
+				Id: result[i].Member.(string),
+			},
 			Score: uint(result[i].Score),
 		}
 	}
@@ -80,7 +78,7 @@ func (r *RedisScoreRepository) UpdateScore(ctx context.Context, dto UpdateScoreD
 	pipe := r.rclient.Pipeline()
 
 	for i := range dto.Scores {
-		member := dto.Scores[i].Id.String()
+		member := dto.Scores[i].Id
 		score := float64(dto.Scores[i].Score)
 
 		switch dto.AggregateType {

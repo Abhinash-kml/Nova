@@ -12,6 +12,7 @@ import (
 	"github.com/abhinash-kml/nova/server/common"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -50,7 +51,7 @@ type ProblemDetails struct {
 }
 
 func DecodeCursor(c string) (int, error) {
-	if c == "nil" {
+	if c == "" {
 		return -1, nil
 	}
 	bytes, err := base64.URLEncoding.DecodeString(c)
@@ -63,6 +64,22 @@ func DecodeCursor(c string) (int, error) {
 	}
 
 	return num, nil
+}
+
+func DecodeCursorUUID(c string) (uuid.UUID, error) {
+	if c == "" {
+		return uuid.Nil, nil
+	}
+	bytes, err := base64.URLEncoding.DecodeString(c)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	id, err := uuid.FromBytes(bytes)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	return id, nil
 }
 
 func EncodeToCursor(c int) string {

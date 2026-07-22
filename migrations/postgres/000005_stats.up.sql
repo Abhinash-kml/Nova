@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS stats(
     key VARCHAR(64) UNIQUE,
     name VARCHAR(64) UNIQUE,
     description TEXT,
-    start_value INT
+    start_value INT,
+    created_at TIMESTAMP
     -- aggregation_type
 );

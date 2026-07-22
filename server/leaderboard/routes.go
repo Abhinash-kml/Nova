@@ -9,7 +9,7 @@ func SetupRoutes(router *gin.Engine, c *Controller) {
 		group.GET("", c.GetAll)        // Get list of  all leaderboards
 		group.GET("/:id", c.Get)       // Get details of a particular leaderboard
 		group.POST("", c.Create)       // Create a leaderboard
-		group.PUT("/:id", c.Modify)    // Modify an existing leaderboard
+		group.PATCH("/:id", c.Modify)  // Modify an existing leaderboard
 		group.DELETE("/:id", c.Delete) // Delete an existing leaderboard
 
 		// Score routes

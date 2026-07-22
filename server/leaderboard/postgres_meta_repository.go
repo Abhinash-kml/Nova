@@ -2,6 +2,7 @@ package leaderboard
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"github.com/abhinash-kml/nova/server/common"
@@ -25,7 +26,7 @@ func NewPostgresMetaRepository(p *pgxpool.Pool, l *zap.Logger, srepo ScoreReposi
 	}
 }
 
-func (r *PostgresMetaRepository) GetAll(ctx context.Context, cursor int, limit int) ([]Leaderboard, error) {
+func (r *PostgresMetaRepository) GetAll(ctx context.Context, cursor uuid.UUID, limit int) ([]Leaderboard, error) {
 	var rows pgx.Rows
 	var err error
 
@@ -40,7 +41,7 @@ func (r *PostgresMetaRepository) GetAll(ctx context.Context, cursor int, limit i
 				FROM
 					leaderboards`
 
-	if cursor == 0 {
+	if cursor == uuid.Nil {
 		rawQuery += ` LIMIT
 						$1;`
 		rows, err = r.pgx.Query(ctx, rawQuery, limit)
@@ -63,12 +64,21 @@ func (r *PostgresMetaRepository) GetAll(ctx context.Context, cursor int, limit i
 	// Scan returned rows
 	for rows.Next() {
 		var leaderboard Leaderboard
-		err := rows.Scan(&leaderboard.Id, &leaderboard.Name, &leaderboard.Type, &leaderboard.ProcessInterval,
-			&leaderboard.CreatedBy, &leaderboard.CreatedAt)
+
+		err := rows.Scan(
+			&leaderboard.Id,
+			&leaderboard.Name,
+			&leaderboard.Type,
+			&leaderboard.Stat,
+			&leaderboard.ProcessInterval,
+			&leaderboard.CreatedBy,
+			&leaderboard.CreatedAt)
 		if err != nil {
 			r.logger.Error("failed to scan returned row in getall query", zap.Error(err))
 			return nil, common.TranslatePostgresError(err, r.logger)
 		}
+
+		leaderboards = append(leaderboards, leaderboard)
 	}
 
 	return leaderboards, nil
@@ -89,13 +99,19 @@ func (r *PostgresMetaRepository) Get(ctx context.Context, id uuid.UUID) (Leaderb
 					id = $1;`
 
 	// Execute query
-	row := r.pgx.QueryRow(ctx, rawQuery)
+	row := r.pgx.QueryRow(ctx, rawQuery, id)
 
 	var leaderboard Leaderboard
 
 	// Scan returned row
-	err := row.Scan(&leaderboard.Id, &leaderboard.Name, &leaderboard.Type, &leaderboard.ProcessInterval,
-		&leaderboard.CreatedBy, &leaderboard.CreatedAt)
+	err := row.Scan(
+		&leaderboard.Id,
+		&leaderboard.Name,
+		&leaderboard.Type,
+		&leaderboard.Stat,
+		&leaderboard.ProcessInterval,
+		&leaderboard.CreatedBy,
+		&leaderboard.CreatedAt)
 	if err != nil {
 		r.logger.Error("Failed to scan returned row in getbyid query", zap.Error(err))
 		return Leaderboard{}, common.TranslatePostgresError(err, r.logger)
@@ -113,17 +129,19 @@ func (r *PostgresMetaRepository) Create(ctx context.Context, dto CreateDTO) (Lea
 	now := time.Now()
 
 	// Execute query
-	_, err := r.pgx.Exec(ctx, rawQuery, id, dto.Name, dto.Stat, dto.Type, dto.ProcessInterval, dto.CreatedBy, now)
+	_, err := r.pgx.Exec(ctx, rawQuery, id, dto.Name, dto.Type, dto.Stat, dto.ProcessInterval, dto.CreatedBy, now)
 	if err != nil {
 		r.logger.Error("Failed to execute insert query", zap.Error(err))
 		return Leaderboard{}, common.TranslatePostgresError(err, r.logger)
 	}
+
 	createdBy, _ := uuid.Parse(dto.CreatedBy)
 
 	temp := Leaderboard{
 		Id:              id,
 		Name:            dto.Name,
 		Type:            dto.Type,
+		Stat:            strconv.Itoa(dto.Stat),
 		ProcessInterval: dto.ProcessInterval,
 		CreatedBy:       createdBy,
 		CreatedAt:       now,
@@ -143,7 +161,7 @@ func (r *PostgresMetaRepository) Modify(ctx context.Context, dto ModifyDTO) (Lea
 					process_interval = $3
 				WHERE
 					id = $1
-				RETUNRING
+				RETURNING
 					*;`
 
 	// Execute query
@@ -152,8 +170,14 @@ func (r *PostgresMetaRepository) Modify(ctx context.Context, dto ModifyDTO) (Lea
 	var leaderboard Leaderboard
 
 	// Scan returned row
-	err := row.Scan(&leaderboard.Id, &leaderboard.Name, &leaderboard.Type, &leaderboard.ProcessInterval,
-		&leaderboard.CreatedBy, &leaderboard.CreatedAt)
+	err := row.Scan(
+		&leaderboard.Id,
+		&leaderboard.Name,
+		&leaderboard.Type,
+		&leaderboard.Stat,
+		&leaderboard.ProcessInterval,
+		&leaderboard.CreatedBy,
+		&leaderboard.CreatedAt)
 	if err != nil {
 		r.logger.Error("Failed to scan returned row in modify query", zap.Error(err))
 		return Leaderboard{}, common.TranslatePostgresError(err, r.logger)

@@ -36,13 +36,19 @@ func (c *Controller) GetAll(ctx *gin.Context) {
 		return
 	}
 
-	decodedCursor, err := utils.DecodeCursor(dto.Cursor)
+	decodedCursor, err := utils.DecodeCursorUUID(dto.Cursor)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		utils.SendProblemDetails(ctx, err)
 		return
 	}
+
+	if dto.Limit == 0 {
+		dto.Limit = 10
+	}
+	span.SetAttributes(attribute.String("decoded cursor", decodedCursor.String()))
+	span.SetAttributes(attribute.Int("limit", dto.Limit))
 
 	leaderboards, err := c.service.GetAll(sctx, decodedCursor, dto.Limit)
 	if err != nil {
@@ -121,6 +127,13 @@ func (c *Controller) Modify(ctx *gin.Context) {
 
 	span.SetAttributes(attribute.String("id", dto.Id))
 
+	if err := ctx.ShouldBindWith(&dto.LeaderboardModifications, binding.JSON); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		utils.SendProblemDetails(ctx, err)
+		return
+	}
+
 	modifiedLeaderboard, err := c.service.Modify(sctx, dto)
 	if err != nil {
 		span.RecordError(err)
@@ -198,7 +211,7 @@ func (c *Controller) UpdateScore(ctx *gin.Context) {
 
 	span.SetAttributes(attribute.String("id", dto.Id))
 
-	if err := ctx.ShouldBindQuery(&dto.AggregateType); err != nil {
+	if err := ctx.ShouldBindQuery(&dto.UpdateOptions); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		utils.SendProblemDetails(ctx, err)
@@ -240,7 +253,7 @@ func (c *Controller) DeleteScore(ctx *gin.Context) {
 
 	span.SetAttributes(attribute.String("id", dto.LeaderboardId.Id))
 
-	if err := ctx.ShouldBindUri(&dto.UserId); err != nil {
+	if err := ctx.ShouldBindQuery(&dto.UserId); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		utils.SendProblemDetails(ctx, err)

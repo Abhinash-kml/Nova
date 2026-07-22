@@ -245,11 +245,18 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (Stats
 					stats
 				SET
 					name = $2,
-					start_value = $3
+					key = $3,
+					description = $4,
+					start_value = $5
 				WHERE
 					id = $1
 				RETURNING
-					id, name, start_value, created_at;`
+					id, 
+					name, 
+					key, 
+					description, 
+					start_value, 
+					created_at;`
 
 	var stat Stats
 
@@ -280,12 +287,16 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (Stats
 		rawQuery,
 		dto.Id,
 		dto.Name,
+		dto.Key,
+		dto.Description,
 		dto.StartValue,
 	)
 
 	err = result.Scan(
 		&stat.Id,
 		&stat.Name,
+		&stat.Key,
+		&stat.Description,
 		&stat.StartValue,
 		&stat.CreatedAt,
 	)

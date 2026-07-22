@@ -9,7 +9,7 @@ import (
 
 type Service interface {
 	// General operations
-	GetAll(ctx context.Context, cursor int, limit int) ([]Leaderboard, error)
+	GetAll(ctx context.Context, cursor uuid.UUID, limit int) ([]Leaderboard, error)
 	Get(ctx context.Context, id uuid.UUID) (Leaderboard, error)
 	Create(ctx context.Context, dto CreateDTO) (Leaderboard, error)
 	Modify(ctx context.Context, dto ModifyDTO) (Leaderboard, error)
@@ -51,7 +51,7 @@ func NewLocalService(ctx context.Context, l *zap.Logger, mr MetadataRepository, 
 }
 
 // General operations
-func (s *LocalService) GetAll(ctx context.Context, cursor int, limit int) ([]Leaderboard, error) {
+func (s *LocalService) GetAll(ctx context.Context, cursor uuid.UUID, limit int) ([]Leaderboard, error) {
 	ctx, span := tracer.Start(ctx, "leaderboard.service.getall")
 	defer span.End()
 

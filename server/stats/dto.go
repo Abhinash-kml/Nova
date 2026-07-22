@@ -9,8 +9,8 @@ type GetDTO struct {
 }
 
 type GetAllDTO struct {
-	Cursor int `form:"cursor" binding:"required,gte=0"`
-	Limit  int `form:"limit" binding:"required,gte=10,lte=20"`
+	Cursor string `form:"cursor" binding:"required"`
+	Limit  int    `form:"limit" binding:"required,gte=10,lte=20" default:"10"`
 }
 
 type CreateDTO struct {
@@ -28,8 +28,10 @@ type UpdateDTO struct {
 }
 
 type ReplacementData struct {
-	Name       string `json:"name" binding:"required"`
-	StartValue int    `json:"startvalue" binding:"required"`
+	Name        string `json:"name" binding:"required"`
+	Key         string `json:"key" binding:"required"`
+	Description string `json:"description" binding:"required"`
+	StartValue  int    `json:"startvalue" binding:"required"`
 }
 
 type ReplaceDTO struct {
