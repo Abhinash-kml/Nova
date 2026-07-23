@@ -15,4 +15,10 @@ type StatsRepository interface {
 	Update(ctx context.Context, dto UpdateDTO) (Stats, error)
 	Replace(ctx context.Context, dto ReplaceDTO) (Stats, error)
 	Delete(ctx context.Context, dto DeleteDTO) (int, error)
+
+	// Player specific operations
+	GetPlayerStats(ctx context.Context, dto GetPlayerStatDTO) (PlayerStatsResponseDTO, error)
+	UpdatePlayerStats(ctx context.Context, dto UpdatePlayerStatDTO) error
+	DeletePlayerStats(ctx context.Context, dto DeletePlayerStatDTO) error
+	DeletePlayerStatSpecific(ctx context.Context, dto DeletePlayerStatSpecificDTO) error
 }

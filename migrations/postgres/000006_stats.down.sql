@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS stats CASCADE;
+
+DROP TABLE IF EXISTS player_stats_progression CASCADE;

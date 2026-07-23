@@ -12,3 +12,5 @@ CREATE TABLE IF NOT EXISTS clans (
     created_at TIMESTAMP DEFAULT now(),
     updated_at TIMESTAMP
 );
+
+CREATE INDEX idx_clans_id ON clans(id);

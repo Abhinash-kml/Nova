@@ -6,3 +6,5 @@ CREATE TABLE IF NOT EXISTS comments (
     created_at TIMESTAMP DEFAULT now(),
     updated_at TIMESTAMP
 );
+
+CREATE INDEX idx_comments_id ON comments(id);

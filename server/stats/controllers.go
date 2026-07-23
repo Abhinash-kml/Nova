@@ -196,3 +196,87 @@ func (c *Controller) Replace(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, replacedStat)
 }
+
+func (c *Controller) UpdatePlayerStats(ctx *gin.Context) {
+	sctx, span := tracer.Start(ctx.Request.Context(), "stats.controller.updateplayerstats")
+	defer span.End()
+
+	var dto UpdatePlayerStatDTO
+
+	if err := ctx.ShouldBindUri(&dto.UserId); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		utils.SendProblemDetails(ctx, err)
+		return
+	}
+
+	span.SetAttributes(attribute.String("userid", dto.Id))
+
+	if err := ctx.ShouldBindWith(&dto.IncomingPlayerStat, binding.JSON); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		utils.SendProblemDetails(ctx, err)
+		return
+	}
+
+	err := c.service.UpdatePlayerStats(sctx, dto)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		utils.SendProblemDetails(ctx, err)
+		return
+	}
+
+	ctx.Status(http.StatusOK)
+}
+
+func (c *Controller) DeletePlayerStats(ctx *gin.Context) {
+	sctx, span := tracer.Start(ctx.Request.Context(), "stats.controller.deleteplayerstats")
+	defer span.End()
+
+	var dto DeletePlayerStatDTO
+
+	if err := ctx.ShouldBindUri(&dto.UserId); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		utils.SendProblemDetails(ctx, err)
+		return
+	}
+
+	span.SetAttributes(attribute.String("userid", dto.Id))
+
+	if err := c.service.DeletePlayerStats(sctx, dto); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		utils.SendProblemDetails(ctx, err)
+		return
+	}
+
+	ctx.Status(http.StatusNoContent)
+}
+
+func (c *Controller) GetPlayerStats(ctx *gin.Context) {
+	sctx, span := tracer.Start(ctx.Request.Context(), "stats.controller.updateplayerstats")
+	defer span.End()
+
+	var dto GetPlayerStatDTO
+
+	if err := ctx.ShouldBindUri(&dto.UserId); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		utils.SendProblemDetails(ctx, err)
+		return
+	}
+
+	span.SetAttributes(attribute.String("userid", dto.Id))
+
+	playerStats, err := c.service.GetPlayerStats(sctx, dto)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		utils.SendProblemDetails(ctx, err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, playerStats)
+}

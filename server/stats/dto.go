@@ -24,7 +24,7 @@ type UpdateDTO struct {
 	StatsId
 
 	Name       *string `json:"name"`
-	StartValue *int    `json:"startvalue"`
+	StartValue *int    `json:"start_value"`
 }
 
 type ReplacementData struct {
@@ -41,4 +41,40 @@ type ReplaceDTO struct {
 
 type DeleteDTO struct {
 	StatsId
+}
+
+type UserId struct {
+	Id string `uri:"id" json:"id" binding:"required"`
+}
+
+type GetPlayerStatDTO struct {
+	UserId
+}
+
+type StatResponseDTO struct {
+	Id    int64 `json:"id"`
+	Value int   `json:"value"`
+}
+
+type PlayerStatsResponseDTO struct {
+	Stats []StatResponseDTO `json:"player_stats"`
+}
+
+type DeletePlayerStatDTO struct {
+	UserId
+}
+
+type DeletePlayerStatSpecificDTO struct {
+	UserId
+	StatsId string `form:"statid" binding:"required,uuid"`
+}
+
+type IncomingPlayerStat struct {
+	StatId string `json:"stat_id"`
+	Value  int    `json:"value"`
+}
+
+type UpdatePlayerStatDTO struct {
+	UserId
+	IncomingPlayerStat
 }

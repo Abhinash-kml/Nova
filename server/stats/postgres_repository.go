@@ -6,6 +6,7 @@ import (
 
 	"github.com/Masterminds/squirrel"
 	"github.com/abhinash-kml/nova/server/common"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
@@ -337,4 +338,116 @@ func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteDTO) (int, er
 	}
 
 	return deletedId, nil
+}
+
+func (r *PostgresRepository) GetPlayerStats(ctx context.Context, dto GetPlayerStatDTO) (PlayerStatsResponseDTO, error) {
+
+	var response PlayerStatsResponseDTO
+
+	query := `SELECT
+				stat_id,
+				current_value
+			FROM 
+				player_stats_progression
+			WHERE 
+				player_id = $1;`
+
+	rows, err := r.pgx.Query(
+		ctx,
+		query,
+		dto.Id,
+	)
+	if err != nil {
+		r.logger.Error("Failed to execute sql insert query", zap.Error(err))
+		return PlayerStatsResponseDTO{}, common.TranslatePostgresError(err, r.logger)
+	}
+
+	for rows.Next() {
+		var stat StatResponseDTO
+		if err := rows.Scan(&stat.Id, &stat.Value); err != nil {
+			r.logger.Error("Failed to scan row in getplayerstats query")
+			return PlayerStatsResponseDTO{}, common.TranslatePostgresError(err, r.logger)
+		}
+
+		response.Stats = append(response.Stats, stat)
+	}
+
+	return response, nil
+}
+
+func (r *PostgresRepository) UpdatePlayerStats(ctx context.Context, dto UpdatePlayerStatDTO) error {
+	query := `INSERT INTO
+				player_stats_progression (
+					player_id,
+					stat_id,
+					current_value,
+					updated_at
+				)
+			VALUES (
+				$1,
+				$2,
+				$3,
+				CURRENT_TIMESTAMP
+			)
+			ON CONFLICT (player_id, stat_id)
+			DO UPDATE SET
+				current_value = EXCLUDED.current_value,
+				updated_at = CURRENT_TIMESTAMP`
+
+	_, err := r.pgx.Exec(
+		ctx,
+		query,
+		dto.Id,
+		dto.StatId,
+		dto.Value,
+	)
+	if err != nil {
+		r.logger.Error("Failed to exec updateplayerstats query", zap.Error(err))
+		return common.TranslatePostgresError(err, r.logger)
+	}
+
+	return nil
+}
+
+func (r *PostgresRepository) DeletePlayerStats(ctx context.Context, dto DeletePlayerStatDTO) error {
+	query := `DELETE FROM 
+				player_stats_progression
+			WHERE 
+				player_id = $1`
+
+	_, err := r.pgx.Exec(
+		ctx,
+		query,
+		dto.Id,
+	)
+	if err != nil {
+		r.logger.Error("Failed to exec deleteplayerstats query", zap.Error(err))
+		return common.TranslatePostgresError(err, r.logger)
+	}
+
+	return nil
+}
+
+func (r *PostgresRepository) DeletePlayerStatSpecific(ctx context.Context, dto DeletePlayerStatSpecificDTO) error {
+	query := `DELETE FROM 
+				player_stats_progression
+			WHERE 
+				player_id = $1
+			AND 
+				stat_id = $2`
+
+	statId, _ := uuid.Parse(dto.StatsId)
+
+	_, err := r.pgx.Exec(
+		ctx,
+		query,
+		dto.Id,
+		statId,
+	)
+	if err != nil {
+		r.logger.Error("Failed to exec deleteplayerstatspecific query", zap.Error(err))
+		return common.TranslatePostgresError(err, r.logger)
+	}
+
+	return nil
 }

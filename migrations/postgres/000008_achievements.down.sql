@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS achievements CASCADE;
+DROP TABLE IF EXISTS achievement_criteria CASCADE;

@@ -97,7 +97,7 @@ func main() {
 	defer file.Close()
 
 	// Setup opentelemetry
-	shutdownFunc, err := observability.SetupOTelSDK(globalCtx)
+	shutdownFunc, err := observability.SetupOTelSDK(globalCtx, &config.Observability)
 	if err != nil {
 
 		log.Fatal("Failed to setup opentelemtry for observability. Error: %w", err)

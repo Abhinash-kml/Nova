@@ -2,6 +2,7 @@ package leaderboard
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/abhinash-kml/nova/server/utils"
 	"github.com/gin-gonic/gin"
@@ -185,6 +186,13 @@ func (c *Controller) GetScore(ctx *gin.Context) {
 	}
 
 	span.SetAttributes(attribute.String("id", dto.Id))
+
+	limit := ctx.DefaultQuery("limit", "100")
+	limitNum, _ := strconv.Atoi(limit)
+
+	span.SetAttributes(attribute.Int("limit", limitNum))
+
+	dto.Limit = limitNum
 
 	scores, err := c.service.GetScore(sctx, dto)
 	if err != nil {

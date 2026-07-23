@@ -7,12 +7,18 @@ import (
 )
 
 type Service interface {
+	// Meta operations
 	Add(ctx context.Context, dto CreateDTO) (Stats, error)
 	GetAll(ctx context.Context, cursor int, limit int) ([]Stats, error)
 	GetById(ctx context.Context, id int) (Stats, error)
 	Update(ctx context.Context, dto UpdateDTO) (Stats, error)
 	Replace(ctx context.Context, dto ReplaceDTO) (Stats, error)
 	Delete(ctx context.Context, dto DeleteDTO) (int, error)
+
+	// Player specific operations
+	GetPlayerStats(ctx context.Context, dto GetPlayerStatDTO) (PlayerStatsResponseDTO, error)
+	UpdatePlayerStats(ctx context.Context, dto UpdatePlayerStatDTO) error
+	DeletePlayerStats(ctx context.Context, dto DeletePlayerStatDTO) error
 }
 
 type StatsService struct {
@@ -67,4 +73,32 @@ func (s *StatsService) Delete(ctx context.Context, dto DeleteDTO) (int, error) {
 	defer span.End()
 
 	return s.repository.Delete(ctx, dto)
+}
+
+func (s *StatsService) GetPlayerStats(ctx context.Context, dto GetPlayerStatDTO) (PlayerStatsResponseDTO, error) {
+	ctx, span := tracer.Start(ctx, "stats.service.getplayerstats")
+	defer span.End()
+
+	return s.repository.GetPlayerStats(ctx, dto)
+}
+
+func (s *StatsService) UpdatePlayerStats(ctx context.Context, dto UpdatePlayerStatDTO) error {
+	ctx, span := tracer.Start(ctx, "stats.service.updateplayerstats")
+	defer span.End()
+
+	return s.repository.UpdatePlayerStats(ctx, dto)
+}
+
+func (s *StatsService) DeletePlayerStats(ctx context.Context, dto DeletePlayerStatDTO) error {
+	ctx, span := tracer.Start(ctx, "stats.service.deleteplayerstats")
+	defer span.End()
+
+	return s.repository.DeletePlayerStats(ctx, dto)
+}
+
+func (s *StatsService) DeletePlayerStatSpecific(ctx context.Context, dto DeletePlayerStatSpecificDTO) error {
+	ctx, span := tracer.Start(ctx, "stats.service.deleteplayerstatspecific")
+	defer span.End()
+
+	return s.repository.DeletePlayerStatSpecific(ctx, dto)
 }

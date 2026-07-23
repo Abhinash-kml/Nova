@@ -20,7 +20,7 @@ func NewRedisScoreRepository(l *zap.Logger, c *redis.Client) *RedisScoreReposito
 }
 
 func (r *RedisScoreRepository) GetScore(ctx context.Context, dto GetScoreDTO) (ScoreDTO, error) {
-	result, err := r.rclient.ZRevRangeWithScores(ctx, dto.Id, 0, 99).Result()
+	result, err := r.rclient.ZRevRangeWithScores(ctx, dto.Id, 0, int64(dto.Limit)).Result()
 	if err != nil {
 		return ScoreDTO{}, err
 	}

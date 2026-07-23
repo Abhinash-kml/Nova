@@ -46,6 +46,7 @@ type Score struct {
 
 type GetScoreDTO struct {
 	LeaderboardId
+	Limit int `form:"limit"`
 }
 
 type ScoreDTO struct {

@@ -3,14 +3,25 @@ package stats
 import "github.com/gin-gonic/gin"
 
 func SetupRoutes(router *gin.Engine, c *Controller) {
-	group := router.Group("/stats")
+	// Private internal routes
+	privateGroup := router.Group("/private/stats")
 	{
-		// General routes
-		group.GET("/", c.GetAll)
-		group.GET("/:id", c.Get)
-		group.POST("/", c.Create)
-		group.PATCH("/:id", c.Modify)
-		group.PUT("/:id", c.Replace)
-		group.DELETE("/:id", c.Delete)
+		// Meta routes
+		privateGroup.GET("/", c.GetAll)
+		privateGroup.GET("/:id", c.Get)
+		privateGroup.POST("/", c.Create)
+		privateGroup.PATCH("/:id", c.Modify)
+		privateGroup.PUT("/:id", c.Replace)
+		privateGroup.DELETE("/:id", c.Delete)
+
+		// Player specific routes
+		privateGroup.POST("/player/:id", c.UpdatePlayerStats)
+		privateGroup.DELETE("/player/:id", c.DeletePlayerStats)
+	}
+
+	// Public routes
+	publicGroup := router.Group("/public/stats")
+	{
+		publicGroup.GET("/player/:id", c.GetPlayerStats)
 	}
 }

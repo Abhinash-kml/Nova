@@ -10,11 +10,11 @@ http:
 
 observability:
   trace:
-    endpoint: 
+    endpoint: localhost:4317
   metric:
     endpoint:
   log:
-    endpoint:
+    endpoint: localhost:4317
 
 realtime-hub:
   goroutine:

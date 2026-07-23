@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS users (
-    id UUID PRIMARY KEY UNIQUE DEFAULT uuidv7(),
+    id UUID UNIQUE DEFAULT uuidv7(),
     username VARCHAR UNIQUE NOT NULL,
     displayname VARCHAR UNIQUE NOT NULL,
     email VARCHAR UNIQUE,
@@ -11,5 +11,9 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP DEFAULT now(),
     updated_at TIMESTAMP,
     verified_at TIMESTAMP,
-    disabled_at TIMESTAMP
+    disabled_at TIMESTAMP,
+
+    PRIMARY KEY(id, username)
 );
+
+CREATE INDEX index_users ON users(id);

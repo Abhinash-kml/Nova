@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/abhinash-kml/nova/server/config"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
@@ -27,7 +28,7 @@ var (
 
 // setupOTelSDK bootstraps the OpenTelemetry pipeline.
 // If it does not return an error, make sure to call shutdown for proper cleanup.
-func SetupOTelSDK(ctx context.Context) (func(context.Context) error, error) {
+func SetupOTelSDK(ctx context.Context, config *config.ObservabilityConfig) (func(context.Context) error, error) {
 	var shutdownFuncs []func(context.Context) error
 	var err error
 
@@ -60,37 +61,43 @@ func SetupOTelSDK(ctx context.Context) (func(context.Context) error, error) {
 	}
 
 	// Set up trace provider.
-	tracerProvider, err := newTracerProvider(resource)
-	if err != nil {
-		handleErr(err)
-		return shutdown, err
-	}
-	tProvider = tracerProvider
+	if config.Trace.Endpoint != "" {
+		tracerProvider, err := newTracerProvider(resource, config.Trace.Endpoint)
+		if err != nil {
+			handleErr(err)
+			return shutdown, err
+		}
+		tProvider = tracerProvider
 
-	shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
-	otel.SetTracerProvider(tracerProvider)
+		shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
+		otel.SetTracerProvider(tracerProvider)
+	}
 
 	//Set up meter provider.
-	meterProvider, err := newMeterProvider(resource)
-	if err != nil {
-		handleErr(err)
-		return shutdown, err
-	}
-	mProvider = meterProvider
+	if config.Metrics.Endpoint != "" {
+		meterProvider, err := newMeterProvider(resource, config.Metrics.Endpoint)
+		if err != nil {
+			handleErr(err)
+			return shutdown, err
+		}
+		mProvider = meterProvider
 
-	shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
-	otel.SetMeterProvider(meterProvider)
+		shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
+		otel.SetMeterProvider(meterProvider)
+	}
 
 	// Set up logger provider.
-	loggerProvider, err := newLoggerProvider(resource)
-	if err != nil {
-		handleErr(err)
-		return shutdown, err
-	}
-	lProvider = loggerProvider
+	if config.Logs.Endpoint != "" {
+		loggerProvider, err := newLoggerProvider(resource, config.Logs.Endpoint)
+		if err != nil {
+			handleErr(err)
+			return shutdown, err
+		}
+		lProvider = loggerProvider
 
-	shutdownFuncs = append(shutdownFuncs, loggerProvider.Shutdown)
-	global.SetLoggerProvider(loggerProvider)
+		shutdownFuncs = append(shutdownFuncs, loggerProvider.Shutdown)
+		global.SetLoggerProvider(loggerProvider)
+	}
 
 	return shutdown, err
 }
@@ -117,14 +124,14 @@ func newResource(ctx context.Context, name, version, environment string) (*resou
 	return res, nil
 }
 
-func newTracerProvider(res *resource.Resource) (*trace.TracerProvider, error) {
+func newTracerProvider(res *resource.Resource, endpoint string) (*trace.TracerProvider, error) {
 	// traceExporter, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
 	// if err != nil {
 	// 	return nil, err
 	// }
 
 	traceExporter, err := otlptracegrpc.New(context.Background(),
-		otlptracegrpc.WithEndpoint("localhost:4317"),
+		otlptracegrpc.WithEndpoint(endpoint),
 		otlptracegrpc.WithInsecure())
 	if err != nil {
 		zap.L().Fatal("Failed to created Otel trace exporter", zap.Error(err))
@@ -139,14 +146,14 @@ func newTracerProvider(res *resource.Resource) (*trace.TracerProvider, error) {
 	return tracerProvider, nil
 }
 
-func newMeterProvider(res *resource.Resource) (*metric.MeterProvider, error) {
+func newMeterProvider(res *resource.Resource, endpoint string) (*metric.MeterProvider, error) {
 	// metricExporter, err := stdoutmetric.New(stdoutmetric.WithPrettyPrint())
 	// if err != nil {
 	// 	return nil, err
 	// }
 
 	metricExporter, err := otlpmetricgrpc.New(context.Background(),
-		otlpmetricgrpc.WithEndpoint("localhost:4317"),
+		otlpmetricgrpc.WithEndpoint(endpoint),
 		otlpmetricgrpc.WithInsecure())
 	if err != nil {
 		zap.L().Fatal("Failed to create Otel metric exporter")
@@ -161,14 +168,14 @@ func newMeterProvider(res *resource.Resource) (*metric.MeterProvider, error) {
 	return meterProvider, nil
 }
 
-func newLoggerProvider(res *resource.Resource) (*log.LoggerProvider, error) {
+func newLoggerProvider(res *resource.Resource, endpoint string) (*log.LoggerProvider, error) {
 	// logExporter, err := stdoutlog.New(stdoutlog.WithPrettyPrint())
 	// if err != nil {
 	// 	return nil, err
 	// }
 
 	logExporter, err := otlploggrpc.New(context.Background(),
-		otlploggrpc.WithEndpoint("localhost:4317"),
+		otlploggrpc.WithEndpoint(endpoint),
 		otlploggrpc.WithInsecure())
 	if err != nil {
 		zap.L().Fatal("Failed to create Otel log exporter")
