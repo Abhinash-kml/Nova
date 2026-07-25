@@ -17,7 +17,7 @@ type CreateDTO struct {
 	Key         string `json:"key" binding:"required"`
 	Name        string `json:"name" binding:"required"`
 	Description string `json:"description" binding:"required"`
-	StartValue  int    `json:"startvalue" binding:"required"`
+	StartValue  int    `json:"start_value" binding:"required"`
 }
 
 type UpdateDTO struct {
@@ -31,7 +31,7 @@ type ReplacementData struct {
 	Name        string `json:"name" binding:"required"`
 	Key         string `json:"key" binding:"required"`
 	Description string `json:"description" binding:"required"`
-	StartValue  int    `json:"startvalue" binding:"required"`
+	StartValue  int    `json:"start_value" binding:"required"`
 }
 
 type ReplaceDTO struct {

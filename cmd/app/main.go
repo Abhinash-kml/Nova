@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/abhinash-kml/nova/server/achievements"
 	"github.com/abhinash-kml/nova/server/apiserver"
 	"github.com/abhinash-kml/nova/server/auth"
 	"github.com/abhinash-kml/nova/server/auth/providers"
@@ -19,6 +20,7 @@ import (
 	"github.com/abhinash-kml/nova/server/comments"
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/abhinash-kml/nova/server/infra"
+	"github.com/abhinash-kml/nova/server/inventory"
 	"github.com/abhinash-kml/nova/server/leaderboard"
 	"github.com/abhinash-kml/nova/server/observability"
 	"github.com/abhinash-kml/nova/server/posts"
@@ -338,6 +340,48 @@ func main() {
 		leaderboardService, _ := leaderboard.NewLocalService(globalCtx, logger, leaderderboardMetaRepo, leaderboardScoreRepo)
 		leaderboardController := leaderboard.NewController(leaderboardService, logger)
 		leaderboard.SetupRoutes(globalRouter, leaderboardController)
+	}
+
+	// Setup achievement module
+	{
+		// Achievement
+		achievementRepo := achievements.NewPostgresRepository(postgresPool, logger)
+		achievementService := achievements.NewAchievementService(achievementRepo, logger)
+		achievementController := achievements.NewController(achievementService, logger)
+
+		// Criteria
+		criteriaRepo := achievements.NewCriteriaPostgresRepository(postgresPool, logger)
+		criteriaService := achievements.NewCriteriaService(criteriaRepo, logger)
+		criteriaController := achievements.NewCriteriaController(criteriaService, logger)
+
+		// Progress
+		progressRepo := achievements.NewProgressPostgresRepository(postgresPool, logger)
+		progressService := achievements.NewLocalProgressServiceService(progressRepo, logger)
+		progressController := achievements.NewProgressController(progressService, logger)
+
+		// Completed
+		completedRepo := achievements.NewPostgresCompletedAchievementRepository(postgresPool, logger)
+		completedService := achievements.NewLocalCompletedAchievementService(completedRepo, logger)
+		completedController := achievements.NewCompletedAchievementController(completedService, logger)
+
+		// Setup routes
+		achievements.SetupRoutes(globalRouter, achievementController, criteriaController, progressController, completedController)
+	}
+
+	// Setup inventory module
+	{
+		// Setup items
+		itemsRepo := inventory.NewItemsPostgresRepositoryFromPgxPool(postgresPool, logger)
+		itemsService := inventory.NewLocalItemsService(itemsRepo, logger)
+		itemsController := inventory.NewItemsController(itemsService, logger)
+
+		// Setup inventory
+		inventoryRepo := inventory.NewPostgresInventoryRepositoryFromPgxPool(postgresPool, logger)
+		inventoryService := inventory.NewLocalInventoryService(inventoryRepo, logger)
+		inventoryController := inventory.NewInventoryController(inventoryService, logger)
+
+		// Setup routes
+		inventory.SetupRoutes(globalRouter, itemsController, inventoryController)
 	}
 
 	// Setup social module
