@@ -47,7 +47,7 @@ type LocalUsersService struct {
 	config *config.Config
 }
 
-func NewLocalUsersService(repository UsersRepository, r *redis.Client, l *zap.Logger, c *config.Config) *LocalUsersService {
+func NewLocalUsersService(repository UsersRepository, r *redis.Client, c *config.Config, l *zap.Logger) *LocalUsersService {
 	return &LocalUsersService{
 		repo:   repository,
 		cache:  r,

@@ -24,7 +24,6 @@ import (
 	"github.com/abhinash-kml/nova/server/leaderboard"
 	"github.com/abhinash-kml/nova/server/observability"
 	"github.com/abhinash-kml/nova/server/posts"
-	"github.com/abhinash-kml/nova/server/progression"
 	"github.com/abhinash-kml/nova/server/secretsmanager"
 	"github.com/abhinash-kml/nova/server/stats"
 	"github.com/abhinash-kml/nova/server/users"
@@ -325,14 +324,6 @@ func main() {
 		statsController := stats.NewController(statsService, logger)
 		stats.SetupRoutes(globalRouter, statsController)
 	}
-	// Setup player progression module
-	{
-		progressionRepository := progression.NewPostgresRepositoryFromPgxPool(postgresPool, logger)
-		progressionService := progression.NewService(progressionRepository, logger)
-		progressionController := progression.NewController(progressionService, logger)
-		progression.SetupRoutes(globalRouter, progressionController)
-	}
-
 	// Setup leaderboard module
 	{
 		leaderboardScoreRepo := leaderboard.NewRedisScoreRepository(logger, redisClient)
@@ -341,7 +332,6 @@ func main() {
 		leaderboardController := leaderboard.NewController(leaderboardService, logger)
 		leaderboard.SetupRoutes(globalRouter, leaderboardController)
 	}
-
 	// Setup achievement module
 	{
 		// Achievement
@@ -367,7 +357,6 @@ func main() {
 		// Setup routes
 		achievements.SetupRoutes(globalRouter, achievementController, criteriaController, progressController, completedController)
 	}
-
 	// Setup inventory module
 	{
 		// Setup items

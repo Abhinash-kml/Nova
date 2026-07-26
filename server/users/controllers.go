@@ -5,6 +5,7 @@ import (
 
 	"github.com/abhinash-kml/nova/server/auth"
 	"github.com/abhinash-kml/nova/server/common"
+	"github.com/abhinash-kml/nova/server/config"
 	"github.com/abhinash-kml/nova/server/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -17,11 +18,13 @@ import (
 type Controller struct {
 	service Service
 	logger  *zap.Logger
+	config  *config.Config
 }
 
-func NewController(s Service, l *zap.Logger) *Controller {
+func NewController(s Service, c *config.Config, l *zap.Logger) *Controller {
 	return &Controller{
 		service: s,
+		config:  c,
 		logger:  l,
 	}
 }
