@@ -3,6 +3,7 @@ package stats
 import (
 	"context"
 
+	"github.com/abhinash-kml/nova/server/config"
 	"go.uber.org/zap"
 )
 
@@ -23,11 +24,13 @@ type Service interface {
 
 type StatsService struct {
 	repository StatsRepository
+	config     *config.Config
 	logger     *zap.Logger
 }
 
-func NewService(r StatsRepository, l *zap.Logger) *StatsService {
+func NewService(r StatsRepository, c *config.Config, l *zap.Logger) *StatsService {
 	return &StatsService{
+		config:     c,
 		repository: r,
 		logger:     l,
 	}
