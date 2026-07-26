@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/abhinash-kml/nova/server/common"
+	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/otel/codes"
@@ -29,13 +30,15 @@ type Service interface {
 
 type LocalPostsService struct {
 	repo   PostsRepository
+	config *config.Config
 	logger *zap.Logger
 	cache  *redis.Client
 }
 
-func NewLocalPostsService(repository PostsRepository, r *redis.Client, l *zap.Logger) *LocalPostsService {
+func NewLocalPostsService(repository PostsRepository, c *config.Config, r *redis.Client, l *zap.Logger) *LocalPostsService {
 	return &LocalPostsService{
 		repo:   repository,
+		config: c,
 		cache:  r,
 		logger: l,
 	}

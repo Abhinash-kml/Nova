@@ -11,18 +11,23 @@ import (
 	"time"
 
 	"github.com/abhinash-kml/nova/server/common"
+	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
 type InMemoryPostsRepository struct {
 	posts  []Post
+	config *config.Config
 	logger *zap.Logger
 	mu     sync.RWMutex
 }
 
-func NewInMemoryPostsRepository(l *zap.Logger) *InMemoryPostsRepository {
-	return &InMemoryPostsRepository{logger: l}
+func NewInMemoryPostsRepository(c *config.Config, l *zap.Logger) *InMemoryPostsRepository {
+	return &InMemoryPostsRepository{
+		config: c,
+		logger: l,
+	}
 }
 
 // INFO: Not needed as its in-memory
