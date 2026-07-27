@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/abhinash-kml/nova/server/config"
 	"github.com/abhinash-kml/nova/server/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -15,11 +16,13 @@ import (
 
 type Controller struct {
 	service Service
+	config  *config.Config
 	logger  *zap.Logger
 }
 
-func NewController(s Service, l *zap.Logger) *Controller {
+func NewController(s Service, c *config.Config, l *zap.Logger) *Controller {
 	return &Controller{
+		config:  c,
 		service: s,
 		logger:  l,
 	}

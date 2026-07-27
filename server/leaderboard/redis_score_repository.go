@@ -3,18 +3,21 @@ package leaderboard
 import (
 	"context"
 
+	"github.com/abhinash-kml/nova/server/config"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
 type RedisScoreRepository struct {
+	config  *config.Config
 	logger  *zap.Logger
 	rclient *redis.Client
 }
 
-func NewRedisScoreRepository(l *zap.Logger, c *redis.Client) *RedisScoreRepository {
+func NewRedisScoreRepository(c *config.Config, l *zap.Logger, r *redis.Client) *RedisScoreRepository {
 	return &RedisScoreRepository{
-		rclient: c,
+		config:  c,
+		rclient: r,
 		logger:  l,
 	}
 }

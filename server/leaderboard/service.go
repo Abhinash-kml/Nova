@@ -3,6 +3,7 @@ package leaderboard
 import (
 	"context"
 
+	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -27,6 +28,7 @@ type Service interface {
 }
 
 type LocalService struct {
+	config     *config.Config
 	logger     *zap.Logger
 	metaRepo   MetadataRepository
 	scoreRepo  ScoreRepository
@@ -35,10 +37,11 @@ type LocalService struct {
 	cancel     context.CancelFunc
 }
 
-func NewLocalService(ctx context.Context, l *zap.Logger, mr MetadataRepository, sr ScoreRepository) (*LocalService, chan Event) {
+func NewLocalService(ctx context.Context, c *config.Config, l *zap.Logger, mr MetadataRepository, sr ScoreRepository) (*LocalService, chan Event) {
 	channel := make(chan Event, 100)
 	ctx, cancelFunc := context.WithCancel(ctx)
 	service := &LocalService{
+		config:     c,
 		logger:     l,
 		metaRepo:   mr,
 		scoreRepo:  sr,

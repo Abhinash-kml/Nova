@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/abhinash-kml/nova/server/common"
+	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -13,14 +14,16 @@ import (
 )
 
 type PostgresMetaRepository struct {
+	config    *config.Config
 	logger    *zap.Logger
 	pgx       *pgxpool.Pool
 	scoreRepo ScoreRepository
 }
 
-func NewPostgresMetaRepository(p *pgxpool.Pool, l *zap.Logger, srepo ScoreRepository) *PostgresMetaRepository {
+func NewPostgresMetaRepository(p *pgxpool.Pool, c *config.Config, l *zap.Logger, srepo ScoreRepository) *PostgresMetaRepository {
 	return &PostgresMetaRepository{
 		pgx:       p,
+		config:    c,
 		logger:    l,
 		scoreRepo: srepo,
 	}
