@@ -6,19 +6,22 @@ import (
 
 	"github.com/Masterminds/squirrel"
 	"github.com/abhinash-kml/nova/server/common"
+	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
 
 type PostgresInventoryRepository struct {
+	config           *config.Config
 	logger           *zap.Logger
 	pgx              *pgxpool.Pool
 	statementBuilder squirrel.StatementBuilderType
 }
 
-func NewPostgresInventoryRepositoryFromPgxPool(connection *pgxpool.Pool, l *zap.Logger) *PostgresInventoryRepository {
+func NewPostgresInventoryRepositoryFromPgxPool(connection *pgxpool.Pool, c *config.Config, l *zap.Logger) *PostgresInventoryRepository {
 	return &PostgresInventoryRepository{
+		config:           c,
 		logger:           l,
 		pgx:              connection,
 		statementBuilder: squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar),

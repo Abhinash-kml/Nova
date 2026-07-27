@@ -3,6 +3,7 @@ package inventory
 import (
 	"net/http"
 
+	"github.com/abhinash-kml/nova/server/config"
 	"github.com/abhinash-kml/nova/server/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -14,11 +15,13 @@ import (
 
 type ItemsController struct {
 	service ItemsService
+	config  *config.Config
 	logger  *zap.Logger
 }
 
-func NewItemsController(s ItemsService, l *zap.Logger) *ItemsController {
+func NewItemsController(s ItemsService, c *config.Config, l *zap.Logger) *ItemsController {
 	return &ItemsController{
+		config:  c,
 		service: s,
 		logger:  l,
 	}

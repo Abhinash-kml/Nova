@@ -3,6 +3,7 @@ package inventory
 import (
 	"context"
 
+	"github.com/abhinash-kml/nova/server/config"
 	"go.uber.org/zap"
 )
 
@@ -17,12 +18,14 @@ type InventoryService interface {
 
 type LocalInventoryService struct {
 	repository InventoryRepository
+	config     *config.Config
 	logger     *zap.Logger
 }
 
-func NewLocalInventoryService(r InventoryRepository, l *zap.Logger) *LocalInventoryService {
+func NewLocalInventoryService(r InventoryRepository, c *config.Config, l *zap.Logger) *LocalInventoryService {
 	return &LocalInventoryService{
 		repository: r,
+		config:     c,
 		logger:     l,
 	}
 }
