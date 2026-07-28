@@ -4,18 +4,21 @@ import (
 	"context"
 
 	"github.com/abhinash-kml/nova/server/common"
+	"github.com/abhinash-kml/nova/server/config"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
 
 type PostgresCompletedAchievementRepository struct {
 	pgx    *pgxpool.Pool
+	config *config.Config
 	logger *zap.Logger
 }
 
-func NewPostgresCompletedAchievementRepository(pool *pgxpool.Pool, l *zap.Logger) *PostgresCompletedAchievementRepository {
+func NewPostgresCompletedAchievementRepository(pool *pgxpool.Pool, c *config.Config, l *zap.Logger) *PostgresCompletedAchievementRepository {
 	return &PostgresCompletedAchievementRepository{
 		pgx:    pool,
+		config: c,
 		logger: l,
 	}
 }

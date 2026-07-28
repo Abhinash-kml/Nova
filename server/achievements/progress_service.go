@@ -3,6 +3,7 @@ package achievements
 import (
 	"context"
 
+	"github.com/abhinash-kml/nova/server/config"
 	"go.uber.org/zap"
 )
 
@@ -16,12 +17,14 @@ type ProgressService interface {
 
 type LocalProgressService struct {
 	repository ProgressService
+	config     *config.Config
 	logger     *zap.Logger
 }
 
-func NewLocalProgressServiceService(repository ProgressRepository, l *zap.Logger) *LocalProgressService {
+func NewLocalProgressServiceService(repository ProgressRepository, c *config.Config, l *zap.Logger) *LocalProgressService {
 	return &LocalProgressService{
 		repository: repository,
+		config:     c,
 		logger:     l,
 	}
 }

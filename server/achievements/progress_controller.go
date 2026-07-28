@@ -3,6 +3,7 @@ package achievements
 import (
 	"net/http"
 
+	"github.com/abhinash-kml/nova/server/config"
 	"github.com/abhinash-kml/nova/server/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -13,12 +14,14 @@ import (
 
 type ProgressController struct {
 	service ProgressService
+	config  *config.Config
 	logger  *zap.Logger
 }
 
-func NewProgressController(service ProgressService, logger *zap.Logger) *ProgressController {
+func NewProgressController(service ProgressService, c *config.Config, logger *zap.Logger) *ProgressController {
 	return &ProgressController{
 		service: service,
+		config:  c,
 		logger:  logger,
 	}
 }

@@ -3,6 +3,7 @@ package achievements
 import (
 	"context"
 
+	"github.com/abhinash-kml/nova/server/config"
 	"go.uber.org/zap"
 )
 
@@ -14,13 +15,15 @@ type Service interface {
 }
 
 type AchievementService struct {
+	config     *config.Config
 	logger     *zap.Logger
 	repository Repository
 }
 
-func NewAchievementService(repository Repository, l *zap.Logger) *AchievementService {
+func NewAchievementService(repository Repository, c *config.Config, l *zap.Logger) *AchievementService {
 	return &AchievementService{
 		repository: repository,
+		config:     c,
 		logger:     l,
 	}
 }

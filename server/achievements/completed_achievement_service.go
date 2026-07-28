@@ -3,6 +3,7 @@ package achievements
 import (
 	"context"
 
+	"github.com/abhinash-kml/nova/server/config"
 	"go.uber.org/zap"
 )
 
@@ -12,12 +13,14 @@ type CompletedAchievementService interface {
 
 type LocalCompletedAchievementService struct {
 	repository CompletedAchievementRepository
+	config     *config.Config
 	logger     *zap.Logger
 }
 
-func NewLocalCompletedAchievementService(repository CompletedAchievementService, l *zap.Logger) *LocalCompletedAchievementService {
+func NewLocalCompletedAchievementService(repository CompletedAchievementService, c *config.Config, l *zap.Logger) *LocalCompletedAchievementService {
 	return &LocalCompletedAchievementService{
 		repository: repository,
+		config:     c,
 		logger:     l,
 	}
 }

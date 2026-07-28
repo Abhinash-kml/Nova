@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/abhinash-kml/nova/server/config"
 	"github.com/abhinash-kml/nova/server/utils"
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel/codes"
@@ -11,12 +12,14 @@ import (
 )
 
 type Controller struct {
+	config  *config.Config
 	logger  *zap.Logger
 	service Service
 }
 
-func NewController(service Service, l *zap.Logger) *Controller {
+func NewController(service Service, c *config.Config, l *zap.Logger) *Controller {
 	return &Controller{
+		config:  c,
 		service: service,
 		logger:  l,
 	}

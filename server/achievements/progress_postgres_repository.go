@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/abhinash-kml/nova/server/common"
+	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
@@ -12,12 +13,14 @@ import (
 
 type ProgressPostgresRepository struct {
 	pgx    *pgxpool.Pool
+	config *config.Config
 	logger *zap.Logger
 }
 
-func NewProgressPostgresRepository(pgx *pgxpool.Pool, logger *zap.Logger) *ProgressPostgresRepository {
+func NewProgressPostgresRepository(pgx *pgxpool.Pool, c *config.Config, logger *zap.Logger) *ProgressPostgresRepository {
 	return &ProgressPostgresRepository{
 		pgx:    pgx,
+		config: c,
 		logger: logger,
 	}
 }

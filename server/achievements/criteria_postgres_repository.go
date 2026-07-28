@@ -5,6 +5,7 @@ import (
 
 	"github.com/Masterminds/squirrel"
 	"github.com/abhinash-kml/nova/server/common"
+	"github.com/abhinash-kml/nova/server/config"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
@@ -12,13 +13,15 @@ import (
 
 type CriteriaPostgresRepository struct {
 	logger           *zap.Logger
+	config           *config.Config
 	pgx              *pgxpool.Pool
 	statementBuilder squirrel.StatementBuilderType
 }
 
-func NewCriteriaPostgresRepository(connection *pgxpool.Pool, l *zap.Logger) *CriteriaPostgresRepository {
+func NewCriteriaPostgresRepository(connection *pgxpool.Pool, c *config.Config, l *zap.Logger) *CriteriaPostgresRepository {
 	return &CriteriaPostgresRepository{
 		logger:           l,
+		config:           c,
 		pgx:              connection,
 		statementBuilder: squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar),
 	}

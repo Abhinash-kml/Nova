@@ -4,18 +4,21 @@ import (
 	"context"
 
 	"github.com/abhinash-kml/nova/server/common"
+	"github.com/abhinash-kml/nova/server/config"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
 
 type PostgresRepository struct {
 	pgx    *pgxpool.Pool
+	config *config.Config
 	logger *zap.Logger
 }
 
-func NewPostgresRepository(pgx *pgxpool.Pool, logger *zap.Logger) *PostgresRepository {
+func NewPostgresRepository(pgx *pgxpool.Pool, c *config.Config, logger *zap.Logger) *PostgresRepository {
 	return &PostgresRepository{
 		pgx:    pgx,
+		config: c,
 		logger: logger,
 	}
 }

@@ -3,6 +3,7 @@ package achievements
 import (
 	"net/http"
 
+	"github.com/abhinash-kml/nova/server/config"
 	"github.com/abhinash-kml/nova/server/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -12,12 +13,14 @@ import (
 
 type CompletedAchievementsController struct {
 	service CompletedAchievementService
+	config  *config.Config
 	logger  *zap.Logger
 }
 
-func NewCompletedAchievementController(service CompletedAchievementService, l *zap.Logger) *CompletedAchievementsController {
+func NewCompletedAchievementController(service CompletedAchievementService, c *config.Config, l *zap.Logger) *CompletedAchievementsController {
 	return &CompletedAchievementsController{
 		service: service,
+		config:  c,
 		logger:  l,
 	}
 }

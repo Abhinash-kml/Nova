@@ -3,6 +3,7 @@ package achievements
 import (
 	"context"
 
+	"github.com/abhinash-kml/nova/server/config"
 	"go.uber.org/zap"
 )
 
@@ -17,12 +18,14 @@ type CriteriaService interface {
 
 type LocalCriteriaService struct {
 	repository CriteriaRepository
+	config     *config.Config
 	logger     *zap.Logger
 }
 
-func NewCriteriaService(r CriteriaRepository, l *zap.Logger) *LocalCriteriaService {
+func NewCriteriaService(r CriteriaRepository, c *config.Config, l *zap.Logger) *LocalCriteriaService {
 	return &LocalCriteriaService{
 		repository: r,
+		config:     c,
 		logger:     l,
 	}
 }

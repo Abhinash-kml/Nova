@@ -3,6 +3,7 @@ package achievements
 import (
 	"net/http"
 
+	"github.com/abhinash-kml/nova/server/config"
 	"github.com/abhinash-kml/nova/server/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -13,12 +14,14 @@ import (
 
 type CriteriaController struct {
 	service CriteriaService
+	config  *config.Config
 	logger  *zap.Logger
 }
 
-func NewCriteriaController(s CriteriaService, l *zap.Logger) *CriteriaController {
+func NewCriteriaController(s CriteriaService, c *config.Config, l *zap.Logger) *CriteriaController {
 	return &CriteriaController{
 		service: s,
+		config:  c,
 		logger:  l,
 	}
 }
