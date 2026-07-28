@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/abhinash-kml/nova/server/common"
+	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -24,11 +25,13 @@ type Service interface {
 
 type LocalChannelsService struct {
 	repo   Repository
+	config *config.Config
 	logger *zap.Logger
 }
 
-func NewLocalChannelService(r Repository, l *zap.Logger) *LocalChannelsService {
+func NewLocalChannelService(r Repository, c *config.Config, l *zap.Logger) *LocalChannelsService {
 	return &LocalChannelsService{
+		config: c,
 		repo:   r,
 		logger: l,
 	}

@@ -8,18 +8,23 @@ import (
 	"time"
 
 	"github.com/abhinash-kml/nova/server/common"
+	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
 type InMemoryChannelsRepository struct {
 	channels []Channel
+	config   *config.Config
 	logger   *zap.Logger
 	mu       sync.RWMutex
 }
 
-func NewInMemoryChannelsRepository(l *zap.Logger) *InMemoryChannelsRepository {
-	return &InMemoryChannelsRepository{logger: l}
+func NewInMemoryChannelsRepository(c *config.Config, l *zap.Logger) *InMemoryChannelsRepository {
+	return &InMemoryChannelsRepository{
+		config: c,
+		logger: l,
+	}
 }
 
 func (r *InMemoryChannelsRepository) Initialize() error {
