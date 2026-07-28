@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/abhinash-kml/nova/server/common"
+	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/otel/codes"
@@ -28,13 +29,15 @@ type Service interface {
 
 type LocalCommentsService struct {
 	repo   CommentsRepository
+	config *config.Config
 	logger *zap.Logger
 	cache  *redis.Client
 }
 
-func NewLocalCommentsService(repository CommentsRepository, r *redis.Client, l *zap.Logger) *LocalCommentsService {
+func NewLocalCommentsService(repository CommentsRepository, c *config.Config, r *redis.Client, l *zap.Logger) *LocalCommentsService {
 	return &LocalCommentsService{
 		repo:   repository,
+		config: c,
 		cache:  r,
 		logger: l,
 	}
