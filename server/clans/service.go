@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/abhinash-kml/nova/server/common"
+	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/otel/codes"
@@ -28,12 +29,14 @@ type Service interface {
 type LocalClansService struct {
 	repo   ClansRepository
 	logger *zap.Logger
+	config *config.Config
 	cache  *redis.Client
 }
 
-func NewLocalClansService(repo ClansRepository, r *redis.Client, l *zap.Logger) *LocalClansService {
+func NewLocalClansService(repo ClansRepository, c *config.Config, r *redis.Client, l *zap.Logger) *LocalClansService {
 	return &LocalClansService{
 		repo:   repo,
+		config: c,
 		cache:  r,
 		logger: l,
 	}

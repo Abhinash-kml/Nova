@@ -261,98 +261,98 @@ func main() {
 
 	// Setup users module
 	{
-		usersRepository := users.NewPostgresRepositoryFromPgxPool(postgresPool, logger, config.SeedsConfig.Users)
+		usersRepository := users.NewPostgresRepositoryFromPgxPool(postgresPool, config, logger, config.SeedsConfig.Users)
 		if err = usersRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed users repository", zap.Error(err))
 		}
-		usersService := users.NewLocalUsersService(usersRepository, redisClient, logger, config)
-		usersController := users.NewController(usersService, logger)
+		usersService := users.NewLocalUsersService(usersRepository, redisClient, config, logger)
+		usersController := users.NewController(usersService, config, logger)
 		users.SetupRoutes(globalRouter, usersController)
 	}
 
 	// Setup posts module
 	{
-		postsRepository := posts.NewPostgresRepositoryFromPgxPool(postgresPool, logger, config.SeedsConfig.Posts)
+		postsRepository := posts.NewPostgresRepositoryFromPgxPool(postgresPool, config, logger, config.SeedsConfig.Posts)
 		if err = postsRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed posts repository", zap.Error(err))
 		}
-		postsService := posts.NewLocalPostsService(postsRepository, redisClient, logger)
-		postsController := posts.NewController(postsService, logger)
+		postsService := posts.NewLocalPostsService(postsRepository, config, redisClient, logger)
+		postsController := posts.NewController(postsService, config, logger)
 		posts.SetupRoutes(globalRouter, postsController)
 	}
 
 	// Setup comments module
 	{
-		commentsRepository := comments.NewPostgresRepositoryFromPgxPool(postgresPool, logger, config.SeedsConfig.Comments)
+		commentsRepository := comments.NewPostgresRepositoryFromPgxPool(postgresPool, config, logger, config.SeedsConfig.Comments)
 		if err = commentsRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed comments repository", zap.Error(err))
 		}
-		commentsService := comments.NewLocalCommentsService(commentsRepository, redisClient, logger)
-		commentsController := comments.NewController(commentsService, logger)
+		commentsService := comments.NewLocalCommentsService(commentsRepository, config, redisClient, logger)
+		commentsController := comments.NewController(commentsService, config, logger)
 		comments.SetupRoutes(globalRouter, commentsController)
 	}
 
 	// Setup clans module
 	{
-		clansRepository := clans.NewPostgresRepositoryFromPgxPool(postgresPool, logger, config.SeedsConfig.Clans)
+		clansRepository := clans.NewPostgresRepositoryFromPgxPool(postgresPool, config, logger, config.SeedsConfig.Clans)
 		if err = clansRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed clans repository", zap.Error(err))
 		}
-		clansService := clans.NewLocalClansService(clansRepository, redisClient, logger)
-		clansController := clans.NewController(clansService, logger)
+		clansService := clans.NewLocalClansService(clansRepository, config, redisClient, logger)
+		clansController := clans.NewController(clansService, config, logger)
 		clans.SetupRoutes(globalRouter, clansController)
 	}
 
 	// Setup channels module
 	{
-		channelsRepository := channels.NewPostgresRepositoryFromPgxPool(postgresPool, logger, config.SeedsConfig.Channels)
+		channelsRepository := channels.NewPostgresRepositoryFromPgxPool(postgresPool, config, logger, config.SeedsConfig.Channels)
 		if err = channelsRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed channels repository", zap.Error(err))
 		}
-		channelsService := channels.NewLocalChannelService(channelsRepository, logger)
-		channelsController := channels.NewController(channelsService, logger)
+		channelsService := channels.NewLocalChannelService(channelsRepository, config, logger)
+		channelsController := channels.NewController(channelsService, config, logger)
 		channels.SetupRoutes(globalRouter, channelsController)
 	}
 
 	// Setup stats module
 	{
-		statsRepository := stats.NewPostgresRepositoryFromPgxPool(postgresPool, logger, config.SeedsConfig.Stats)
+		statsRepository := stats.NewPostgresRepositoryFromPgxPool(postgresPool, config, logger, config.SeedsConfig.Stats)
 		if err = statsRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed stats repository", zap.Error(err))
 		}
-		statsService := stats.NewService(statsRepository, logger)
-		statsController := stats.NewController(statsService, logger)
+		statsService := stats.NewService(statsRepository, config, logger)
+		statsController := stats.NewController(statsService, config, logger)
 		stats.SetupRoutes(globalRouter, statsController)
 	}
 	// Setup leaderboard module
 	{
-		leaderboardScoreRepo := leaderboard.NewRedisScoreRepository(logger, redisClient)
-		leaderderboardMetaRepo := leaderboard.NewPostgresMetaRepository(postgresPool, logger, leaderboardScoreRepo)
-		leaderboardService, _ := leaderboard.NewLocalService(globalCtx, logger, leaderderboardMetaRepo, leaderboardScoreRepo)
-		leaderboardController := leaderboard.NewController(leaderboardService, logger)
+		leaderboardScoreRepo := leaderboard.NewRedisScoreRepository(config, logger, redisClient)
+		leaderderboardMetaRepo := leaderboard.NewPostgresMetaRepository(postgresPool, config, logger, leaderboardScoreRepo)
+		leaderboardService, _ := leaderboard.NewLocalService(globalCtx, config, logger, leaderderboardMetaRepo, leaderboardScoreRepo)
+		leaderboardController := leaderboard.NewController(leaderboardService, config, logger)
 		leaderboard.SetupRoutes(globalRouter, leaderboardController)
 	}
 	// Setup achievement module
 	{
 		// Achievement
-		achievementRepo := achievements.NewPostgresRepository(postgresPool, logger)
-		achievementService := achievements.NewAchievementService(achievementRepo, logger)
-		achievementController := achievements.NewController(achievementService, logger)
+		achievementRepo := achievements.NewPostgresRepository(postgresPool, config, logger)
+		achievementService := achievements.NewAchievementService(achievementRepo, config, logger)
+		achievementController := achievements.NewController(achievementService, config, logger)
 
 		// Criteria
-		criteriaRepo := achievements.NewCriteriaPostgresRepository(postgresPool, logger)
-		criteriaService := achievements.NewCriteriaService(criteriaRepo, logger)
-		criteriaController := achievements.NewCriteriaController(criteriaService, logger)
+		criteriaRepo := achievements.NewCriteriaPostgresRepository(postgresPool, config, logger)
+		criteriaService := achievements.NewCriteriaService(criteriaRepo, config, logger)
+		criteriaController := achievements.NewCriteriaController(criteriaService, config, logger)
 
 		// Progress
-		progressRepo := achievements.NewProgressPostgresRepository(postgresPool, logger)
-		progressService := achievements.NewLocalProgressServiceService(progressRepo, logger)
-		progressController := achievements.NewProgressController(progressService, logger)
+		progressRepo := achievements.NewProgressPostgresRepository(postgresPool, config, logger)
+		progressService := achievements.NewLocalProgressServiceService(progressRepo, config, logger)
+		progressController := achievements.NewProgressController(progressService, config, logger)
 
 		// Completed
-		completedRepo := achievements.NewPostgresCompletedAchievementRepository(postgresPool, logger)
-		completedService := achievements.NewLocalCompletedAchievementService(completedRepo, logger)
-		completedController := achievements.NewCompletedAchievementController(completedService, logger)
+		completedRepo := achievements.NewPostgresCompletedAchievementRepository(postgresPool, config, logger)
+		completedService := achievements.NewLocalCompletedAchievementService(completedRepo, config, logger)
+		completedController := achievements.NewCompletedAchievementController(completedService, config, logger)
 
 		// Setup routes
 		achievements.SetupRoutes(globalRouter, achievementController, criteriaController, progressController, completedController)
@@ -360,14 +360,14 @@ func main() {
 	// Setup inventory module
 	{
 		// Setup items
-		itemsRepo := inventory.NewItemsPostgresRepositoryFromPgxPool(postgresPool, logger)
-		itemsService := inventory.NewLocalItemsService(itemsRepo, logger)
-		itemsController := inventory.NewItemsController(itemsService, logger)
+		itemsRepo := inventory.NewItemsPostgresRepositoryFromPgxPool(postgresPool, config, logger)
+		itemsService := inventory.NewLocalItemsService(itemsRepo, config, logger)
+		itemsController := inventory.NewItemsController(itemsService, config, logger)
 
 		// Setup inventory
-		inventoryRepo := inventory.NewPostgresInventoryRepositoryFromPgxPool(postgresPool, logger)
-		inventoryService := inventory.NewLocalInventoryService(inventoryRepo, logger)
-		inventoryController := inventory.NewInventoryController(inventoryService, logger)
+		inventoryRepo := inventory.NewPostgresInventoryRepositoryFromPgxPool(postgresPool, config, logger)
+		inventoryService := inventory.NewLocalInventoryService(inventoryRepo, config, logger)
+		inventoryController := inventory.NewInventoryController(inventoryService, config, logger)
 
 		// Setup routes
 		inventory.SetupRoutes(globalRouter, itemsController, inventoryController)
