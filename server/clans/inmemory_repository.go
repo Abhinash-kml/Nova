@@ -12,18 +12,23 @@ import (
 	"time"
 
 	"github.com/abhinash-kml/nova/server/common"
+	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
 type InMemoryClansRepository struct {
 	clans  []Clan
+	config *config.Config
 	logger *zap.Logger
 	mu     sync.RWMutex
 }
 
-func NewInMemoryClanRepository(l *zap.Logger) *InMemoryClansRepository {
-	return &InMemoryClansRepository{logger: l}
+func NewInMemoryClanRepository(c *config.Config, l *zap.Logger) *InMemoryClansRepository {
+	return &InMemoryClansRepository{
+		config: c,
+		logger: l,
+	}
 }
 
 func (r *InMemoryClansRepository) Initialize() error {
