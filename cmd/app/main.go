@@ -25,12 +25,12 @@ import (
 	"github.com/abhinash-kml/nova/server/observability"
 	"github.com/abhinash-kml/nova/server/posts"
 	"github.com/abhinash-kml/nova/server/secretsmanager"
+	"github.com/abhinash-kml/nova/server/social"
 	"github.com/abhinash-kml/nova/server/stats"
 	"github.com/abhinash-kml/nova/server/users"
 	"github.com/gin-contrib/cors"
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/redis/go-redis/extra/redisotel/v9"
 	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/contrib/bridges/otelzap"
@@ -189,17 +189,17 @@ func main() {
 	//globalRouter.Use(auth.Token())
 
 	// Setup domains of interests
-	postgresDb := stdlib.OpenDBFromPool(postgresPool)
-	migrationManager, err := infra.NewMigrationManager(postgresDb, "./migrations/postgres", logger)
-	if err != nil {
-		logger.Fatal("Failed to create migration manager", zap.Error(err))
-	}
+	// postgresDb := stdlib.OpenDBFromPool(postgresPool)
+	// migrationManager, err := infra.NewMigrationManager(postgresDb, "./migrations/postgres", logger)
+	// if err != nil {
+	// 	logger.Fatal("Failed to create migration manager", zap.Error(err))
+	// }
 
-	// Run migrations
-	err = migrationManager.MigrateWithLock(context.Background(), migrateDirection, migratetionSteps)
-	if err != nil {
-		logger.Fatal("Failed to run migrations with lock & rollback", zap.Error(err))
-	}
+	// // Run migrations
+	// err = migrationManager.MigrateWithLock(context.Background(), migrateDirection, migratetionSteps)
+	// if err != nil {
+	// 	logger.Fatal("Failed to run migrations with lock & rollback", zap.Error(err))
+	// }
 
 	// Setup oauth callback handler
 	globalRouter.GET("/token", func(ctx *gin.Context) {
@@ -374,7 +374,12 @@ func main() {
 	}
 
 	// Setup social module
-
+	{
+		socialRepository := social.NewPostgreRepository(postgresPool, config, logger)
+		socialService := social.NewLocalSocialService(socialRepository, config, logger)
+		socialController := social.NewController(socialService, config, logger)
+		social.SetupRoutes(globalRouter, socialController)
+	}
 	// Setup realtime module
 
 	// Create http api server & start it
