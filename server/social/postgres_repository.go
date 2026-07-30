@@ -180,6 +180,11 @@ func (r *PostgresRepository) GetAllIncomingFriendRequests(ctx context.Context, d
 		requests = append(requests, result)
 	}
 
+	if err := rows.Err(); err != nil {
+		r.logger.Error("Error while scanning rows", zap.Error(err))
+		return []RequestDTO{}, common.TranslatePostgresError(err, r.logger)
+	}
+
 	return requests, nil
 }
 
@@ -223,6 +228,11 @@ func (r *PostgresRepository) GetAllOutgoingFriendRequests(ctx context.Context, d
 		}
 
 		requests = append(requests, result)
+	}
+
+	if err := rows.Err(); err != nil {
+		r.logger.Error("Error while scanning rows", zap.Error(err))
+		return []RequestDTO{}, common.TranslatePostgresError(err, r.logger)
 	}
 
 	return requests, nil
@@ -329,6 +339,11 @@ func (r *PostgresRepository) GetAllFriends(ctx context.Context, dto GetAllFriend
 		friendIDs = append(friendIDs, friendID)
 	}
 
+	if err := rows.Err(); err != nil {
+		r.logger.Error("Error while scanning rows", zap.Error(err))
+		return []uuid.UUID{}, common.TranslatePostgresError(err, r.logger)
+	}
+
 	return friendIDs, nil
 }
 
@@ -366,6 +381,11 @@ func (r *PostgresRepository) GetAllBlocked(ctx context.Context, dto GetAllBlocke
 		}
 
 		blockedIDs = append(blockedIDs, blockedID)
+	}
+
+	if err := rows.Err(); err != nil {
+		r.logger.Error("Error while scanning rows", zap.Error(err))
+		return []uuid.UUID{}, common.TranslatePostgresError(err, r.logger)
 	}
 
 	return blockedIDs, nil
@@ -422,6 +442,11 @@ func (r *PostgresRepository) GetMutualFriends(ctx context.Context, dto GetMutual
 		}
 
 		mutualFriendIDs = append(mutualFriendIDs, mutualFriendID)
+	}
+
+	if err := rows.Err(); err != nil {
+		r.logger.Error("Error while scanning rows", zap.Error(err))
+		return []uuid.UUID{}, common.TranslatePostgresError(err, r.logger)
 	}
 
 	return mutualFriendIDs, nil
