@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS currencies CASCADE;
+
+DROP TABLE IF EXISTS wallets;

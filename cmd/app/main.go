@@ -19,6 +19,7 @@ import (
 	"github.com/abhinash-kml/nova/server/clans"
 	"github.com/abhinash-kml/nova/server/comments"
 	"github.com/abhinash-kml/nova/server/config"
+	"github.com/abhinash-kml/nova/server/economy"
 	"github.com/abhinash-kml/nova/server/infra"
 	"github.com/abhinash-kml/nova/server/inventory"
 	"github.com/abhinash-kml/nova/server/leaderboard"
@@ -379,6 +380,21 @@ func main() {
 		socialService := social.NewLocalSocialService(socialRepository, config, logger)
 		socialController := social.NewController(socialService, config, logger)
 		social.SetupRoutes(globalRouter, socialController)
+	}
+
+	//	Setup economy module
+	{
+		// Setup currency
+		currencyRepo := economy.NewPostgresCurrencyRepository(postgresPool, config, logger)
+		currencyService := economy.NewLocalCurrencyService(currencyRepo, config, logger)
+		currencyController := economy.NBewCurrencyController(currencyService, config, logger)
+
+		// Setup wallet
+		walletRepo := economy.NewPostgresWalletRepository(postgresPool, config, logger)
+		walletService := economy.NewLocalWalletService(walletRepo, config, logger)
+		walletController := economy.NewWalletController(walletService, config, logger)
+
+		economy.SetupRoutes(globalRouter, currencyController, walletController)
 	}
 	// Setup realtime module
 
