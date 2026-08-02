@@ -1,6 +1,8 @@
 package economy
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/gin-gonic/gin"
+)
 
 func SetupRoutes(router *gin.Engine, cc *CurrencyController, wc *WalletController) {
 	currency := router.Group("/private/currency")

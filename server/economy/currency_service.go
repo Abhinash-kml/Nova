@@ -3,6 +3,7 @@ package economy
 import (
 	"context"
 
+	"github.com/abhinash-kml/nova/server/common"
 	"github.com/abhinash-kml/nova/server/config"
 	"go.uber.org/zap"
 )
@@ -30,36 +31,61 @@ func NewLocalCurrencyService(repo CurrencyRepository, c *config.Config, l *zap.L
 }
 
 func (s *LocalCurrencyService) Get(ctx context.Context, dto GetCurrencyDTO) (CurrencyDTO, error) {
-	ctx, span := tracer.Start(ctx, "economy.currency.get")
+	ctx, span := tracer.Start(ctx, "economy.currency.service.get")
 	defer span.End()
 
-	return s.repo.Get(ctx, dto)
+	currency, err := s.repo.Get(ctx, dto)
+	if err != nil {
+		return CurrencyDTO{}, common.TranslatePostgresError(err, s.logger)
+	}
+
+	return currency, nil
 }
 
 func (s *LocalCurrencyService) GetAll(ctx context.Context, dto GetAllCurrencyDTO) ([]CurrencyDTO, error) {
-	ctx, span := tracer.Start(ctx, "economy.currency.getall")
+	ctx, span := tracer.Start(ctx, "economy.currency.service.getall")
 	defer span.End()
 
-	return s.repo.GetAll(ctx, dto)
+	currencies, err := s.repo.GetAll(ctx, dto)
+	if err != nil {
+		return nil, common.TranslatePostgresError(err, s.logger)
+	}
+
+	return currencies, nil
 }
 
 func (s *LocalCurrencyService) Create(ctx context.Context, dto CreateCurrencyDTO) (CurrencyDTO, error) {
-	ctx, span := tracer.Start(ctx, "economy.currency.get")
+	ctx, span := tracer.Start(ctx, "economy.currency.service.create")
 	defer span.End()
 
-	return s.repo.Create(ctx, dto)
+	currency, err := s.repo.Create(ctx, dto)
+	if err != nil {
+		return CurrencyDTO{}, common.TranslatePostgresError(err, s.logger)
+	}
+
+	return currency, nil
 }
 
 func (s *LocalCurrencyService) Update(ctx context.Context, dto UpdateCurrencyDTO) (CurrencyDTO, error) {
-	ctx, span := tracer.Start(ctx, "economy.currency.get")
+	ctx, span := tracer.Start(ctx, "economy.currency.service.update")
 	defer span.End()
 
-	return s.repo.Update(ctx, dto)
+	currency, err := s.repo.Update(ctx, dto)
+	if err != nil {
+		return CurrencyDTO{}, common.TranslatePostgresError(err, s.logger)
+	}
+
+	return currency, nil
 }
 
 func (s *LocalCurrencyService) Delete(ctx context.Context, dto DeleetCurrencyDTO) (int, error) {
-	ctx, span := tracer.Start(ctx, "economy.currency.get")
+	ctx, span := tracer.Start(ctx, "economy.currency.service.delete")
 	defer span.End()
 
-	return s.repo.Delete(ctx, dto)
+	id, err := s.repo.Delete(ctx, dto)
+	if err != nil {
+		return 0, common.TranslatePostgresError(err, s.logger)
+	}
+
+	return id, nil
 }

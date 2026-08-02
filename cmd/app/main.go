@@ -18,6 +18,7 @@ import (
 	"github.com/abhinash-kml/nova/server/channels"
 	"github.com/abhinash-kml/nova/server/clans"
 	"github.com/abhinash-kml/nova/server/comments"
+	"github.com/abhinash-kml/nova/server/common"
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/abhinash-kml/nova/server/economy"
 	"github.com/abhinash-kml/nova/server/infra"
@@ -121,7 +122,7 @@ func main() {
 	stdOutCore := zapcore.NewCore(consoleEncoder, stdOutSyncer, logLevel)
 	otelLogCore := otelzap.NewCore("nova", otelzap.WithLoggerProvider(observability.LoggerProvider()))
 	teeCore := zapcore.NewTee(fileCore, stdOutCore, otelLogCore)
-	logger := zap.New(teeCore)
+	logger := zap.New(teeCore).WithOptions(zap.AddCaller())
 	defer logger.Sync()
 
 	logger.Sugar().Infof("Server started at: %w", time.Now())
@@ -185,6 +186,9 @@ func main() {
 
 	// Setup logging middleware
 	globalRouter.Use(ginzap.Ginzap(logger, time.RFC3339, true))
+
+	// Setup Error handling middleware
+	globalRouter.Use(common.ErrorHandler)
 
 	// Setup Auth middleware
 	//globalRouter.Use(auth.Token())

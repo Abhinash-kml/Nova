@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/abhinash-kml/nova/server/config"
-	"github.com/abhinash-kml/nova/server/utils"
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel/codes"
 	"go.uber.org/zap"
@@ -25,23 +24,31 @@ func NBewCurrencyController(service CurrencyService, c *config.Config, l *zap.Lo
 }
 
 func (c *CurrencyController) Get(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "economy.currency.")
-	defer span.End()
+	sctx, span := tracer.Start(ctx.Request.Context(), "economy.currency.controller.get")
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto GetCurrencyDTO
 
-	if err := ctx.ShouldBindUri(&dto.CurrencyID); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindUri(&dto.CurrencyID)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	currency, err := c.service.Get(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to get currency data",
+			zap.String("currency_id", dto.ID),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -49,23 +56,32 @@ func (c *CurrencyController) Get(ctx *gin.Context) {
 }
 
 func (c *CurrencyController) GetAll(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "economy.currency.")
-	defer span.End()
+	sctx, span := tracer.Start(ctx.Request.Context(), "economy.currency.controller.getall")
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto GetAllCurrencyDTO
 
-	if err := ctx.ShouldBindQuery(&dto); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindQuery(&dto)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	currencies, err := c.service.GetAll(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to get all currency",
+			zap.Int("limit", dto.Limit),
+			zap.Int("cursor", dto.Cursor),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -73,23 +89,29 @@ func (c *CurrencyController) GetAll(ctx *gin.Context) {
 }
 
 func (c *CurrencyController) Create(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "economy.currency.")
-	defer span.End()
+	sctx, span := tracer.Start(ctx.Request.Context(), "economy.currency.controller.create")
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto CreateCurrencyDTO
 
-	if err := ctx.ShouldBindBodyWithJSON(&dto); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindBodyWithJSON(&dto)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	currency, err := c.service.Create(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to create currency", zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -97,30 +119,35 @@ func (c *CurrencyController) Create(ctx *gin.Context) {
 }
 
 func (c *CurrencyController) Update(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "economy.currency.")
-	defer span.End()
+	sctx, span := tracer.Start(ctx.Request.Context(), "economy.currency.controller.update")
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto UpdateCurrencyDTO
 
-	if err := ctx.ShouldBindUri(&dto.CurrencyID); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindUri(&dto.CurrencyID)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
-	if err := ctx.ShouldBindBodyWithJSON(&dto.UpdateData); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindBodyWithJSON(&dto.UpdateData)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	updatedCurrency, err := c.service.Update(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to update currency", zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -128,23 +155,29 @@ func (c *CurrencyController) Update(ctx *gin.Context) {
 }
 
 func (c *CurrencyController) Delete(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "economy.currency.")
-	defer span.End()
+	sctx, span := tracer.Start(ctx.Request.Context(), "economy.currency.controller.delete")
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto DeleetCurrencyDTO
 
-	if err := ctx.ShouldBindUri(&dto.CurrencyID); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindUri(&dto.CurrencyID)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
-	_, err := c.service.Delete(sctx, dto)
+	_, err = c.service.Delete(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to delete currency", zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 }

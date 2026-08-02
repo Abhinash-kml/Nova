@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/abhinash-kml/nova/server/common"
+	"github.com/abhinash-kml/nova/server/apperr"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -150,53 +150,103 @@ func SendProblemDetails(c *gin.Context, err error) {
 	}
 
 	// Commom errors
+	var cError *apperr.Error
+	if errors.As(err, &cError) {
+		switch cError.Code {
+		case apperr.CodeUnAuthorized:
+			{
+				problem.Type = "nova.com/user-unauthorised"
+				problem.Title = "Unauthorized"
+				problem.Description = "You are not authorized"
+				problem.StatusCode = http.StatusUnauthorized
 
-	// Resource not found
-	if errors.Is(err, common.ErrResourceNotFound) {
-		problem.Type = "nova.com/no-resource"
-		problem.Title = "Resource Not Found"
-		problem.Description = "The requested resource cannot be found"
-		problem.StatusCode = http.StatusNotFound
+				c.JSON(problem.StatusCode, problem)
+				return
+			}
+		case apperr.CodeForbidden:
+			{
+				problem.Type = "nova.com/forbidden"
+				problem.Title = "Forbidden"
+				problem.Description = "You are forbidden"
+				problem.StatusCode = http.StatusForbidden
 
-		c.JSON(problem.StatusCode, problem)
-		return
-	}
+				c.JSON(problem.StatusCode, problem)
+				return
+			}
+		case apperr.CodeCannotBeCreated:
+			{
+				problem.Type = "nova.com/cannot-be-created"
+				problem.Title = "Cannot Create"
+				problem.Description = "The resource cannot be created"
+				problem.StatusCode = http.StatusConflict
 
-	// Resource already exists
-	if errors.Is(err, common.ErrResourceExists) {
-		problem.Type = "nova.com/already-exists"
-		problem.Title = "Resource Exists"
-		problem.Description = "The requested resource already exists"
-		problem.StatusCode = http.StatusConflict
+				c.JSON(problem.StatusCode, problem)
+				return
+			}
+		case apperr.CodeCannotBeModified:
+			{
+				problem.Type = "nova.com/cannot-be-updated"
+				problem.Title = "Cannot update"
+				problem.Description = "The resource cannot be updated"
+				problem.StatusCode = http.StatusConflict
 
-		c.JSON(problem.StatusCode, problem)
-		return
-	}
+				c.JSON(problem.StatusCode, problem)
+				return
+			}
+		case apperr.CodeNotFound:
+			{
+				problem.Type = "nova.com/not-found"
+				problem.Title = "Resource Not Found"
+				problem.Description = "The requested resource cannot be found"
+				problem.StatusCode = http.StatusNotFound
 
-	if errors.Is(err, common.ErrResourceCannotBeDeleted) {
-		problem.Type = "nova.com/resource-cannot-delete"
-		problem.Title = "Resource Not Deleted"
-		problem.Description = "The requested resource cannot be deleted"
-		problem.StatusCode = http.StatusConflict
+				c.JSON(problem.StatusCode, problem)
+				return
+			}
+		case apperr.CodeCannotBeDeleted:
+			{
+				problem.Type = "nova.com/resource-cannot-delete"
+				problem.Title = "Resource Not Deleted"
+				problem.Description = "The requested resource cannot be deleted"
+				problem.StatusCode = http.StatusConflict
 
-		c.JSON(problem.StatusCode, problem)
-		return
-	}
+				c.JSON(problem.StatusCode, problem)
+				return
+			}
+		case apperr.CodeConflict:
+			{
+				problem.Type = "nova.com/already-exists"
+				problem.Title = "Resource Exists"
+				problem.Description = "The requested resource already exists"
+				problem.StatusCode = http.StatusConflict
 
-	// Cursor
-	if errors.Is(err, common.ErrCursorDecodeFailed) {
-		problem.Type = "nova.com/validation-error"
-		problem.Title = "Request Field Validation Failed"
-		problem.Description = "One or more parameters in your request violated structural constrainsts."
-		problem.StatusCode = http.StatusBadRequest
-		problem.Errors = append(problem.Errors, ProblemDetailErrors{
-			Field:   "cursor",
-			Message: "The provided cursor cannot be decoded to internal representation",
-			Code:    "400",
-		})
+				c.JSON(problem.StatusCode, problem)
+				return
+			}
+		case apperr.CodeCursorDecodingFailed:
+			{
+				problem.Type = "nova.com/validation-error"
+				problem.Title = "Request Field Validation Failed"
+				problem.Description = "One or more parameters in your request violated structural constrainsts."
+				problem.StatusCode = http.StatusBadRequest
+				problem.Errors = append(problem.Errors, ProblemDetailErrors{
+					Field:   "cursor",
+					Message: "The provided cursor cannot be decoded to internal representation",
+					Code:    "400",
+				})
 
-		c.JSON(problem.StatusCode, problem)
-		return
+				c.JSON(problem.StatusCode, problem)
+				return
+			}
+		case apperr.CodeInfraIssue:
+			problem.Type = "nova.com/internal-issue"
+			problem.Title = "Internal server issue"
+			problem.Description = "The request cannot be completed due to an internal server issue"
+			problem.StatusCode = http.StatusInternalServerError
+
+			c.JSON(problem.StatusCode, problem)
+			return
+		}
 	}
 }
 

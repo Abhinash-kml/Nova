@@ -2,6 +2,7 @@ package economy
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/abhinash-kml/nova/server/common"
@@ -57,8 +58,7 @@ func (r *PostgresCurrencyRepository) Get(ctx context.Context, dto GetCurrencyDTO
 		&currency.MaxBalanceMinor,
 		&currency.SortOrder,
 	); err != nil {
-		r.logger.Error("Failed to scan row in get currency query")
-		return CurrencyDTO{}, common.TranslatePostgresError(err, r.logger)
+		return CurrencyDTO{}, fmt.Errorf("getting currency (%s): %w", dto.ID, err)
 	}
 
 	return currency, nil
@@ -86,8 +86,7 @@ func (r *PostgresCurrencyRepository) GetAll(ctx context.Context, dto GetAllCurre
 
 	rows, err := r.pgx.Query(ctx, rawQuery, dto.Cursor, dto.Limit)
 	if err != nil {
-		r.logger.Error("Failed to execute get all currency query", zap.Error(err))
-		return nil, common.TranslatePostgresError(err, r.logger)
+		return nil, fmt.Errorf("getting all currency: %w", err)
 	}
 	defer rows.Close()
 
@@ -107,16 +106,14 @@ func (r *PostgresCurrencyRepository) GetAll(ctx context.Context, dto GetAllCurre
 			&currency.MaxBalanceMinor,
 			&currency.SortOrder,
 		); err != nil {
-			r.logger.Error("Failed to scan row in get currency query")
-			return nil, common.TranslatePostgresError(err, r.logger)
+			return nil, fmt.Errorf("scanning row: %w", err)
 		}
 
 		currencies = append(currencies, currency)
 	}
 
 	if err := rows.Err(); err != nil {
-		r.logger.Error("Error while iterating through rows", zap.Error(err))
-		return nil, common.TranslatePostgresError(err, r.logger)
+		return nil, fmt.Errorf("iterating rows: %w", err)
 	}
 
 	return currencies, nil
@@ -171,8 +168,7 @@ func (r *PostgresCurrencyRepository) Create(ctx context.Context, dto CreateCurre
 		&currency.MaxBalanceMinor,
 		&currency.SortOrder,
 	); err != nil {
-		r.logger.Error("Failed to scan row in create currency query")
-		return CurrencyDTO{}, common.TranslatePostgresError(err, r.logger)
+		return CurrencyDTO{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return currency, nil
@@ -227,8 +223,7 @@ func (r *PostgresCurrencyRepository) Update(ctx context.Context, dto UpdateCurre
 		&currency.MaxBalanceMinor,
 		&currency.SortOrder,
 	); err != nil {
-		r.logger.Error("Failed to scan row in update currency query")
-		return CurrencyDTO{}, common.TranslatePostgresError(err, r.logger)
+		return CurrencyDTO{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return currency, nil
@@ -249,8 +244,7 @@ func (r *PostgresCurrencyRepository) Delete(ctx context.Context, dto DeleetCurre
 	var deletedCurrencyID int
 
 	if err := row.Scan(&deletedCurrencyID); err != nil {
-		r.logger.Error("Failed to scan row in delete currency query", zap.Error(err))
-		return 0, common.TranslatePostgresError(err, r.logger)
+		return 0, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return deletedCurrencyID, nil

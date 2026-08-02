@@ -24,13 +24,13 @@ CREATE TABLE IF NOT EXISTS wallets(
 
 CREATE TABLE IF NOT EXISTS wallet_ledger (
     id BIGSERIAL PRIMARY KEY,
-    wallet_id BIGINT NOT NULL,
+    wallet_id BIGINT,
     
     -- "credit" (adding money) or "debit" (spending money)
     transaction_type VARCHAR(10) NOT NULL CHECK (transaction_type IN ('credit', 'debit')),
     
     -- Always store the absolute change amount as a positive number
-    amount_minor BIGINT NOT NULL CHECK (amount_minor > 0),
+    amount_minor BIGINT NOT NULL,
     
     -- System tracking metadata
     reference_id UUID NOT NULL UNIQUE, -- Idempotency key from game engine (e.g., match_id, purchase_id)
