@@ -3,11 +3,10 @@ package economy
 import (
 	"context"
 	"errors"
-	"log"
+	"fmt"
 	"time"
 
 	"github.com/Masterminds/squirrel"
-	"github.com/abhinash-kml/nova/server/common"
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -51,8 +50,7 @@ func (r *PostgresWalletRepository) CreateWalletOfNewPlayer(ctx context.Context, 
 	`
 	_, err := r.pgx.Exec(ctx, rawQuery, dto.UserID)
 	if err != nil {
-		r.logger.Error("Failed to execute create wallet of new player query", zap.Error(err))
-		return common.TranslatePostgresError(err, r.logger)
+		return fmt.Errorf("creating wallet of player: %w", err)
 	}
 
 	return nil
@@ -71,8 +69,7 @@ func (r *PostgresWalletRepository) GetWalletOfPlayer(ctx context.Context, dto Ge
 
 	rows, err := r.pgx.Query(ctx, rawQuery, dto.UserID)
 	if err != nil {
-		r.logger.Error("Failed to execute get wallet of user query", zap.Error(err))
-		return nil, common.TranslatePostgresError(err, r.logger)
+		return nil, fmt.Errorf("getting wallet of player: %w", err)
 	}
 	defer rows.Close()
 
@@ -84,16 +81,14 @@ func (r *PostgresWalletRepository) GetWalletOfPlayer(ctx context.Context, dto Ge
 			&wallet.CurrencyID,
 			&wallet.BalanceMinor,
 		); err != nil {
-			r.logger.Error("Failed to scan row in get wallet of user query", zap.Error(err))
-			return nil, common.TranslatePostgresError(err, r.logger)
+			return nil, fmt.Errorf("scanning row: %w", err)
 		}
 
 		wallets = append(wallets, wallet)
 	}
 
 	if err := rows.Err(); err != nil {
-		r.logger.Error("Error while looping through rows", zap.Error(err))
-		return nil, common.TranslatePostgresError(err, r.logger)
+		return nil, fmt.Errorf("iterating rows: %w", err)
 	}
 
 	return wallets, nil
@@ -135,32 +130,28 @@ func (r *PostgresWalletRepository) UpdateWalletOfPlayer(ctx context.Context, dto
 
 	transaction, err := r.pgx.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
-		r.logger.Error("Failed to start transaction", zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("begin transanction: %w", err)
 	}
 	defer func() {
 		if err := transaction.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-			log.Printf("failed to rollback transaction: %v", err)
+			r.logger.Error("rolling back transaction", zap.Error(err))
 		}
 	}()
 
 	_, err = transaction.Exec(ctx, walletQuery, dto.UserID, dto.CurrencyID, dto.Amount)
 	if err != nil {
-		r.logger.Error("Failed to update wallet of user", zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("update wallet: %w", err)
 	}
 
 	dummyIdempotencyKey, _ := uuid.NewV7()
 	_, err = transaction.Exec(ctx, ledgerQuery, dto.UserID, dto.CurrencyID, dto.Amount, dto.Operation, dummyIdempotencyKey, now)
 	if err != nil {
-		r.logger.Error("Failed to update ledger of wallet transaction", zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("update wallet ledger: %w", err)
 	}
 
 	err = transaction.Commit(ctx)
 	if err != nil {
-		r.logger.Error("Failed to commit transaction of updating wallet", zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("commit transaction: %w", err)
 	}
 
 	return nil, nil
@@ -176,8 +167,7 @@ func (r *PostgresWalletRepository) DeleteWalletOfPlayer(ctx context.Context, dto
 
 	_, err := r.pgx.Exec(ctx, rawQuery, dto.UserID)
 	if err != nil {
-		r.logger.Error("Failed to execute delete wallet of player query", zap.Error(err))
-		return common.TranslatePostgresError(err, r.logger)
+		return fmt.Errorf("deleting wallet of player: %w", err)
 	}
 
 	return nil

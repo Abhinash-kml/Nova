@@ -28,7 +28,7 @@ type Error struct {
 
 func (e *Error) Error() string {
 	if e.Err != nil {
-		return fmt.Sprintf("%s: %s: %v", e.Code, e.Message, e.Err)
+		return fmt.Sprintf("%s: %v", e.Code, e.Err)
 	}
 	return fmt.Sprintf("%s: %s", e.Code, e.Message)
 }
@@ -37,46 +37,59 @@ func (e *Error) Unwrap() error {
 	return e.Err
 }
 
-func NotFound(message string, args ...any) *Error {
-	return &Error{Code: CodeNotFound, Message: fmt.Sprintf(message, args...)}
+func (e *Error) WithMessage(m string) *Error {
+	if e == nil {
+		return nil
+	}
+
+	e.Message = m
+	return e
 }
 
-func InvalidInput(message string, args ...any) *Error {
-	return &Error{Code: CodeInvalidInput, Message: fmt.Sprintf(message, args...)}
+func AlreadyExists(err error, message string, args ...any) *Error {
+	return &Error{Code: CodeAlreadyExists, Err: err, Message: fmt.Sprintf(message, args...)}
 }
 
-func Conflict(message string, args ...any) *Error {
-	return &Error{Code: CodeConflict, Message: fmt.Sprintf(message, args...)}
+func NotFound(err error, message string, args ...any) *Error {
+	return &Error{Code: CodeNotFound, Err: err, Message: fmt.Sprintf(message, args...)}
 }
 
-func Forbidden(message string, args ...any) *Error {
-	return &Error{Code: CodeForbidden, Message: fmt.Sprintf(message, args...)}
+func InvalidInput(err error, message string, args ...any) *Error {
+	return &Error{Code: CodeInvalidInput, Err: err, Message: fmt.Sprintf(message, args...)}
 }
 
-func Internal(message string, args ...any) *Error {
-	return &Error{Code: CodeInternal, Message: fmt.Sprintf(message, args...)}
+func Conflict(err error, message string, args ...any) *Error {
+	return &Error{Code: CodeConflict, Err: err, Message: fmt.Sprintf(message, args...)}
 }
 
-func Unavailable(message string, args ...any) *Error {
-	return &Error{Code: CodeUnavailable, Message: fmt.Sprintf(message, args...)}
+func Forbidden(err error, message string, args ...any) *Error {
+	return &Error{Code: CodeForbidden, Err: err, Message: fmt.Sprintf(message, args...)}
 }
 
-func CannotBeDeleted(message string, args ...any) *Error {
-	return &Error{Code: CodeCannotBeDeleted, Message: fmt.Sprintf(message, args...)}
+func Internal(err error, message string, args ...any) *Error {
+	return &Error{Code: CodeInternal, Err: err, Message: fmt.Sprintf(message, args...)}
 }
 
-func CannotBeModified(message string, args ...any) *Error {
-	return &Error{Code: CodeCannotBeModified, Message: fmt.Sprintf(message, args...)}
+func Unavailable(err error, message string, args ...any) *Error {
+	return &Error{Code: CodeUnavailable, Err: err, Message: fmt.Sprintf(message, args...)}
 }
 
-func CannotBeCreated(message string, args ...any) *Error {
-	return &Error{Code: CodeCannotBeCreated, Message: fmt.Sprintf(message, args...)}
+func CannotBeDeleted(err error, message string, args ...any) *Error {
+	return &Error{Code: CodeCannotBeDeleted, Err: err, Message: fmt.Sprintf(message, args...)}
 }
 
-func InfraIssue(message string, args ...any) *Error {
-	return &Error{Code: CodeInfraIssue, Message: fmt.Sprintf(message, args...)}
+func CannotBeModified(err error, message string, args ...any) *Error {
+	return &Error{Code: CodeCannotBeModified, Err: err, Message: fmt.Sprintf(message, args...)}
 }
 
-func CursorDecodingFailed(message string, args ...any) *Error {
-	return &Error{Code: CodeCursorDecodingFailed, Message: fmt.Sprintf(message, args...)}
+func CannotBeCreated(err error, message string, args ...any) *Error {
+	return &Error{Code: CodeCannotBeCreated, Err: err, Message: fmt.Sprintf(message, args...)}
+}
+
+func InfraIssue(err error, message string, args ...any) *Error {
+	return &Error{Code: CodeInfraIssue, Err: err, Message: fmt.Sprintf(message, args...)}
+}
+
+func CursorDecodingFailed(err error, message string, args ...any) *Error {
+	return &Error{Code: CodeCursorDecodingFailed, Err: err, Message: fmt.Sprintf(message, args...)}
 }

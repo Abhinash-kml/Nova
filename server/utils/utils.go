@@ -167,7 +167,11 @@ func SendProblemDetails(c *gin.Context, err error) {
 			{
 				problem.Type = "nova.com/forbidden"
 				problem.Title = "Forbidden"
-				problem.Description = "You are forbidden"
+				if cError.Message != "" {
+					problem.Description = cError.Message
+				} else {
+					problem.Description = "You are forbidden"
+				}
 				problem.StatusCode = http.StatusForbidden
 
 				c.JSON(problem.StatusCode, problem)
@@ -177,7 +181,11 @@ func SendProblemDetails(c *gin.Context, err error) {
 			{
 				problem.Type = "nova.com/cannot-be-created"
 				problem.Title = "Cannot Create"
-				problem.Description = "The resource cannot be created"
+				if cError.Message != "" {
+					problem.Description = cError.Message
+				} else {
+					problem.Description = "The resource cannot be created"
+				}
 				problem.StatusCode = http.StatusConflict
 
 				c.JSON(problem.StatusCode, problem)
@@ -187,7 +195,11 @@ func SendProblemDetails(c *gin.Context, err error) {
 			{
 				problem.Type = "nova.com/cannot-be-updated"
 				problem.Title = "Cannot update"
-				problem.Description = "The resource cannot be updated"
+				if cError.Message != "" {
+					problem.Description = cError.Message
+				} else {
+					problem.Description = "The resource cannot be updated"
+				}
 				problem.StatusCode = http.StatusConflict
 
 				c.JSON(problem.StatusCode, problem)
@@ -197,7 +209,11 @@ func SendProblemDetails(c *gin.Context, err error) {
 			{
 				problem.Type = "nova.com/not-found"
 				problem.Title = "Resource Not Found"
-				problem.Description = "The requested resource cannot be found"
+				if cError.Message != "" {
+					problem.Description = cError.Message
+				} else {
+					problem.Description = "The requested resource cannot be found"
+				}
 				problem.StatusCode = http.StatusNotFound
 
 				c.JSON(problem.StatusCode, problem)
@@ -207,7 +223,11 @@ func SendProblemDetails(c *gin.Context, err error) {
 			{
 				problem.Type = "nova.com/resource-cannot-delete"
 				problem.Title = "Resource Not Deleted"
-				problem.Description = "The requested resource cannot be deleted"
+				if cError.Message != "" {
+					problem.Description = cError.Message
+				} else {
+					problem.Description = "The resource cannot be deleted"
+				}
 				problem.StatusCode = http.StatusConflict
 
 				c.JSON(problem.StatusCode, problem)
@@ -217,7 +237,11 @@ func SendProblemDetails(c *gin.Context, err error) {
 			{
 				problem.Type = "nova.com/already-exists"
 				problem.Title = "Resource Exists"
-				problem.Description = "The requested resource already exists"
+				if cError.Message != "" {
+					problem.Description = cError.Message
+				} else {
+					problem.Description = "There's conflict with the resource"
+				}
 				problem.StatusCode = http.StatusConflict
 
 				c.JSON(problem.StatusCode, problem)

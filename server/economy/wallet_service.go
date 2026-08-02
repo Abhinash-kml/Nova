@@ -3,6 +3,7 @@ package economy
 import (
 	"context"
 
+	"github.com/abhinash-kml/nova/server/common"
 	"github.com/abhinash-kml/nova/server/config"
 	"go.uber.org/zap"
 )
@@ -32,26 +33,42 @@ func (s *LocalWalletService) CreateWalletOfNewPlayer(ctx context.Context, dto Cr
 	ctx, span := tracer.Start(ctx, "economy.wallet.createwalletofnewplayer")
 	defer span.End()
 
-	return s.repo.CreateWalletOfNewPlayer(ctx, dto)
+	return common.TranslatePostgresError(
+		s.repo.CreateWalletOfNewPlayer(ctx, dto),
+		s.logger,
+	).WithMessage("Failed to create wallet")
 }
 
 func (s *LocalWalletService) GetWalletOfPlayer(ctx context.Context, dto GetWalletOfPlayerDTO) ([]WalletDTO, error) {
 	ctx, span := tracer.Start(ctx, "economy.wallet.getwalletofplayer")
 	defer span.End()
 
-	return s.repo.GetWalletOfPlayer(ctx, dto)
+	wallet, err := s.repo.GetWalletOfPlayer(ctx, dto)
+	if err != nil {
+		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to get wallet")
+	}
+
+	return wallet, nil
 }
 
 func (s *LocalWalletService) UpdateWalletOfPlayer(ctx context.Context, dto UpdateWalletOfPlayerDTO) ([]WalletDTO, error) {
 	ctx, span := tracer.Start(ctx, "economy.wallet.updatewalletofplayer")
 	defer span.End()
 
-	return s.repo.UpdateWalletOfPlayer(ctx, dto)
+	wallet, err := s.repo.UpdateWalletOfPlayer(ctx, dto)
+	if err != nil {
+		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to update wallet")
+	}
+
+	return wallet, nil
 }
 
 func (s *LocalWalletService) DeleteWalletOfPlayer(ctx context.Context, dto DeleteWalletOfPlayerDTO) error {
 	ctx, span := tracer.Start(ctx, "economy.wallet.deletewalletofplayer")
 	defer span.End()
 
-	return s.repo.DeleteWalletOfPlayer(ctx, dto)
+	return common.TranslatePostgresError(
+		s.repo.DeleteWalletOfPlayer(ctx, dto),
+		s.logger,
+	).WithMessage("Failed to delete wallet")
 }

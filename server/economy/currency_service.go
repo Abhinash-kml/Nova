@@ -36,7 +36,7 @@ func (s *LocalCurrencyService) Get(ctx context.Context, dto GetCurrencyDTO) (Cur
 
 	currency, err := s.repo.Get(ctx, dto)
 	if err != nil {
-		return CurrencyDTO{}, common.TranslatePostgresError(err, s.logger)
+		return CurrencyDTO{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to get currency")
 	}
 
 	return currency, nil
