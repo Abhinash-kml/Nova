@@ -31,30 +31,37 @@ func NewController(s Service, c *config.Config, l *zap.Logger) *Controller {
 
 func (c *Controller) GetAll(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "users.controller.getall")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto GetAllDTO
 
-	if err := ctx.ShouldBindQuery(&dto); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindQuery(&dto)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	decodedCursor, err := utils.DecodeCursor(dto.Cursor)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		ctx.Error(err)
 		return
 	}
 
 	users, err := c.service.GetAll(sctx, decodedCursor, dto.Limit)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to get all users",
+			zap.Int("cursor", decodedCursor),
+			zap.Int("limit", dto.Limit),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -63,26 +70,34 @@ func (c *Controller) GetAll(ctx *gin.Context) {
 
 func (c *Controller) Get(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "users.controller.get")
-	defer span.End()
+	var err error
 
-	var data GetDTO
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
-	if err := ctx.ShouldBindUri(&data); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	var dto GetDTO
+
+	err = ctx.ShouldBindUri(&dto)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("userid", data.Id))
+	span.SetAttributes(attribute.String("user_id", dto.Id))
 
-	parsedId, _ := uuid.Parse(data.Id)
+	parsedId, _ := uuid.Parse(dto.Id)
 
 	user, err := c.service.GetById(sctx, parsedId)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to get user",
+			zap.String("user_id", dto.Id),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -91,22 +106,28 @@ func (c *Controller) Get(ctx *gin.Context) {
 
 func (c *Controller) Create(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "users.controller.create")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto CreateDTO
 
-	if err := ctx.ShouldBindWith(&dto, binding.JSON); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	user, err := c.service.Add(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to create user", zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -115,31 +136,37 @@ func (c *Controller) Create(ctx *gin.Context) {
 
 func (c *Controller) Modify(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "users.controller.modify")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto UpdateDTO
 
-	if err := ctx.ShouldBindUri(&dto.UserId); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindUri(&dto.UserId)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("userid", dto.Id))
+	span.SetAttributes(attribute.String("user_id", dto.Id))
 
 	if err := ctx.ShouldBindWith(&dto.FieldUpdates, binding.JSON); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		ctx.Error(err)
 		return
 	}
 
 	modifiedUser, err := c.service.Update(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to update user",
+			zap.String("user_id", dto.Id),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -148,33 +175,40 @@ func (c *Controller) Modify(ctx *gin.Context) {
 
 func (c *Controller) Delete(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "users.controller.delete")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto DeleteDTO
 
-	if err := ctx.ShouldBindUri(&dto.UserId); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindUri(&dto.UserId)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("userid", dto.Id))
+	span.SetAttributes(attribute.String("user_id", dto.Id))
 
-	if err := ctx.ShouldBindQuery(&dto.DeleteOptions); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindQuery(&dto.DeleteOptions)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	span.SetAttributes(attribute.String("type", dto.Type))
 
-	_, err := c.service.Delete(sctx, dto)
+	_, err = c.service.Delete(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		ctx.Error(err)
+		c.logger.Error("Failed to delete user",
+			zap.String("user_id", dto.Id),
+			zap.Error(err))
 		return
 	}
 
@@ -183,31 +217,38 @@ func (c *Controller) Delete(ctx *gin.Context) {
 
 func (c *Controller) Replace(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "users.controller.replace")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto ReplaceDTO
 
-	if err := ctx.ShouldBindUri(&dto.UserId); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindUri(&dto.UserId)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("userid", dto.Id))
+	span.SetAttributes(attribute.String("user_id", dto.Id))
 
-	if err := ctx.ShouldBindWith(&dto.ReplacementData, binding.JSON); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindWith(&dto.ReplacementData, binding.JSON)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	replacedUser, err := c.service.Replace(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to replace user",
+			zap.String("user_id", dto.Id),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -216,14 +257,21 @@ func (c *Controller) Replace(ctx *gin.Context) {
 
 func (c *Controller) BulkAdd(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "users.controller.bulkadd")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto BulkCreateDTO
 
-	if err := ctx.ShouldBindWith(&dto, binding.JSON); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
@@ -231,9 +279,8 @@ func (c *Controller) BulkAdd(ctx *gin.Context) {
 
 	results, err := c.service.BulkAdd(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Bulk add operation failed", zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -266,14 +313,21 @@ func (c *Controller) BulkAdd(ctx *gin.Context) {
 
 func (c *Controller) BulkModify(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "users.controller.bulkmodify")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto BulkModifyDTO
 
-	if err := ctx.ShouldBindWith(&dto, binding.JSON); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
@@ -281,9 +335,8 @@ func (c *Controller) BulkModify(ctx *gin.Context) {
 
 	results, err := c.service.BulkModify(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Bulk modify operation failed", zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -316,14 +369,21 @@ func (c *Controller) BulkModify(ctx *gin.Context) {
 
 func (c *Controller) BulkDelete(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "users.controller.bulkdelete")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto BulkDeleteDTO
 
-	if err := ctx.ShouldBindWith(&dto, binding.JSON); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
@@ -331,9 +391,8 @@ func (c *Controller) BulkDelete(ctx *gin.Context) {
 
 	results, err := c.service.BulkDelete(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Bulk delete operation failed", zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -366,22 +425,29 @@ func (c *Controller) BulkDelete(ctx *gin.Context) {
 
 func (c *Controller) Login(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "users.controller.login")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var loginRequest auth.LoginRequest
 
-	err := ctx.ShouldBindBodyWith(&loginRequest, binding.JSON)
+	err = ctx.ShouldBindBodyWith(&loginRequest, binding.JSON)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		ctx.Error(err)
+		return
 	}
 
 	loginResponse, err := c.service.Login(sctx, loginRequest)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to login user", zap.Error(err))
+		ctx.Error(err)
+		return
 	}
 
 	ctx.JSON(http.StatusOK, loginResponse)
@@ -389,22 +455,29 @@ func (c *Controller) Login(ctx *gin.Context) {
 
 func (c *Controller) Refresh(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "users.controller.refresh")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto auth.TokenRefreshRequest
 
-	err := ctx.ShouldBindBodyWith(&dto, binding.JSON)
+	err = ctx.ShouldBindBodyWith(&dto, binding.JSON)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		ctx.Error(err)
+		return
 	}
 
 	response, err := c.service.Refresh(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to refresh user token", zap.Error(err))
+		ctx.Error(err)
+		return
 	}
 
 	ctx.JSON(http.StatusOK, response)

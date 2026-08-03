@@ -10,7 +10,6 @@ import (
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
-	"go.opentelemetry.io/otel/codes"
 	"go.uber.org/zap"
 )
 
@@ -60,21 +59,36 @@ func (s *LocalUsersService) Add(ctx context.Context, user CreateDTO) (User, erro
 	ctx, span := tracer.Start(ctx, "users.service.add")
 	defer span.End()
 
-	return s.repo.Add(ctx, user)
+	createdUser, err := s.repo.Add(ctx, user)
+	if err != nil {
+		return User{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to create user")
+	}
+
+	return createdUser, nil
 }
 
 func (s *LocalUsersService) GetAll(ctx context.Context, cursor, count int) ([]User, error) {
 	ctx, span := tracer.Start(ctx, "users.service.getall")
 	defer span.End()
 
-	return s.repo.GetAll(ctx, cursor, count)
+	users, err := s.repo.GetAll(ctx, cursor, count)
+	if err != nil {
+		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to get all users")
+	}
+
+	return users, nil
 }
 
 func (s *LocalUsersService) GetAllByAttribute(ctx context.Context, attribute string) ([]User, error) {
 	ctx, span := tracer.Start(ctx, "users.service.getallbyattribute")
 	defer span.End()
 
-	return s.repo.GetAllByAttribute(ctx, attribute)
+	users, err := s.repo.GetAllByAttribute(ctx, attribute)
+	if err != nil {
+		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to get all users by attribute")
+	}
+
+	return users, nil
 }
 
 func (s *LocalUsersService) GetById(ctx context.Context, id uuid.UUID) (User, error) {
@@ -98,9 +112,7 @@ func (s *LocalUsersService) GetById(ctx context.Context, id uuid.UUID) (User, er
 	// 2. Fallback to repo
 	user, err = s.repo.GetById(ctx, id)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return User{}, common.ErrResourceNotFound
+		return User{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to get user by id")
 	}
 
 	// 3. Populate cache asynchronously
@@ -132,9 +144,7 @@ func (s *LocalUsersService) Update(ctx context.Context, dto UpdateDTO) (User, er
 	// Update repository first
 	user, err := s.repo.Update(ctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return User{}, err
+		return User{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to update user")
 	}
 
 	// Invalidate old record from cache, next get call with repopulate it
@@ -157,9 +167,7 @@ func (s *LocalUsersService) Replace(ctx context.Context, dto ReplaceDTO) (User, 
 	// Update repository first
 	user, err := s.repo.Replace(ctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return User{}, err
+		return User{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to replace user")
 	}
 
 	// Invalidate old record from cache, next get call with repopulate it
@@ -182,9 +190,7 @@ func (s *LocalUsersService) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUI
 	// Delete in repo
 	deletedId, err := s.repo.Delete(ctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return uuid.Nil, err
+		return uuid.Nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to delete user")
 	}
 
 	// Delete from cache

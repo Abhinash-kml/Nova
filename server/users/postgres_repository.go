@@ -152,8 +152,7 @@ func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (User, erro
 		now,
 		now)
 	if err != nil {
-		r.logger.Error("Failed to execute sql insert query", zap.Error(err))
-		return User{}, common.TranslatePostgresError(err, r.logger)
+		return User{}, fmt.Errorf("getting user: %w", err)
 	}
 
 	return User{
@@ -214,7 +213,7 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 			&user.CreatedAt, &user.UpdatedAt, &user.VerifiedAt)
 		if err != nil {
 			r.logger.Error("Failed to sca nreturned row in getall query", zap.Error(err))
-			return nil, common.TranslatePostgresError(err, r.logger)
+			return nil, fmt.Errorf("scanning row: %w", err)
 		}
 
 		users = append(users, user)
@@ -257,8 +256,7 @@ func (r *PostgresRepository) GetById(ctx context.Context, id uuid.UUID) (User, e
 	err := row.Scan(&user.Id, &user.Username, &user.DisplayName, &user.Email, &user.Country, &user.State, &user.AvatarURL, &user.LangTag, &user.Timezone,
 		&user.CreatedAt, &user.UpdatedAt, &user.VerifiedAt, &disabledAt)
 	if err != nil {
-		r.logger.Error("Failed to scan row in getbyid query", zap.Error(err))
-		return User{}, common.TranslatePostgresError(err, r.logger)
+		return User{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	if disabledAt != nil && !disabledAt.IsZero() {
@@ -298,8 +296,7 @@ func (r *PostgresRepository) GetByName(ctx context.Context, name string) (User, 
 	err := row.Scan(&user.Id, &user.Username, &user.DisplayName, &user.Email, &user.Country, &user.State, &user.AvatarURL, &user.LangTag, &user.Timezone,
 		&user.CreatedAt, &user.UpdatedAt, &user.VerifiedAt, &disabledAt)
 	if err != nil {
-		r.logger.Error("Failed to scan result in getbyname query", zap.Error(err))
-		return User{}, common.TranslatePostgresError(err, r.logger)
+		return User{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	if disabledAt != nil && !disabledAt.IsZero() {
@@ -318,8 +315,7 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (User, e
 	queryBuilder = queryBuilder.Suffix("RETURNING *")
 	query, args, err := queryBuilder.ToSql()
 	if err != nil {
-		r.logger.Error("Failed to generate update query using squirrel", zap.Error(err))
-		return User{}, common.TranslatePostgresError(err, r.logger)
+		return User{}, fmt.Errorf("building query: %w", err)
 	}
 
 	var user User
@@ -328,16 +324,14 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (User, e
 	// Begin transaction
 	tx, err := r.pgx.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
-		r.logger.Error("Failed to begin transaction in update query", zap.Error(err))
-		return User{}, common.TranslatePostgresError(err, r.logger)
+		return User{}, fmt.Errorf("begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
 	// Lock row inside transaction
 	_, err = tx.Exec(ctx, "SELECT username FROM users WHERE id = $1 FOR UPDATE;", dto.Id)
 	if err != nil {
-		r.logger.Error("Failed to lock row for update in transaction", zap.Error(err))
-		return User{}, common.TranslatePostgresError(err, r.logger)
+		return User{}, fmt.Errorf("locking row: %w", err)
 	}
 
 	// Execute query
@@ -345,8 +339,7 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (User, e
 	err = result.Scan(&user.Id, &user.Username, &user.DisplayName, &user.Email, &user.Country, &user.State, &user.AvatarURL, &user.LangTag, &user.Timezone,
 		&user.CreatedAt, &user.UpdatedAt, &user.VerifiedAt, &disabledAt)
 	if err != nil {
-		r.logger.Error("Failed to scan returned object from update query in transaction", zap.Error(err))
-		return User{}, common.TranslatePostgresError(err, r.logger)
+		return User{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	if disabledAt != nil && !disabledAt.IsZero() {
@@ -357,7 +350,7 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (User, e
 	err = tx.Commit(ctx)
 	if err != nil {
 		r.logger.Error("Failed to commit transaction in update query", zap.Error(err))
-		return User{}, common.TranslatePostgresError(err, r.logger)
+		return User{}, fmt.Errorf("commit transaction: %w", err)
 	}
 
 	return user, nil
@@ -389,15 +382,14 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (User,
 	// Begin transaction
 	tx, err := r.pgx.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
-		return User{}, common.TranslatePostgresError(err, r.logger)
+		return User{}, fmt.Errorf("begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
 	// Lock row inside transaction
 	_, err = tx.Exec(ctx, "SELECT username FROM users WHERE id = $1 FOR UPDATE;", dto.Id)
 	if err != nil {
-		r.logger.Error("Failed to lock row for replace in transaction", zap.Error(err))
-		return User{}, common.TranslatePostgresError(err, r.logger)
+		return User{}, fmt.Errorf("locking row: %w", err)
 	}
 
 	// Execute query
@@ -405,8 +397,7 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (User,
 	err = result.Scan(&user.Id, &user.Username, &user.DisplayName, &user.Email, &user.Country, &user.State, &user.AvatarURL, &user.LangTag, &user.Timezone,
 		&user.CreatedAt, &user.UpdatedAt, &user.VerifiedAt, &disabledAt)
 	if err != nil {
-		r.logger.Error("Failed to scan result of replace query", zap.Error(err))
-		return User{}, common.TranslatePostgresError(err, r.logger)
+		return User{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	if disabledAt != nil && !disabledAt.IsZero() {
@@ -416,8 +407,7 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (User,
 	// Commit transaction
 	err = tx.Commit(ctx)
 	if err != nil {
-		r.logger.Error("Failed to commit transaction in replace query", zap.Error(err))
-		return User{}, common.TranslatePostgresError(err, r.logger)
+		return User{}, fmt.Errorf("commit transaction: %w", err)
 	}
 
 	return user, nil
@@ -452,8 +442,7 @@ func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UU
 
 	// Scan returned row
 	if err := result.Scan(&deletedId); err != nil {
-		r.logger.Error("Failed to scan result in delete query", zap.Error(err))
-		return uuid.Nil, common.TranslatePostgresError(err, r.logger)
+		return uuid.Nil, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return deletedId, nil
@@ -464,8 +453,7 @@ func (r *PostgresRepository) FindOrCreateUserFromSocialProfile(ctx context.Conte
 	// Check if user with social provider id exists
 	exists, err := r.CheckIfUserWithSocialProviderIdExists(ctx, profile.UserId, profile.Provider)
 	if err != nil {
-		r.logger.Error("Failed to check for existance of user in FindOrCreateUserFromSocialProfile")
-		return uuid.Nil, false, common.TranslatePostgresError(err, r.logger)
+		return uuid.Nil, false, fmt.Errorf("checking user with social provider: %w", err)
 	}
 
 	var user User
@@ -487,14 +475,13 @@ func (r *PostgresRepository) FindOrCreateUserFromSocialProfile(ctx context.Conte
 
 		user, err := r.Add(ctx, newUser)
 		if err != nil {
-			r.logger.Error("Failed to create new user in findorcreateuserfromsocialprofile", zap.Error(err))
-			return uuid.Nil, false, common.TranslatePostgresError(err, r.logger)
+			return uuid.Nil, false, fmt.Errorf("creating new user: %w", err)
 		}
 
 		// 2. Add mapping of new user with the social provider id
 		err = r.MapUserWithSocialProvider(ctx, user.Id, profile.UserId, profile.Provider)
 		if err != nil {
-			return uuid.Nil, false, common.TranslatePostgresError(err, r.logger)
+			return uuid.Nil, false, fmt.Errorf("mapping user: %w", err)
 		}
 
 		// Created
@@ -502,7 +489,10 @@ func (r *PostgresRepository) FindOrCreateUserFromSocialProfile(ctx context.Conte
 	}
 
 	// Get existing user
-	user, _ = r.GetBySocialProfileId(ctx, profile.Provider, profile.UserId)
+	user, err = r.GetBySocialProfileId(ctx, profile.Provider, profile.UserId)
+	if err != nil {
+		return uuid.Nil, false, fmt.Errorf("getting user by social profile: %w", err)
+	}
 
 	// Not crerated
 	return user.Id, false, nil
@@ -514,8 +504,7 @@ func (r *PostgresRepository) CheckIfUserWithSocialProviderIdExists(ctx context.C
 	var exists bool
 	row := r.pgx.QueryRow(ctx, query, socialUserid)
 	if err := row.Scan(&exists); err != nil {
-		r.logger.Error("Failed to scan row in CheckIfUserWithSocialProviderIdExists query", zap.Error(err))
-		return false, err
+		return false, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return exists, nil
@@ -529,8 +518,7 @@ func (r *PostgresRepository) MapUserWithSocialProvider(ctx context.Context, user
 
 	_, err := r.pgx.Exec(ctx, mappingQuery, userId, providerUserId, provider)
 	if err != nil {
-		r.logger.Error("Failed to add mapping for new user in MapUserWithSocialProvider", zap.Error(err))
-		return err
+		return fmt.Errorf("mapping user: %w", err)
 	}
 
 	return nil
@@ -568,8 +556,7 @@ func (r *PostgresRepository) GetBySocialProfileId(ctx context.Context, provider,
 	err := row.Scan(&user.Id, &user.Username, &user.DisplayName, &user.Email, &user.Country, &user.State, &user.AvatarURL, &user.LangTag, &user.Timezone,
 		&user.CreatedAt, &user.UpdatedAt, &user.VerifiedAt, &disabledAt)
 	if err != nil {
-		r.logger.Error("Failed to scan row in getbyid query", zap.Error(err))
-		return User{}, common.TranslatePostgresError(err, r.logger)
+		return User{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	if disabledAt != nil && !disabledAt.IsZero() {
@@ -619,19 +606,17 @@ func (r *PostgresRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]
 
 	query, args, err := queryBuilder.ToSql()
 	if err != nil {
-		r.logger.Error("Failed to generate bulk insert users query using squirrel", zap.Error(err))
-		return nil, common.TranslatePostgresError(err, r.logger)
+		return nil, fmt.Errorf("generate query: %w", err)
 	}
 
 	_, err = r.pgx.Exec(ctx, query, args...)
 	if err != nil {
-		r.logger.Error("Failed to execute bulk insert query", zap.Error(err))
 		for i := range results {
 			results[i].Status = 0
 			results[i].Success = false
 			results[i].Message = "failed"
 		}
-		return results, common.TranslatePostgresError(err, r.logger)
+		return results, fmt.Errorf("inserting user: %w", err)
 	}
 
 	return results, nil
@@ -659,19 +644,17 @@ func (r *PostgresRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) 
 
 	query, args, err := queryBuilder.ToSql()
 	if err != nil {
-		r.logger.Error("Failed to generate bulk modify query with squirrel", zap.Error(err))
-		return nil, common.ErrResourcesCannotBeModified
+		return nil, fmt.Errorf("generate query: %w", err)
 	}
 
 	_, err = r.pgx.Exec(ctx, query, args...)
 	if err != nil {
-		r.logger.Error("Failed to execute bulk modify query", zap.Error(err))
 		for i := range results {
 			results[i].Status = 0
 			results[i].Success = false
 			results[i].Message = "failed"
 		}
-		return results, common.ErrResourcesCannotBeModified
+		return results, fmt.Errorf("updating users: %w", err)
 	}
 
 	return nil, nil
@@ -697,19 +680,17 @@ func (r *PostgresRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) 
 
 	query, args, err := queryBuilder.ToSql()
 	if err != nil {
-		r.logger.Error("Failed to generate bulk delete query with squirrel", zap.Error(err))
-		return nil, common.ErrResourcesCannotBeDeleted
+		return nil, fmt.Errorf("generate query: %w", err)
 	}
 
 	_, err = r.pgx.Exec(ctx, query, args...)
 	if err != nil {
-		r.logger.Error("Failed to execute bulk delete query", zap.Error(err))
 		for i := range results {
 			results[i].Status = 0
 			results[i].Message = "failed"
 			results[i].Success = false
 		}
-		return results, common.TranslatePostgresError(err, r.logger)
+		return results, fmt.Errorf("deleting user: %w", err)
 	}
 
 	return results, nil
