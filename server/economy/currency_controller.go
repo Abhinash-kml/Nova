@@ -146,7 +146,9 @@ func (c *CurrencyController) Update(ctx *gin.Context) {
 
 	updatedCurrency, err := c.service.Update(sctx, dto)
 	if err != nil {
-		c.logger.Error("Failed to update currency", zap.Error(err))
+		c.logger.Error("Failed to update currency",
+			zap.String("currency_id", dto.ID),
+			zap.Error(err))
 		ctx.Error(err)
 		return
 	}
@@ -176,7 +178,9 @@ func (c *CurrencyController) Delete(ctx *gin.Context) {
 
 	_, err = c.service.Delete(sctx, dto)
 	if err != nil {
-		c.logger.Error("Failed to delete currency", zap.Error(err))
+		c.logger.Error("Failed to delete currency",
+			zap.String("currency_id", dto.ID),
+			zap.Error(err))
 		ctx.Error(err)
 		return
 	}

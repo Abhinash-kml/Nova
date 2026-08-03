@@ -2,10 +2,9 @@ package social
 
 import (
 	"context"
-	"database/sql"
+	"fmt"
 
 	"github.com/Masterminds/squirrel"
-	"github.com/abhinash-kml/nova/server/common"
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -48,8 +47,7 @@ func (r *PostgresRepository) AddFriend(ctx context.Context, dto AddFriendDTO) er
 
 	_, err := r.pgx.Exec(ctx, rawQuery, userID, targetID)
 	if err != nil {
-		r.logger.Error("Failed to exec add friend query", zap.Error(err))
-		return common.TranslatePostgresError(err, r.logger)
+		return fmt.Errorf("adding friend: %w", err)
 	}
 
 	return nil
@@ -72,11 +70,10 @@ func (r *PostgresRepository) RemoveFriend(ctx context.Context, dto RemoveFriendD
 
 	result, err := r.pgx.Exec(ctx, rawQuery, userID, targetID)
 	if err != nil {
-		r.logger.Error("Failed to exec remove friend query", zap.Error(err))
-		return common.TranslatePostgresError(err, r.logger)
+		return fmt.Errorf("removing friend: %w", err)
 	}
 	if result.RowsAffected() != 1 {
-		return common.TranslatePostgresError(sql.ErrNoRows, r.logger)
+		return fmt.Errorf("removing friend: no op")
 	}
 
 	return nil
@@ -102,11 +99,10 @@ func (r *PostgresRepository) AcceptFriendRequest(ctx context.Context, dto Accept
 
 	result, err := r.pgx.Exec(ctx, rawQuery, targetID, userID)
 	if err != nil {
-		r.logger.Error("Failed to execute accept friend request query", zap.Error(err))
-		return common.TranslatePostgresError(err, r.logger)
+		return fmt.Errorf("accept friend request: %w", err)
 	}
 	if result.RowsAffected() != 1 {
-		return common.TranslatePostgresError(err, r.logger)
+		return fmt.Errorf("accept friend request: no op")
 	}
 
 	return nil
@@ -129,11 +125,10 @@ func (r *PostgresRepository) RejectFriendRequest(ctx context.Context, dto Reject
 
 	result, err := r.pgx.Exec(ctx, rawQuery, targetID, userID)
 	if err != nil {
-		r.logger.Error("Failed to execute reject friend request query", zap.Error(err))
-		return common.TranslatePostgresError(err, r.logger)
+		return fmt.Errorf("rejecting friend request: %w", err)
 	}
 	if result.RowsAffected() != 1 {
-		return common.TranslatePostgresError(err, r.logger)
+		return fmt.Errorf("rejecting friend request: no op")
 	}
 
 	return nil
@@ -160,8 +155,7 @@ func (r *PostgresRepository) GetAllIncomingFriendRequests(ctx context.Context, d
 
 	rows, err := r.pgx.Query(ctx, rawQuery, userID)
 	if err != nil {
-		r.logger.Error("Failed to execute get all incoming friend requests query", zap.Error(err))
-		return []RequestDTO{}, common.TranslatePostgresError(err, r.logger)
+		return nil, fmt.Errorf("getting incoming requests: %w", err)
 	}
 	defer rows.Close()
 
@@ -173,16 +167,14 @@ func (r *PostgresRepository) GetAllIncomingFriendRequests(ctx context.Context, d
 			&result.UserID,
 			&result.InitiatedAt,
 		); err != nil {
-			r.logger.Error("Failed to scan row in get all incoming friend requests query", zap.Error(err))
-			return []RequestDTO{}, common.TranslatePostgresError(err, r.logger)
+			return nil, fmt.Errorf("scanning row: %w", err)
 		}
 
 		requests = append(requests, result)
 	}
 
 	if err := rows.Err(); err != nil {
-		r.logger.Error("Error while scanning rows", zap.Error(err))
-		return []RequestDTO{}, common.TranslatePostgresError(err, r.logger)
+		return nil, fmt.Errorf("iterating row: %w", err)
 	}
 
 	return requests, nil
@@ -210,8 +202,7 @@ func (r *PostgresRepository) GetAllOutgoingFriendRequests(ctx context.Context, d
 
 	rows, err := r.pgx.Query(ctx, rawQuery, userID)
 	if err != nil {
-		r.logger.Error("Failed to execute get all outgoing friend requests query", zap.Error(err))
-		return []RequestDTO{}, common.TranslatePostgresError(err, r.logger)
+		return nil, fmt.Errorf("outgoing friend requests: %w", err)
 	}
 	defer rows.Close()
 
@@ -223,16 +214,14 @@ func (r *PostgresRepository) GetAllOutgoingFriendRequests(ctx context.Context, d
 			&result.UserID,
 			&result.InitiatedAt,
 		); err != nil {
-			r.logger.Error("Failed to scan row in get all outgoing friend requests query", zap.Error(err))
-			return []RequestDTO{}, common.TranslatePostgresError(err, r.logger)
+			return nil, fmt.Errorf("scanning row: %w", err)
 		}
 
 		requests = append(requests, result)
 	}
 
 	if err := rows.Err(); err != nil {
-		r.logger.Error("Error while scanning rows", zap.Error(err))
-		return []RequestDTO{}, common.TranslatePostgresError(err, r.logger)
+		return nil, fmt.Errorf("iterating rows: %w", err)
 	}
 
 	return requests, nil
@@ -264,11 +253,10 @@ func (r *PostgresRepository) BlockUser(ctx context.Context, dto BlockUserDTO) er
 
 	result, err := r.pgx.Exec(ctx, rawQuery, userID, targetID)
 	if err != nil {
-		r.logger.Error("Failed to execute block user query", zap.Error(err))
-		return common.TranslatePostgresError(err, r.logger)
+		return fmt.Errorf("blocking user: %w", err)
 	}
 	if result.RowsAffected() != 1 {
-		return common.ErrResourceOperationFailed
+		return fmt.Errorf("blocking user: no op")
 	}
 
 	return nil
@@ -293,11 +281,10 @@ func (r *PostgresRepository) UnblockUser(ctx context.Context, dto UnblockUserDTO
 
 	result, err := r.pgx.Exec(ctx, rawQuery, userID, targetID)
 	if err != nil {
-		r.logger.Error("Failed to execute unblock user query", zap.Error(err))
-		return common.TranslatePostgresError(err, r.logger)
+		return fmt.Errorf("unblocking user: %w", err)
 	}
 	if result.RowsAffected() != 1 {
-		return common.ErrResourceOperationFailed
+		return fmt.Errorf("unblocking user: no op")
 	}
 
 	return nil
@@ -322,8 +309,7 @@ func (r *PostgresRepository) GetAllFriends(ctx context.Context, dto GetAllFriend
 
 	rows, err := r.pgx.Query(ctx, rawQuery, userID)
 	if err != nil {
-		r.logger.Error("Failed to execute get all friends query", zap.Error(err))
-		return []uuid.UUID{}, common.TranslatePostgresError(err, r.logger)
+		return nil, fmt.Errorf("getting all friends: %w", err)
 	}
 	defer rows.Close()
 
@@ -332,16 +318,14 @@ func (r *PostgresRepository) GetAllFriends(ctx context.Context, dto GetAllFriend
 	for rows.Next() {
 		var friendID uuid.UUID
 		if err := rows.Scan(&friendID); err != nil {
-			r.logger.Error("Failed to scan row in get all friends query", zap.Error(err))
-			return []uuid.UUID{}, common.TranslatePostgresError(err, r.logger)
+			return nil, fmt.Errorf("scanning row: %w", err)
 		}
 
 		friendIDs = append(friendIDs, friendID)
 	}
 
 	if err := rows.Err(); err != nil {
-		r.logger.Error("Error while scanning rows", zap.Error(err))
-		return []uuid.UUID{}, common.TranslatePostgresError(err, r.logger)
+		return nil, fmt.Errorf("iterating row: %w", err)
 	}
 
 	return friendIDs, nil
@@ -366,8 +350,7 @@ func (r *PostgresRepository) GetAllBlocked(ctx context.Context, dto GetAllBlocke
 
 	rows, err := r.pgx.Query(ctx, rawQuery, userID)
 	if err != nil {
-		r.logger.Error("Failed to execute get all blocked query", zap.Error(err))
-		return []uuid.UUID{}, common.TranslatePostgresError(err, r.logger)
+		return nil, fmt.Errorf("getting blocked users: %w", err)
 	}
 	defer rows.Close()
 
@@ -376,16 +359,14 @@ func (r *PostgresRepository) GetAllBlocked(ctx context.Context, dto GetAllBlocke
 	for rows.Next() {
 		var blockedID uuid.UUID
 		if err := rows.Scan(&blockedID); err != nil {
-			r.logger.Error("Failed to scan row in get all blocked query", zap.Error(err))
-			return []uuid.UUID{}, common.TranslatePostgresError(err, r.logger)
+			return nil, fmt.Errorf("scanning row: %w", err)
 		}
 
 		blockedIDs = append(blockedIDs, blockedID)
 	}
 
 	if err := rows.Err(); err != nil {
-		r.logger.Error("Error while scanning rows", zap.Error(err))
-		return []uuid.UUID{}, common.TranslatePostgresError(err, r.logger)
+		return nil, fmt.Errorf("iterating rows: %w", err)
 	}
 
 	return blockedIDs, nil
@@ -427,8 +408,7 @@ func (r *PostgresRepository) GetMutualFriends(ctx context.Context, dto GetMutual
 
 	rows, err := r.pgx.Query(ctx, rawQuery, userID, friendID)
 	if err != nil {
-		r.logger.Error("Failed to execute get all mutual friends query", zap.Error(err))
-		return []uuid.UUID{}, common.TranslatePostgresError(err, r.logger)
+		return nil, fmt.Errorf("getting mutual friends: %w", err)
 	}
 	defer rows.Close()
 
@@ -437,16 +417,14 @@ func (r *PostgresRepository) GetMutualFriends(ctx context.Context, dto GetMutual
 	for rows.Next() {
 		var mutualFriendID uuid.UUID
 		if err := rows.Scan(&mutualFriendID); err != nil {
-			r.logger.Error("Failed to scan row in get all blocked query", zap.Error(err))
-			return []uuid.UUID{}, common.TranslatePostgresError(err, r.logger)
+			return nil, fmt.Errorf("scanning row: %w", err)
 		}
 
 		mutualFriendIDs = append(mutualFriendIDs, mutualFriendID)
 	}
 
 	if err := rows.Err(); err != nil {
-		r.logger.Error("Error while scanning rows", zap.Error(err))
-		return []uuid.UUID{}, common.TranslatePostgresError(err, r.logger)
+		return nil, fmt.Errorf("iterating rows: %w", err)
 	}
 
 	return mutualFriendIDs, nil
