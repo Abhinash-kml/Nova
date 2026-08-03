@@ -136,8 +136,7 @@ func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (Post, erro
 	// Execute query
 	_, err := r.pgx.Exec(ctx, rawQuery, id, dto.Title, dto.Body, dto.AuthorId, likes, comments, now, now)
 	if err != nil {
-		r.logger.Error("Failed to execute sql insert query", zap.Error(err))
-		return Post{}, common.TranslatePostgresError(err, r.logger)
+		return Post{}, fmt.Errorf("creating post: %w", err)
 	}
 
 	return Post{
@@ -181,6 +180,9 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 
 		rows, err = r.pgx.Query(ctx, rawQuery, cursor, limit)
 	}
+	if err != nil {
+		return nil, fmt.Errorf("getting all posts: %w", err)
+	}
 	defer rows.Close()
 
 	// Scan returned rows
@@ -190,10 +192,14 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 		err = rows.Scan(&post.Id, &post.Title, &post.Body, &post.AuthorId, &post.Likes, &post.Comments,
 			&post.CreatedAt, &post.UpdatedAt)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to scan rows")
+			return nil, fmt.Errorf("scanning row: %w", err)
 		}
 
 		posts = append(posts, post)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating rows: %w", err)
 	}
 
 	return posts, nil
@@ -225,8 +231,7 @@ func (r *PostgresRepository) GetById(ctx context.Context, id uuid.UUID) (Post, e
 	err := row.Scan(&post.Id, &post.Title, &post.Body, &post.AuthorId, &post.Likes, &post.Comments,
 		&post.CreatedAt, &post.UpdatedAt)
 	if err != nil {
-		r.logger.Error("Failed scan row in getbyid query", zap.Error(err))
-		return Post{}, common.TranslatePostgresError(err, r.logger)
+		return Post{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return post, nil
@@ -254,8 +259,7 @@ func (r *PostgresRepository) GetByName(ctx context.Context, name string) (Post, 
 	err := row.Scan(&post.Id, &post.Title, &post.Body, &post.AuthorId, &post.Likes, &post.Comments,
 		&post.CreatedAt, &post.UpdatedAt)
 	if err != nil {
-		r.logger.Error("Failed scan row in getbyid query", zap.Error(err))
-		return Post{}, common.TranslatePostgresError(err, r.logger)
+		return Post{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return post, nil
@@ -270,8 +274,7 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (Post, e
 	queryBuilder = queryBuilder.Suffix("RETURNING *")
 	query, args, err := queryBuilder.ToSql()
 	if err != nil {
-		r.logger.Error("Failed to generate update query using squirrel", zap.Error(err))
-		return Post{}, common.TranslatePostgresError(err, r.logger)
+		return Post{}, fmt.Errorf("generate query: %w", err)
 	}
 
 	var post Post
@@ -279,16 +282,14 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (Post, e
 	// Begin transaction
 	tx, err := r.pgx.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
-		r.logger.Error("Failed to begin transaction in update query", zap.Error(err))
-		return Post{}, common.TranslatePostgresError(err, r.logger)
+		return Post{}, fmt.Errorf("begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
 	// Lock row inside transaction
 	_, err = tx.Exec(ctx, "SELECT id FROM posts WHERE id = $1 FOR UPDATE;", dto.Id)
 	if err != nil {
-		r.logger.Error("Failed to lock row for update in transaction", zap.Error(err))
-		return Post{}, common.TranslatePostgresError(err, r.logger)
+		return Post{}, fmt.Errorf("locking row: %w", err)
 	}
 
 	// Execute query
@@ -296,15 +297,13 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (Post, e
 	err = row.Scan(&post.Id, &post.Title, &post.Body, &post.AuthorId, &post.Likes, &post.Comments,
 		&post.CreatedAt, &post.UpdatedAt)
 	if err != nil {
-		r.logger.Error("Failed to scan returned row from update query", zap.Error(err))
-		return Post{}, common.TranslatePostgresError(err, r.logger)
+		return Post{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	// Commit trasnsaction
 	err = tx.Commit(ctx)
 	if err != nil {
-		r.logger.Error("Failed to commit transaction in update query", zap.Error(err))
-		return Post{}, common.TranslatePostgresError(err, r.logger)
+		return Post{}, fmt.Errorf("commit transaction: %w", err)
 	}
 
 	return post, nil
@@ -331,16 +330,14 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (Post,
 	// Begin transaction
 	tx, err := r.pgx.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
-		r.logger.Error("Failed to begin transaction in replace query", zap.Error(err))
-		return Post{}, common.TranslatePostgresError(err, r.logger)
+		return Post{}, fmt.Errorf("begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
 	// Lock row inside transaction
 	_, err = tx.Exec(ctx, "SELECT id FROM posts WHERE id = $1 FOR UPDATE;", dto.Id)
 	if err != nil {
-		r.logger.Error("Failed to lock row for replace in transaction", zap.Error(err))
-		return Post{}, common.TranslatePostgresError(err, r.logger)
+		return Post{}, fmt.Errorf("locking row: %w", err)
 	}
 
 	// Execute query
@@ -348,15 +345,13 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (Post,
 	err = row.Scan(&post.Id, &post.Title, &post.Body, &post.AuthorId, &post.Likes, &post.Comments,
 		&post.CreatedAt, &post.UpdatedAt)
 	if err != nil {
-		r.logger.Error("Failed to scan result of replace query", zap.Error(err))
-		return Post{}, common.TranslatePostgresError(err, r.logger)
+		return Post{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	// Commit transaction
 	err = tx.Commit(ctx)
 	if err != nil {
-		r.logger.Error("Failed to commit transaction in replace query", zap.Error(err))
-		return Post{}, common.TranslatePostgresError(err, r.logger)
+		return Post{}, fmt.Errorf("commit transaction: %w", err)
 	}
 
 	return post, nil
@@ -379,7 +374,7 @@ func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UU
 	err := row.Scan(&deletedId)
 	if err != nil {
 		r.logger.Error("Failed to scan returned row from delete query", zap.Error(err))
-		return uuid.Nil, common.TranslatePostgresError(err, r.logger)
+		return uuid.Nil, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return deletedId, nil
