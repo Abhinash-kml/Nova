@@ -7,7 +7,6 @@ import (
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
-	"go.opentelemetry.io/otel/codes"
 	"go.uber.org/zap"
 )
 
@@ -63,9 +62,7 @@ func (s *LocalClansService) GetById(ctx context.Context, id uuid.UUID) (Clan, er
 	// 2. Fallback to repo
 	clan, err = s.repo.GetById(ctx, id)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return Clan{}, common.ErrResourceNotFound
+		return Clan{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to get clan")
 	}
 
 	// 3. Populate cache asynchronously (safe version)
@@ -88,21 +85,36 @@ func (s *LocalClansService) GetByName(ctx context.Context, name string) (Clan, e
 
 	// Caching logic
 
-	return s.repo.GetByName(ctx, name)
+	clan, err := s.repo.GetByName(ctx, name)
+	if err != nil {
+		return Clan{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to get clan by name")
+	}
+
+	return clan, nil
 }
 
 func (s *LocalClansService) GetAll(ctx context.Context, cursor, limit int) ([]Clan, error) {
 	ctx, span := tracer.Start(ctx, "clans.service.getall")
 	defer span.End()
 
-	return s.repo.GetAll(ctx, cursor, limit)
+	clans, err := s.repo.GetAll(ctx, cursor, limit)
+	if err != nil {
+		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to get all clans")
+	}
+
+	return clans, nil
 }
 
 func (s *LocalClansService) Add(ctx context.Context, dto CreateDTO) (Clan, error) {
 	ctx, span := tracer.Start(ctx, "clans.service.add")
 	defer span.End()
 
-	return s.repo.Add(ctx, dto)
+	clan, err := s.repo.Add(ctx, dto)
+	if err != nil {
+		return Clan{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to create clan")
+	}
+
+	return clan, nil
 }
 
 func (s *LocalClansService) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
@@ -112,9 +124,7 @@ func (s *LocalClansService) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUI
 	// Delete in repo
 	deletedId, err := s.repo.Delete(ctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return uuid.Nil, err
+		return uuid.Nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to delete clan")
 	}
 
 	// Delete from cache
@@ -137,9 +147,7 @@ func (s *LocalClansService) Update(ctx context.Context, dto UpdateDTO) (Clan, er
 	// Update repository first
 	updatedClan, err := s.repo.Update(ctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return Clan{}, err
+		return Clan{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to update clan")
 	}
 
 	// Invalidate old record from cache, next get call with repopulate it
@@ -159,19 +167,34 @@ func (s *LocalClansService) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]c
 	ctx, span := tracer.Start(ctx, "clans.service.bulkadd")
 	defer span.End()
 
-	return s.repo.BulkAdd(ctx, dto)
+	results, err := s.repo.BulkAdd(ctx, dto)
+	if err != nil {
+		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Bulk add clan operation failed")
+	}
+
+	return results, nil
 }
 
 func (s *LocalClansService) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
 	ctx, span := tracer.Start(ctx, "clans.service.bulkmodify")
 	defer span.End()
 
-	return s.repo.BulkModify(ctx, dto)
+	results, err := s.repo.BulkModify(ctx, dto)
+	if err != nil {
+		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Bulk modify clan operation failed")
+	}
+
+	return results, nil
 }
 
 func (s *LocalClansService) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
 	ctx, span := tracer.Start(ctx, "clans.service.bulkdelete")
 	defer span.End()
 
-	return s.repo.BulkDelete(ctx, dto)
+	results, err := s.repo.BulkDelete(ctx, dto)
+	if err != nil {
+		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Bulk delete clan operation failed")
+	}
+
+	return results, nil
 }

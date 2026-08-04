@@ -3,6 +3,7 @@ package clans
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -147,8 +148,7 @@ func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (Clan, erro
 	_, err := r.pgx.Exec(ctx, rawQuery, id, dto.Name, dto.Tag, dto.Description, dto.LeaderId, dto.ColeaderId, dto.Level,
 		dto.Members, dto.MaxMembers, dto.IsLocked, now, now)
 	if err != nil {
-		r.logger.Error("Failed to execute sql insert query", zap.Error(err))
-		return Clan{}, common.TranslatePostgresError(err, r.logger)
+		return Clan{}, fmt.Errorf("create clan: %w", err)
 	}
 
 	return Clan{
@@ -195,8 +195,7 @@ func (r *PostgresRepository) GetById(ctx context.Context, id uuid.UUID) (Clan, e
 	err := row.Scan(&clan.Id, &clan.Name, &clan.Tag, &clan.Description, &clan.LeaderId, &clan.ColeaderId,
 		&clan.Level, &clan.Members, &clan.MaxMembers, &clan.IsLocked, &clan.CreatedAt, &clan.UpdatedAt)
 	if err != nil {
-		r.logger.Error("Failed to scan returned row from getbyid query", zap.Error(err))
-		return Clan{}, common.TranslatePostgresError(err, r.logger)
+		return Clan{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return clan, nil
@@ -230,8 +229,7 @@ func (r *PostgresRepository) GetByName(ctx context.Context, name string) (Clan, 
 	err := row.Scan(&clan.Id, &clan.Name, &clan.Tag, &clan.Description, &clan.LeaderId, &clan.ColeaderId,
 		&clan.Level, &clan.Members, &clan.MaxMembers, &clan.IsLocked, &clan.CreatedAt, &clan.UpdatedAt)
 	if err != nil {
-		r.logger.Error("Failed to scan returned row from getbyname query", zap.Error(err))
-		return Clan{}, common.TranslatePostgresError(err, r.logger)
+		return Clan{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return clan, nil
@@ -270,6 +268,9 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 					LIMIT $2;`
 		rows, err = r.pgx.Query(ctx, rawQuery, cursor, limit)
 	}
+	if err != nil {
+		return nil, fmt.Errorf("getting clans: %w", err)
+	}
 	defer rows.Close()
 
 	// Scan returned rows
@@ -279,8 +280,7 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 		err = rows.Scan(&clan.Id, &clan.Name, &clan.Tag, &clan.Description, &clan.LeaderId, &clan.ColeaderId,
 			&clan.Level, &clan.Members, &clan.MaxMembers, &clan.IsLocked, &clan.CreatedAt, &clan.UpdatedAt)
 		if err != nil {
-			r.logger.Error("Failed to scan returned row in getall query", zap.Error(err))
-			return nil, common.TranslatePostgresError(err, r.logger)
+			return nil, fmt.Errorf("scanning row: %w", err)
 		}
 
 		clans = append(clans, clan)
@@ -300,8 +300,7 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (Clan, e
 	// Generate query
 	query, args, err := queryBuilder.ToSql()
 	if err != nil {
-		r.logger.Error("Failed to generate update query using squirrel", zap.Error(err))
-		return Clan{}, common.TranslatePostgresError(err, r.logger)
+		return Clan{}, fmt.Errorf("generate query: %w", err)
 	}
 
 	var clan Clan
@@ -309,16 +308,14 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (Clan, e
 	// Begin transaction
 	tx, err := r.pgx.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
-		r.logger.Error("Failed to begin transaction in update query", zap.Error(err))
-		return Clan{}, common.TranslatePostgresError(err, r.logger)
+		return Clan{}, fmt.Errorf("begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
 	// Lock row in transaction
 	_, err = tx.Exec(ctx, "SELECT name FROM clans WHERE id = $1 FOR UPDATE;", dto.Id)
 	if err != nil {
-		r.logger.Error("Failed to lock row for update in transaction", zap.Error(err))
-		return Clan{}, common.TranslatePostgresError(err, r.logger)
+		return Clan{}, fmt.Errorf("locking row: %w", err)
 	}
 
 	// Execute query
@@ -328,15 +325,13 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (Clan, e
 	err = row.Scan(&clan.Id, &clan.Name, &clan.Tag, &clan.Description, &clan.LeaderId, &clan.ColeaderId,
 		&clan.Level, &clan.Members, &clan.MaxMembers, &clan.IsLocked, &clan.CreatedAt, &clan.UpdatedAt)
 	if err != nil {
-		r.logger.Error("Failed to scan returned row from update query", zap.Error(err))
-		return Clan{}, common.TranslatePostgresError(err, r.logger)
+		return Clan{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	// Commit transaction
 	err = tx.Commit(ctx)
 	if err != nil {
-		r.logger.Error("Failed to commit transaction in update query", zap.Error(err))
-		return Clan{}, common.TranslatePostgresError(err, r.logger)
+		return Clan{}, fmt.Errorf("commit transaction: %w", err)
 	}
 
 	return clan, nil
@@ -359,8 +354,7 @@ func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UU
 	// Scan returned row
 	err := row.Scan(&deletedId)
 	if err != nil {
-		r.logger.Error("Failed to scan returned row from delete query", zap.Error(err))
-		return uuid.Nil, common.TranslatePostgresError(err, r.logger)
+		return uuid.Nil, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return deletedId, nil
