@@ -30,24 +30,37 @@ func NewController(s Service, c *config.Config, l *zap.Logger) *Controller {
 
 func (c *Controller) GetAll(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "comments.controller.getall")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto GetAllDTO
 
-	if err := ctx.ShouldBindQuery(&dto); err != nil {
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindQuery(&dto)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	decodedCursor, err := utils.DecodeCursor(dto.Cursor)
 	if err != nil {
-		utils.SendProblemDetails(ctx, err)
+		ctx.Error(err)
 		return
 	}
 
 	comments, err := c.service.GetAll(sctx, decodedCursor, dto.Limit)
 	if err != nil {
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to get all comments",
+			zap.String("cursor", dto.Cursor),
+			zap.Int("limit", dto.Limit),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -56,26 +69,34 @@ func (c *Controller) GetAll(ctx *gin.Context) {
 
 func (c *Controller) Get(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "comments.controller.get")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto GetDTO
 
-	if err := ctx.ShouldBindUri(&dto); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindUri(&dto)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("commentid", dto.Id))
+	span.SetAttributes(attribute.String("comment_id", dto.Id))
 
 	parsedUuid, _ := uuid.Parse(dto.Id)
 
 	comment, err := c.service.GetById(sctx, parsedUuid)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to get comment by id",
+			zap.String("comment_id", dto.Id),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -84,22 +105,28 @@ func (c *Controller) Get(ctx *gin.Context) {
 
 func (c *Controller) Create(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "comments.controller.create")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto CreateDTO
 
-	if err := ctx.ShouldBindWith(&dto, binding.JSON); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	comment, err := c.service.Add(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to create comment", zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -108,31 +135,38 @@ func (c *Controller) Create(ctx *gin.Context) {
 
 func (c *Controller) Modify(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "comments.controller.modify")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto UpdateDTO
 
-	if err := ctx.ShouldBindUri(&dto.CommentId); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindUri(&dto.CommentId)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("commentid", dto.Id))
+	span.SetAttributes(attribute.String("comment_id", dto.Id))
 
-	if err := ctx.ShouldBindWith(&dto.Body, binding.JSON); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindWith(&dto.Body, binding.JSON)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	modifiedComment, err := c.service.Update(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to update comment",
+			zap.String("comment_id", dto.Id),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -141,33 +175,40 @@ func (c *Controller) Modify(ctx *gin.Context) {
 
 func (c *Controller) Delete(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "comments.controller.delete")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto DeleteDTO
 
-	if err := ctx.ShouldBindUri(&dto.CommentId); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindUri(&dto.CommentId)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("commentid", dto.Id))
+	span.SetAttributes(attribute.String("comment_id", dto.Id))
 
-	if err := ctx.ShouldBindQuery(&dto.DeleteOptions); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindQuery(&dto.DeleteOptions)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	span.SetAttributes(attribute.String("type", dto.Type))
 
-	_, err := c.service.Delete(sctx, dto)
+	_, err = c.service.Delete(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to delete comment",
+			zap.String("comment_id", dto.Id),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -176,29 +217,38 @@ func (c *Controller) Delete(ctx *gin.Context) {
 
 func (c *Controller) Replace(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "comments.controller.replace")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto ReplaceDTO
 
-	if err := ctx.ShouldBindUri(&dto.CommentId); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindUri(&dto.CommentId)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("commentid", dto.Id))
+	span.SetAttributes(attribute.String("comment_id", dto.Id))
 
-	if err := ctx.ShouldBindWith(&dto.Body, binding.JSON); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindWith(&dto.Body, binding.JSON)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	replacedComment, err := c.service.Replace(sctx, dto)
 	if err != nil {
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to replace comment",
+			zap.String("comment_id", dto.Id),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -207,14 +257,21 @@ func (c *Controller) Replace(ctx *gin.Context) {
 
 func (c *Controller) BulkAdd(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "comments.controller.bulkadd")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto BulkCreateDTO
 
-	if err := ctx.ShouldBindWith(&dto, binding.JSON); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
@@ -222,9 +279,8 @@ func (c *Controller) BulkAdd(ctx *gin.Context) {
 
 	results, err := c.service.BulkAdd(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to perform bulk add comments", zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -257,14 +313,21 @@ func (c *Controller) BulkAdd(ctx *gin.Context) {
 
 func (c *Controller) BulkModify(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "comments.controller.bulkmodify")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto BulkModifyDTO
 
-	if err := ctx.ShouldBindWith(&dto, binding.JSON); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
@@ -272,9 +335,8 @@ func (c *Controller) BulkModify(ctx *gin.Context) {
 
 	results, err := c.service.BulkModify(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to perform bulk update comments", zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -307,14 +369,21 @@ func (c *Controller) BulkModify(ctx *gin.Context) {
 
 func (c *Controller) BulkDelete(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "comments.controller.bulkdelete")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto BulkDeleteDTO
 
-	if err := ctx.ShouldBindWith(&dto, binding.JSON); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
@@ -322,9 +391,8 @@ func (c *Controller) BulkDelete(ctx *gin.Context) {
 
 	results, err := c.service.BulkDelete(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to perform bulk delete comments", zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 

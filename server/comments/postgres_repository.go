@@ -3,6 +3,7 @@ package comments
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -132,8 +133,7 @@ func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (Comment, e
 	// Execute quury
 	_, err := r.pgx.Exec(ctx, rawQuery, id, dto.PostId, dto.Body, now, now)
 	if err != nil {
-		r.logger.Error("Failed to execute sql insert query", zap.Error(err))
-		return Comment{}, common.TranslatePostgresError(err, r.logger)
+		return Comment{}, fmt.Errorf("adding comment: %w", err)
 	}
 
 	return Comment{
@@ -169,6 +169,9 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 						$2;`
 		rows, err = r.pgx.Query(ctx, rawQuery, cursor, limit)
 	}
+	if err != nil {
+		return nil, fmt.Errorf("getting comment: %w", err)
+	}
 	defer rows.Close()
 
 	// Scan returned rows
@@ -178,11 +181,14 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 		err = rows.Scan(&comment.Id, &comment.PostId, &comment.AuthorId, &comment.Body, &comment.CreatedAt,
 			&comment.UpdatedAt)
 		if err != nil {
-			r.logger.Error("Failed to scan returned row in getall query", zap.Error(err))
-			return nil, common.TranslatePostgresError(err, r.logger)
+			return nil, fmt.Errorf("scanning row: %w", err)
 		}
 
 		comments = append(comments, comment)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating rows: %w", err)
 	}
 
 	return comments, nil
@@ -214,8 +220,7 @@ func (r *PostgresRepository) GetById(ctx context.Context, id uuid.UUID) (Comment
 	err := row.Scan(&comment.Id, &comment.PostId, &comment.AuthorId, &comment.Body, &comment.CreatedAt,
 		&comment.UpdatedAt)
 	if err != nil {
-		r.logger.Error("Failed to scan row in getbyid query", zap.Error(err))
-		return Comment{}, common.TranslatePostgresError(err, r.logger)
+		return Comment{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return comment, nil
@@ -242,8 +247,7 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (Comment
 	err := row.Scan(&comment.Id, &comment.PostId, &comment.AuthorId, &comment.Body, &comment.CreatedAt,
 		&comment.UpdatedAt)
 	if err != nil {
-		r.logger.Error("Failed to scan returned row in update query", zap.Error(err))
-		return Comment{}, common.TranslatePostgresError(err, r.logger)
+		return Comment{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return comment, nil
@@ -271,8 +275,7 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (Comme
 	err := row.Scan(&comment.Id, &comment.PostId, &comment.AuthorId, &comment.Body, &comment.CreatedAt,
 		&comment.UpdatedAt)
 	if err != nil {
-		r.logger.Error("Failed to scan returned row in update query", zap.Error(err))
-		return Comment{}, common.TranslatePostgresError(err, r.logger)
+		return Comment{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return comment, nil
@@ -295,8 +298,7 @@ func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UU
 	// Scan returned row
 	err := row.Scan(&deletedId)
 	if err != nil {
-		r.logger.Error("Failed to scan returned row in delete query", zap.Error(err))
-		return uuid.Nil, common.TranslatePostgresError(err, r.logger)
+		return uuid.Nil, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return deletedId, nil
