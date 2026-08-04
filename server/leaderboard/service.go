@@ -3,6 +3,7 @@ package leaderboard
 import (
 	"context"
 
+	"github.com/abhinash-kml/nova/server/common"
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -58,35 +59,60 @@ func (s *LocalService) GetAll(ctx context.Context, cursor uuid.UUID, limit int) 
 	ctx, span := tracer.Start(ctx, "leaderboard.service.getall")
 	defer span.End()
 
-	return s.metaRepo.GetAll(ctx, cursor, limit)
+	leaderboards, err := s.metaRepo.GetAll(ctx, cursor, limit)
+	if err != nil {
+		return nil, common.TranslatePostgresError(err, s.logger)
+	}
+
+	return leaderboards, nil
 }
 
 func (s *LocalService) Get(ctx context.Context, id uuid.UUID) (Leaderboard, error) {
 	ctx, span := tracer.Start(ctx, "leaderboard.service.get")
 	defer span.End()
 
-	return s.metaRepo.Get(ctx, id)
+	leaderboard, err := s.metaRepo.Get(ctx, id)
+	if err != nil {
+		return Leaderboard{}, common.TranslatePostgresError(err, s.logger)
+	}
+
+	return leaderboard, nil
 }
 
 func (s *LocalService) Create(ctx context.Context, dto CreateDTO) (Leaderboard, error) {
 	ctx, span := tracer.Start(ctx, "leaderboard.service.create")
 	defer span.End()
 
-	return s.metaRepo.Create(ctx, dto)
+	leaderboard, err := s.metaRepo.Create(ctx, dto)
+	if err != nil {
+		return Leaderboard{}, common.TranslatePostgresError(err, s.logger)
+	}
+
+	return leaderboard, nil
 }
 
 func (s *LocalService) Modify(ctx context.Context, dto ModifyDTO) (Leaderboard, error) {
 	ctx, span := tracer.Start(ctx, "leaderboard.service.modify")
 	defer span.End()
 
-	return s.metaRepo.Modify(ctx, dto)
+	leaderboard, err := s.metaRepo.Modify(ctx, dto)
+	if err != nil {
+		return Leaderboard{}, common.TranslatePostgresError(err, s.logger)
+	}
+
+	return leaderboard, nil
 }
 
 func (s *LocalService) Delete(ctx context.Context, dto DeleteDTO) (Leaderboard, error) {
 	ctx, span := tracer.Start(ctx, "leaderboard.service.delete")
 	defer span.End()
 
-	return s.metaRepo.Delete(ctx, dto)
+	leaderboard, err := s.metaRepo.Delete(ctx, dto)
+	if err != nil {
+		return Leaderboard{}, common.TranslatePostgresError(err, s.logger)
+	}
+
+	return leaderboard, nil
 }
 
 // Events related

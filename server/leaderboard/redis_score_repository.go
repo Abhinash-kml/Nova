@@ -2,6 +2,7 @@ package leaderboard
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/redis/go-redis/v9"
@@ -61,24 +62,21 @@ func (r *RedisScoreRepository) UpdateScore(ctx context.Context, dto UpdateScoreD
 				Members: members,
 			}).Result()
 			if err != nil {
-				r.logger.Error("Failed to update score with best aggregation")
-				return err
+				return fmt.Errorf("update score with best aggregation: %w", err)
 			}
 		} else {
 			_, err = r.rclient.ZAdd(ctx, dto.Id, members...).Result()
 		}
 
 		if err != nil {
-			r.logger.Error("Failed to update score",
-				zap.String("leaderboard", dto.Id),
-				zap.String("aggregation", dto.AggregateType),
-				zap.Int("updates", len(dto.Scores)))
+			return fmt.Errorf("update score best/set: %w", err)
 		}
 	}
 
 	// For increment / decrement
 	// Create transaction pipeline
 	pipe := r.rclient.Pipeline()
+	var err error
 
 	for i := range dto.Scores {
 		member := dto.Scores[i].Id
@@ -86,21 +84,20 @@ func (r *RedisScoreRepository) UpdateScore(ctx context.Context, dto UpdateScoreD
 
 		switch dto.AggregateType {
 		case "incr":
-			pipe.ZIncrBy(ctx, dto.Id, score, member)
+			_, err = pipe.ZIncrBy(ctx, dto.Id, score, member).Result()
 		case "decr":
-			pipe.ZIncrBy(ctx, dto.Id, -score, member)
+			_, err = pipe.ZIncrBy(ctx, dto.Id, -score, member).Result()
+		}
+
+		if err != nil {
+			return fmt.Errorf("update score incr/decr: %w", err)
 		}
 	}
 
 	// Execute pipeline across the network in exactly one transaction block
-	_, err := pipe.Exec(ctx)
+	_, err = pipe.Exec(ctx)
 	if err != nil {
-		r.logger.Error("Pipelined incremental update failed",
-			zap.String("leaderboard", dto.Id),
-			zap.String("operator", dto.AggregateType),
-			zap.Error(err),
-		)
-		return err
+		return fmt.Errorf("score update pipeline: %w", err)
 	}
 
 	return nil
@@ -111,11 +108,7 @@ func (r *RedisScoreRepository) DeleteScore(ctx context.Context, dto DeleteScoreD
 	userId := dto.UserId.Id
 	_, err := r.rclient.ZRem(ctx, leaderboardId, userId).Result()
 	if err != nil {
-		r.logger.Error("Failed to delete score",
-			zap.String("leaderboard", leaderboardId),
-			zap.String("userid", userId))
-
-		return err
+		return fmt.Errorf("delete score: %w", err)
 	}
 
 	return nil

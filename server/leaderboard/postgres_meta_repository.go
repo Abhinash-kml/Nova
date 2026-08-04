@@ -2,10 +2,10 @@ package leaderboard
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
-	"github.com/abhinash-kml/nova/server/common"
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -57,8 +57,7 @@ func (r *PostgresMetaRepository) GetAll(ctx context.Context, cursor uuid.UUID, l
 		rows, err = r.pgx.Query(ctx, rawQuery, cursor, limit)
 	}
 	if err != nil {
-		r.logger.Error("Failed to execute getall query", zap.Error(err))
-		return nil, common.TranslatePostgresError(err, r.logger)
+		return nil, fmt.Errorf("getting rows: %w", err)
 	}
 	defer rows.Close()
 
@@ -77,11 +76,14 @@ func (r *PostgresMetaRepository) GetAll(ctx context.Context, cursor uuid.UUID, l
 			&leaderboard.CreatedBy,
 			&leaderboard.CreatedAt)
 		if err != nil {
-			r.logger.Error("failed to scan returned row in getall query", zap.Error(err))
-			return nil, common.TranslatePostgresError(err, r.logger)
+			return nil, fmt.Errorf("scanning row: %w", err)
 		}
 
 		leaderboards = append(leaderboards, leaderboard)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating rows: %w", err)
 	}
 
 	return leaderboards, nil
@@ -116,8 +118,7 @@ func (r *PostgresMetaRepository) Get(ctx context.Context, id uuid.UUID) (Leaderb
 		&leaderboard.CreatedBy,
 		&leaderboard.CreatedAt)
 	if err != nil {
-		r.logger.Error("Failed to scan returned row in getbyid query", zap.Error(err))
-		return Leaderboard{}, common.TranslatePostgresError(err, r.logger)
+		return Leaderboard{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return leaderboard, nil
@@ -134,8 +135,7 @@ func (r *PostgresMetaRepository) Create(ctx context.Context, dto CreateDTO) (Lea
 	// Execute query
 	_, err := r.pgx.Exec(ctx, rawQuery, id, dto.Name, dto.Type, dto.Stat, dto.ProcessInterval, dto.CreatedBy, now)
 	if err != nil {
-		r.logger.Error("Failed to execute insert query", zap.Error(err))
-		return Leaderboard{}, common.TranslatePostgresError(err, r.logger)
+		return Leaderboard{}, fmt.Errorf("creating leaderboard: %w", err)
 	}
 
 	createdBy, _ := uuid.Parse(dto.CreatedBy)
@@ -182,8 +182,7 @@ func (r *PostgresMetaRepository) Modify(ctx context.Context, dto ModifyDTO) (Lea
 		&leaderboard.CreatedBy,
 		&leaderboard.CreatedAt)
 	if err != nil {
-		r.logger.Error("Failed to scan returned row in modify query", zap.Error(err))
-		return Leaderboard{}, common.TranslatePostgresError(err, r.logger)
+		return Leaderboard{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return leaderboard, nil
@@ -206,8 +205,7 @@ func (r *PostgresMetaRepository) Delete(ctx context.Context, dto DeleteDTO) (Lea
 	err := row.Scan(&leaderboard.Id, &leaderboard.Name, &leaderboard.Type, &leaderboard.ProcessInterval,
 		&leaderboard.CreatedBy, &leaderboard.CreatedAt)
 	if err != nil {
-		r.logger.Error("Failed to scan returned row in modify query", zap.Error(err))
-		return Leaderboard{}, common.TranslatePostgresError(err, r.logger)
+		return Leaderboard{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return leaderboard, nil
