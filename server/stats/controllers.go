@@ -28,30 +28,37 @@ func NewController(s Service, c *config.Config, l *zap.Logger) *Controller {
 
 func (c *Controller) GetAll(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "stats.controller.getall")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto GetAllDTO
 
-	if err := ctx.ShouldBindQuery(&dto); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindQuery(&dto)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	cursor, err := utils.DecodeCursor(dto.Cursor)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		ctx.Error(err)
 		return
 	}
 
 	stats, err := c.service.GetAll(sctx, cursor, dto.Limit)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to get all stats",
+			zap.String("cursor", dto.Cursor),
+			zap.Int("limit", dto.Limit),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -60,24 +67,32 @@ func (c *Controller) GetAll(ctx *gin.Context) {
 
 func (c *Controller) Get(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "stats.controller.get")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var data GetDTO
 
-	if err := ctx.ShouldBindUri(&data); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindUri(&data)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.Int("statid", data.Id))
+	span.SetAttributes(attribute.Int("stat_id", data.Id))
 
 	stat, err := c.service.GetById(sctx, data.Id)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to get stat",
+			zap.Int("stat_id", data.Id),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -86,22 +101,28 @@ func (c *Controller) Get(ctx *gin.Context) {
 
 func (c *Controller) Create(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "stats.controller.create")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto CreateDTO
 
-	if err := ctx.ShouldBindWith(&dto, binding.JSON); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	stat, err := c.service.Add(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to create stat", zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -110,31 +131,38 @@ func (c *Controller) Create(ctx *gin.Context) {
 
 func (c *Controller) Modify(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "stats.controller.modify")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto UpdateDTO
 
-	if err := ctx.ShouldBindUri(&dto.StatsId); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindUri(&dto.StatsId)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.Int("statid", dto.Id))
+	span.SetAttributes(attribute.Int("stat_id", dto.Id))
 
-	if err := ctx.ShouldBindWith(&dto, binding.JSON); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	modifiedStat, err := c.service.Update(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to update stat",
+			zap.Int("stat_id", dto.Id),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -143,24 +171,32 @@ func (c *Controller) Modify(ctx *gin.Context) {
 
 func (c *Controller) Delete(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "stats.controller.delete")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto DeleteDTO
 
-	if err := ctx.ShouldBindUri(&dto.StatsId); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindUri(&dto.StatsId)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.Int("statid", dto.Id))
+	span.SetAttributes(attribute.Int("stat_id", dto.Id))
 
-	_, err := c.service.Delete(sctx, dto)
+	_, err = c.service.Delete(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to delete stat",
+			zap.Int("stat_it", dto.Id),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -169,31 +205,38 @@ func (c *Controller) Delete(ctx *gin.Context) {
 
 func (c *Controller) Replace(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "stats.controller.replace")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto ReplaceDTO
 
-	if err := ctx.ShouldBindUri(&dto.StatsId); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindUri(&dto.StatsId)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.Int("statid", dto.Id))
+	span.SetAttributes(attribute.Int("stat_id", dto.Id))
 
-	if err := ctx.ShouldBindWith(&dto.ReplacementData, binding.JSON); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindWith(&dto.ReplacementData, binding.JSON)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	replacedStat, err := c.service.Replace(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to replace stat",
+			zap.Int("stat_id", dto.Id),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -202,31 +245,41 @@ func (c *Controller) Replace(ctx *gin.Context) {
 
 func (c *Controller) UpdatePlayerStats(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "stats.controller.updateplayerstats")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto UpdatePlayerStatDTO
 
-	if err := ctx.ShouldBindUri(&dto.UserId); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
-		return
-	}
-
-	span.SetAttributes(attribute.String("userid", dto.Id))
-
-	if err := ctx.ShouldBindWith(&dto.IncomingPlayerStat, binding.JSON); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
-		return
-	}
-
-	err := c.service.UpdatePlayerStats(sctx, dto)
+	err = ctx.ShouldBindUri(&dto.UserId)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		ctx.Error(err)
+		return
+	}
+
+	span.SetAttributes(
+		attribute.String("user_id", dto.Id),
+		attribute.String("stat_id", dto.StatId),
+	)
+
+	err = ctx.ShouldBindWith(&dto.IncomingPlayerStat, binding.JSON)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	err = c.service.UpdatePlayerStats(sctx, dto)
+	if err != nil {
+		c.logger.Error("Failed to update player stat",
+			zap.String("user_id", dto.Id),
+			zap.String("stat_it", dto.StatId))
+		ctx.Error(err)
 		return
 	}
 
@@ -235,23 +288,30 @@ func (c *Controller) UpdatePlayerStats(ctx *gin.Context) {
 
 func (c *Controller) DeletePlayerStats(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "stats.controller.deleteplayerstats")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto DeletePlayerStatDTO
 
-	if err := ctx.ShouldBindUri(&dto.UserId); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindUri(&dto.UserId)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("userid", dto.Id))
+	span.SetAttributes(attribute.String("user_id", dto.Id))
 
-	if err := c.service.DeletePlayerStats(sctx, dto); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = c.service.DeletePlayerStats(sctx, dto)
+	if err != nil {
+		c.logger.Error("Failed to delete player stats", zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -260,24 +320,30 @@ func (c *Controller) DeletePlayerStats(ctx *gin.Context) {
 
 func (c *Controller) GetPlayerStats(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "stats.controller.updateplayerstats")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto GetPlayerStatDTO
 
-	if err := ctx.ShouldBindUri(&dto.UserId); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindUri(&dto.UserId)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("userid", dto.Id))
+	span.SetAttributes(attribute.String("user_id", dto.Id))
 
 	playerStats, err := c.service.GetPlayerStats(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to get player stats", zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 

@@ -2,10 +2,10 @@ package stats
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Masterminds/squirrel"
-	"github.com/abhinash-kml/nova/server/common"
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -72,8 +72,7 @@ func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (Stats, err
 	)
 
 	if err != nil {
-		r.logger.Error("Failed to execute sql insert query", zap.Error(err))
-		return Stats{}, common.TranslatePostgresError(err, r.logger)
+		return Stats{}, fmt.Errorf("creating stat: %w", err)
 	}
 
 	return stat, nil
@@ -106,12 +105,9 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 
 		rows, err = r.pgx.Query(ctx, rawQuery, cursor, limit)
 	}
-
 	if err != nil {
-		r.logger.Error("Failed to execute getall query", zap.Error(err))
-		return nil, common.TranslatePostgresError(err, r.logger)
+		return nil, fmt.Errorf("getting all stats: %w", err)
 	}
-
 	defer rows.Close()
 
 	var stats []Stats
@@ -129,14 +125,17 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 		)
 
 		if err != nil {
-			r.logger.Error("Failed to scan returned row in getall query", zap.Error(err))
-			return nil, common.TranslatePostgresError(err, r.logger)
+			return nil, fmt.Errorf("scanning row: %w", err)
 		}
 
 		stats = append(stats, stat)
 	}
 
-	return stats, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating rows: %w", err)
+	}
+
+	return stats, nil
 }
 
 func (r *PostgresRepository) GetById(ctx context.Context, id int) (Stats, error) {
@@ -168,8 +167,7 @@ func (r *PostgresRepository) GetById(ctx context.Context, id int) (Stats, error)
 	)
 
 	if err != nil {
-		r.logger.Error("Failed to scan row in getbyid query", zap.Error(err))
-		return Stats{}, common.TranslatePostgresError(err, r.logger)
+		return Stats{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return stat, nil
@@ -192,8 +190,7 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (Stats, 
 
 	query, args, err := queryBuilder.ToSql()
 	if err != nil {
-		r.logger.Error("Failed to generate update query using squirrel", zap.Error(err))
-		return Stats{}, common.TranslatePostgresError(err, r.logger)
+		return Stats{}, fmt.Errorf("generate query: %w", err)
 	}
 
 	var stat Stats
@@ -202,10 +199,8 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (Stats, 
 		IsoLevel: pgx.ReadCommitted,
 	})
 	if err != nil {
-		r.logger.Error("Failed to begin transaction in update query", zap.Error(err))
-		return Stats{}, common.TranslatePostgresError(err, r.logger)
+		return Stats{}, fmt.Errorf("begin transaction: %w", err)
 	}
-
 	defer tx.Rollback(ctx)
 
 	_, err = tx.Exec(
@@ -213,10 +208,8 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (Stats, 
 		"SELECT id FROM stats WHERE id = $1 FOR UPDATE;",
 		dto.Id,
 	)
-
 	if err != nil {
-		r.logger.Error("Failed to lock row for update in transaction", zap.Error(err))
-		return Stats{}, common.TranslatePostgresError(err, r.logger)
+		return Stats{}, fmt.Errorf("locking row: %w", err)
 	}
 
 	result := tx.QueryRow(ctx, query, args...)
@@ -229,16 +222,13 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (Stats, 
 		&stat.StartValue,
 		&stat.CreatedAt,
 	)
-
 	if err != nil {
-		r.logger.Error("Failed to scan returned object from update query in transaction", zap.Error(err))
-		return Stats{}, common.TranslatePostgresError(err, r.logger)
+		return Stats{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	err = tx.Commit(ctx)
 	if err != nil {
-		r.logger.Error("Failed to commit transaction in update query", zap.Error(err))
-		return Stats{}, common.TranslatePostgresError(err, r.logger)
+		return Stats{}, fmt.Errorf("commit transaction: %w", err)
 	}
 
 	return stat, nil
@@ -267,12 +257,10 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (Stats
 	tx, err := r.pgx.BeginTx(ctx, pgx.TxOptions{
 		IsoLevel: pgx.ReadCommitted,
 	})
-
 	if err != nil {
 		r.logger.Error("Failed to begin transaction in replace query", zap.Error(err))
-		return Stats{}, common.TranslatePostgresError(err, r.logger)
+		return Stats{}, fmt.Errorf("begin transaction: %w", err)
 	}
-
 	defer tx.Rollback(ctx)
 
 	_, err = tx.Exec(
@@ -280,10 +268,8 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (Stats
 		"SELECT id FROM stats WHERE id = $1 FOR UPDATE;",
 		dto.Id,
 	)
-
 	if err != nil {
-		r.logger.Error("Failed to lock row for replace in transaction", zap.Error(err))
-		return Stats{}, common.TranslatePostgresError(err, r.logger)
+		return Stats{}, fmt.Errorf("locking row: %w", err)
 	}
 
 	result := tx.QueryRow(
@@ -295,7 +281,6 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (Stats
 		dto.Description,
 		dto.StartValue,
 	)
-
 	err = result.Scan(
 		&stat.Id,
 		&stat.Name,
@@ -304,16 +289,13 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (Stats
 		&stat.StartValue,
 		&stat.CreatedAt,
 	)
-
 	if err != nil {
-		r.logger.Error("Failed to scan result of replace query", zap.Error(err))
-		return Stats{}, common.TranslatePostgresError(err, r.logger)
+		return Stats{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	err = tx.Commit(ctx)
 	if err != nil {
-		r.logger.Error("Failed to commit transaction in replace query", zap.Error(err))
-		return Stats{}, common.TranslatePostgresError(err, r.logger)
+		return Stats{}, fmt.Errorf("commit transaction: %w", err)
 	}
 
 	return stat, nil
@@ -334,10 +316,8 @@ func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteDTO) (int, er
 		deleteQuery,
 		dto.Id,
 	).Scan(&deletedId)
-
 	if err != nil {
-		r.logger.Error("Failed to scan result in delete query", zap.Error(err))
-		return 0, common.TranslatePostgresError(err, r.logger)
+		return 0, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return deletedId, nil
@@ -361,18 +341,21 @@ func (r *PostgresRepository) GetPlayerStats(ctx context.Context, dto GetPlayerSt
 		dto.Id,
 	)
 	if err != nil {
-		r.logger.Error("Failed to execute sql insert query", zap.Error(err))
-		return PlayerStatsResponseDTO{}, common.TranslatePostgresError(err, r.logger)
+		return PlayerStatsResponseDTO{}, fmt.Errorf("getting player stats: %w", err)
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var stat StatResponseDTO
 		if err := rows.Scan(&stat.Id, &stat.Value); err != nil {
-			r.logger.Error("Failed to scan row in getplayerstats query")
-			return PlayerStatsResponseDTO{}, common.TranslatePostgresError(err, r.logger)
+			return PlayerStatsResponseDTO{}, fmt.Errorf("scanning row: %w", err)
 		}
 
 		response.Stats = append(response.Stats, stat)
+	}
+
+	if err := rows.Err(); err != nil {
+		return PlayerStatsResponseDTO{}, fmt.Errorf("iterating rows: %w", err)
 	}
 
 	return response, nil
@@ -386,16 +369,16 @@ func (r *PostgresRepository) UpdatePlayerStats(ctx context.Context, dto UpdatePl
 					current_value,
 					updated_at
 				)
-			VALUES (
-				$1,
-				$2,
-				$3,
-				CURRENT_TIMESTAMP
-			)
-			ON CONFLICT (player_id, stat_id)
-			DO UPDATE SET
-				current_value = EXCLUDED.current_value,
-				updated_at = CURRENT_TIMESTAMP`
+				VALUES (
+					$1,
+					$2,
+					$3,
+					CURRENT_TIMESTAMP
+				)
+				ON CONFLICT (player_id, stat_id)
+				DO UPDATE SET
+					current_value = EXCLUDED.current_value,
+					updated_at = CURRENT_TIMESTAMP`
 
 	_, err := r.pgx.Exec(
 		ctx,
@@ -405,8 +388,7 @@ func (r *PostgresRepository) UpdatePlayerStats(ctx context.Context, dto UpdatePl
 		dto.Value,
 	)
 	if err != nil {
-		r.logger.Error("Failed to exec updateplayerstats query", zap.Error(err))
-		return common.TranslatePostgresError(err, r.logger)
+		return fmt.Errorf("updating stats: %w", err)
 	}
 
 	return nil
@@ -424,8 +406,7 @@ func (r *PostgresRepository) DeletePlayerStats(ctx context.Context, dto DeletePl
 		dto.Id,
 	)
 	if err != nil {
-		r.logger.Error("Failed to exec deleteplayerstats query", zap.Error(err))
-		return common.TranslatePostgresError(err, r.logger)
+		return fmt.Errorf("delete stats: %w", err)
 	}
 
 	return nil
@@ -449,7 +430,7 @@ func (r *PostgresRepository) DeletePlayerStatSpecific(ctx context.Context, dto D
 	)
 	if err != nil {
 		r.logger.Error("Failed to exec deleteplayerstatspecific query", zap.Error(err))
-		return common.TranslatePostgresError(err, r.logger)
+		return fmt.Errorf("delete stat specififc: %w", err)
 	}
 
 	return nil
