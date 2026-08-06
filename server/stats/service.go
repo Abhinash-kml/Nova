@@ -91,7 +91,7 @@ func (s *StatsService) Replace(ctx context.Context, dto ReplaceDTO) (Stats, erro
 
 	stat, err := s.repository.Replace(ctx, dto)
 	if err != nil {
-		return Stats{}, common.TranslatePostgresError(err, s.logger)
+		return Stats{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to replace stat")
 	}
 
 	return stat, nil
@@ -103,7 +103,7 @@ func (s *StatsService) Delete(ctx context.Context, dto DeleteDTO) (int, error) {
 
 	statID, err := s.repository.Delete(ctx, dto)
 	if err != nil {
-		return 0, common.TranslatePostgresError(err, s.logger)
+		return 0, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to delete stat")
 	}
 
 	return statID, nil
@@ -115,7 +115,7 @@ func (s *StatsService) GetPlayerStats(ctx context.Context, dto GetPlayerStatDTO)
 
 	response, err := s.repository.GetPlayerStats(ctx, dto)
 	if err != nil {
-		return PlayerStatsResponseDTO{}, common.TranslatePostgresError(err, s.logger)
+		return PlayerStatsResponseDTO{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to get player stats")
 	}
 
 	return response, nil
@@ -125,19 +125,19 @@ func (s *StatsService) UpdatePlayerStats(ctx context.Context, dto UpdatePlayerSt
 	ctx, span := tracer.Start(ctx, "stats.service.updateplayerstats")
 	defer span.End()
 
-	return common.TranslatePostgresError(s.repository.UpdatePlayerStats(ctx, dto), s.logger)
+	return common.TranslatePostgresError(s.repository.UpdatePlayerStats(ctx, dto), s.logger).WithMessage("Failed ot update player stats")
 }
 
 func (s *StatsService) DeletePlayerStats(ctx context.Context, dto DeletePlayerStatDTO) error {
 	ctx, span := tracer.Start(ctx, "stats.service.deleteplayerstats")
 	defer span.End()
 
-	return common.TranslatePostgresError(s.repository.DeletePlayerStats(ctx, dto), s.logger)
+	return common.TranslatePostgresError(s.repository.DeletePlayerStats(ctx, dto), s.logger).WithMessage("Failed to delete player stats")
 }
 
 func (s *StatsService) DeletePlayerStatSpecific(ctx context.Context, dto DeletePlayerStatSpecificDTO) error {
 	ctx, span := tracer.Start(ctx, "stats.service.deleteplayerstatspecific")
 	defer span.End()
 
-	return common.TranslatePostgresError(s.repository.DeletePlayerStatSpecific(ctx, dto), s.logger)
+	return common.TranslatePostgresError(s.repository.DeletePlayerStatSpecific(ctx, dto), s.logger).WithMessage("Failed to delete player stat specific")
 }
