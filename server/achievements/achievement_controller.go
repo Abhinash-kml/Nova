@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	"github.com/abhinash-kml/nova/server/config"
-	"github.com/abhinash-kml/nova/server/utils"
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel/codes"
 	"go.uber.org/zap"
@@ -27,22 +26,28 @@ func NewController(service Service, c *config.Config, l *zap.Logger) *Controller
 
 func (c *Controller) Create(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "achievements.controller.create")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto CreateAchievementDTO
 
-	if err := ctx.ShouldBindJSON(&dto); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindJSON(&dto)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	response, err := c.service.Create(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to create achievement", zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -51,13 +56,19 @@ func (c *Controller) Create(ctx *gin.Context) {
 
 func (c *Controller) Get(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "achievements.controller.get")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		ctx.Error(err)
 		return
 	}
 
@@ -67,9 +78,10 @@ func (c *Controller) Get(ctx *gin.Context) {
 
 	response, err := c.service.Get(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to get achievement",
+			zap.Int("achievement_id", dto.Id),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -78,22 +90,27 @@ func (c *Controller) Get(ctx *gin.Context) {
 
 func (c *Controller) Update(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "achievements.controller.update")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		ctx.Error(err)
 		return
 	}
 
 	var dto UpdateAchievementDTO
 
-	if err := ctx.ShouldBindJSON(&dto); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindJSON(&dto)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
@@ -101,9 +118,10 @@ func (c *Controller) Update(ctx *gin.Context) {
 
 	err = c.service.Update(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to update achievement",
+			zap.Int("achievement_id", dto.Id),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -112,13 +130,19 @@ func (c *Controller) Update(ctx *gin.Context) {
 
 func (c *Controller) Delete(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "achievements.controller.delete")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		ctx.Error(err)
 		return
 	}
 
@@ -128,9 +152,10 @@ func (c *Controller) Delete(ctx *gin.Context) {
 
 	err = c.service.Delete(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to delete achievement",
+			zap.Int("achievement_id", dto.Id),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 

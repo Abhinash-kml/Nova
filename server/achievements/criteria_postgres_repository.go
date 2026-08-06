@@ -2,9 +2,9 @@ package achievements
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Masterminds/squirrel"
-	"github.com/abhinash-kml/nova/server/common"
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -59,8 +59,7 @@ func (r *CriteriaPostgresRepository) Add(ctx context.Context, dto CreateCriteria
 	)
 
 	if err != nil {
-		r.logger.Error("Failed to execute achievement criteria insert query", zap.Error(err))
-		return AchievementCriteria{}, common.TranslatePostgresError(err, r.logger)
+		return AchievementCriteria{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return criteria, nil
@@ -88,8 +87,7 @@ func (r *CriteriaPostgresRepository) GetAll(ctx context.Context, dto GetAllCrite
 		rows, err = r.pgx.Query(ctx, rawQuery, dto.Cursor, dto.Limit)
 	}
 	if err != nil {
-		r.logger.Error("Failed to execute get all achievement criteria query", zap.Error(err))
-		return []AchievementCriteria{}, common.TranslatePostgresError(err, r.logger)
+		return []AchievementCriteria{}, fmt.Errorf("get all criteria: %w", err)
 	}
 
 	defer rows.Close()
@@ -98,14 +96,21 @@ func (r *CriteriaPostgresRepository) GetAll(ctx context.Context, dto GetAllCrite
 
 	for rows.Next() {
 		var criteria AchievementCriteria
-		rows.Scan(
+		err = rows.Scan(
 			&criteria.AchievementId,
 			&criteria.StatId,
 			&criteria.TargetValue,
 			&criteria.CriteriaText,
 		)
+		if err != nil {
+			return nil, fmt.Errorf("scanning row: %w", err)
+		}
 
 		criterias = append(criterias, criteria)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating rows: %w", err)
 	}
 
 	return criterias, nil
@@ -136,8 +141,7 @@ func (r *CriteriaPostgresRepository) Get(ctx context.Context, dto GetCriteriaDTO
 	)
 
 	if err != nil {
-		r.logger.Error("Failed to scan achievement criteria", zap.Error(err))
-		return AchievementCriteria{}, common.TranslatePostgresError(err, r.logger)
+		return AchievementCriteria{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return criteria, nil
@@ -161,12 +165,9 @@ func (r *CriteriaPostgresRepository) GetByAchievement(ctx context.Context, dto G
 		rawQuery,
 		dto.Id,
 	)
-
 	if err != nil {
-		r.logger.Error("Failed to execute get achievement criteria query", zap.Error(err))
-		return nil, common.TranslatePostgresError(err, r.logger)
+		return nil, fmt.Errorf("get criterias: %w", err)
 	}
-
 	defer rows.Close()
 
 	var criteria []AchievementCriteria
@@ -180,18 +181,15 @@ func (r *CriteriaPostgresRepository) GetByAchievement(ctx context.Context, dto G
 			&criterion.TargetValue,
 			&criterion.CriteriaText,
 		)
-
 		if err != nil {
-			r.logger.Error("Failed to scan achievement criteria row", zap.Error(err))
-			return nil, common.TranslatePostgresError(err, r.logger)
+			return nil, fmt.Errorf("scanning row: %w", err)
 		}
 
 		criteria = append(criteria, criterion)
 	}
 
 	if err := rows.Err(); err != nil {
-		r.logger.Error("Failed while iterating achievement criteria rows", zap.Error(err))
-		return nil, common.TranslatePostgresError(err, r.logger)
+		return nil, fmt.Errorf("iterating rows: %w", err)
 	}
 
 	return criteria, nil
@@ -229,8 +227,7 @@ func (r *CriteriaPostgresRepository) Update(ctx context.Context, dto UpdateCrite
 	)
 
 	if err != nil {
-		r.logger.Error("Failed to scan updated achievement criteria", zap.Error(err))
-		return AchievementCriteria{}, common.TranslatePostgresError(err, r.logger)
+		return AchievementCriteria{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return criteria, nil
@@ -249,8 +246,7 @@ func (r *CriteriaPostgresRepository) Delete(ctx context.Context, dto DeleteCrite
 	)
 
 	if err != nil {
-		r.logger.Error("Failed to execute delete achievement criteria query", zap.Error(err))
-		return common.TranslatePostgresError(err, r.logger)
+		return fmt.Errorf("delete criteria: %w", err)
 	}
 
 	return nil

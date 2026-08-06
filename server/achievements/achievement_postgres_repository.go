@@ -2,8 +2,8 @@ package achievements
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/abhinash-kml/nova/server/common"
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
@@ -32,16 +32,16 @@ func (r *PostgresRepository) Create(ctx context.Context, dto CreateAchievementDT
 					name,
 					description
 				)
-			VALUES (
-				$1,
-				$2,
-				$3
-			)
-			RETURNING
-				id,
-				key,
-				name,
-				description`
+				VALUES (
+					$1,
+					$2,
+					$3
+				)
+				RETURNING
+					id,
+					key,
+					name,
+					description`
 
 	err := r.pgx.QueryRow(
 		ctx,
@@ -57,8 +57,7 @@ func (r *PostgresRepository) Create(ctx context.Context, dto CreateAchievementDT
 	)
 
 	if err != nil {
-		r.logger.Error("Failed to exec createachievement query", zap.Error(err))
-		return AchievementResponseDTO{}, common.TranslatePostgresError(err, r.logger)
+		return AchievementResponseDTO{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return response, nil
@@ -89,8 +88,7 @@ func (r *PostgresRepository) Get(ctx context.Context, dto GetAchievementDTO) (Ac
 	)
 
 	if err != nil {
-		r.logger.Error("Failed to exec getachievement query", zap.Error(err))
-		return AchievementResponseDTO{}, common.TranslatePostgresError(err, r.logger)
+		return AchievementResponseDTO{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return response, nil
@@ -116,8 +114,7 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateAchievementDT
 	)
 
 	if err != nil {
-		r.logger.Error("Failed to exec updateachievement query", zap.Error(err))
-		return common.TranslatePostgresError(err, r.logger)
+		return fmt.Errorf("updating row: %w", err)
 	}
 
 	return nil
@@ -136,8 +133,7 @@ func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteAchievementDT
 	)
 
 	if err != nil {
-		r.logger.Error("Failed to exec deleteachievement query", zap.Error(err))
-		return common.TranslatePostgresError(err, r.logger)
+		return fmt.Errorf("delete row: %w", err)
 	}
 
 	return nil

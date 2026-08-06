@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/abhinash-kml/nova/server/config"
-	"github.com/abhinash-kml/nova/server/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"go.opentelemetry.io/otel/attribute"
@@ -28,22 +27,30 @@ func NewProgressController(service ProgressService, c *config.Config, logger *za
 
 func (c *ProgressController) Create(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "achievement.progress.controller.create")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto CreateProgressDTO
 
-	if err := ctx.ShouldBindBodyWith(&dto, binding.JSON); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindBodyWith(&dto, binding.JSON)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	result, err := c.service.Create(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to create achievement progress",
+			zap.Int("criteria_id", dto.CriterionId),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -52,22 +59,30 @@ func (c *ProgressController) Create(ctx *gin.Context) {
 
 func (c *ProgressController) Get(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "achievement.progress.controller.get")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto GetProgressDTO
 
-	if err := ctx.ShouldBindUri(&dto.ProgressId); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindUri(&dto.ProgressId)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	result, err := c.service.Get(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to get achievement progress",
+			zap.Int("progress_id", dto.Id),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -76,22 +91,28 @@ func (c *ProgressController) Get(ctx *gin.Context) {
 
 func (c *ProgressController) GetOfUser(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "achievement.progress.controller.getofuser")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto GetProgressOfUserDTO
 
-	if err := ctx.ShouldBindQuery(&dto); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindQuery(&dto)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	result, err := c.service.GetOfUser(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to get achievement progress of user", zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -100,29 +121,37 @@ func (c *ProgressController) GetOfUser(ctx *gin.Context) {
 
 func (c *ProgressController) Update(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "achievement.progress.controller.update")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto UpdateProgressDTO
 
-	if err := ctx.ShouldBindUri(&dto.ProgressId); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindUri(&dto.ProgressId)
+	if err != nil {
+		ctx.Error(err)
 	}
 
 	span.SetAttributes(attribute.Int("progress_id", dto.Id))
 
-	if err := ctx.ShouldBindBodyWith(&dto.ProgressUpdateData, binding.JSON); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindBodyWith(&dto.ProgressUpdateData, binding.JSON)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
-	if err := c.service.Update(sctx, dto); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = c.service.Update(sctx, dto)
+	if err != nil {
+		c.logger.Error("Failed to update acheievemnt progress",
+			zap.Int("progress_id", dto.Id),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -131,23 +160,32 @@ func (c *ProgressController) Update(ctx *gin.Context) {
 
 func (c *ProgressController) Delete(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "achievement.progress.controller.delete")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto DeleteProgressDTO
 
-	if err := ctx.ShouldBindUri(&dto.ProgressId); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindUri(&dto.ProgressId)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	span.SetAttributes(attribute.Int("progress_id", dto.Id))
 
-	if _, err := c.service.Delete(sctx, dto); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	_, err = c.service.Delete(sctx, dto)
+	if err != nil {
+		c.logger.Error("Failed to delete achievement progress",
+			zap.Int("progress_id", dto.Id),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 

@@ -3,6 +3,7 @@ package achievements
 import (
 	"context"
 
+	"github.com/abhinash-kml/nova/server/common"
 	"github.com/abhinash-kml/nova/server/config"
 	"go.uber.org/zap"
 )
@@ -29,5 +30,5 @@ func (s *LocalCompletedAchievementService) Create(ctx context.Context, dto Compl
 	ctx, span := tracer.Start(ctx, "achievements.completed.create")
 	defer span.End()
 
-	return s.repository.Create(ctx, dto)
+	return common.TranslatePostgresError(s.repository.Create(ctx, dto), s.logger).WithMessage("Failed to create compleeted achievement")
 }

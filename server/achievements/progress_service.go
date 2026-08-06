@@ -3,6 +3,7 @@ package achievements
 import (
 	"context"
 
+	"github.com/abhinash-kml/nova/server/common"
 	"github.com/abhinash-kml/nova/server/config"
 	"go.uber.org/zap"
 )
@@ -33,33 +34,53 @@ func (s *LocalProgressService) Create(ctx context.Context, dto CreateProgressDTO
 	ctx, span := tracer.Start(ctx, "achievement.progress.service.create")
 	defer span.End()
 
-	return s.repository.Create(ctx, dto)
+	progress, err := s.repository.Create(ctx, dto)
+	if err != nil {
+		return AchievementProgress{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to create acheievement progress")
+	}
+
+	return progress, nil
 }
 
 func (s *LocalProgressService) Get(ctx context.Context, dto GetProgressDTO) (AchievementProgress, error) {
 	ctx, span := tracer.Start(ctx, "achievement.progress.service.get")
 	defer span.End()
 
-	return s.repository.Get(ctx, dto)
+	progress, err := s.repository.Get(ctx, dto)
+	if err != nil {
+		return AchievementProgress{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to get achievement progress")
+	}
+
+	return progress, nil
 }
 
 func (s *LocalProgressService) GetOfUser(ctx context.Context, dto GetProgressOfUserDTO) ([]AchievementProgress, error) {
 	ctx, span := tracer.Start(ctx, "achievement.progress.service.getofuser")
 	defer span.End()
 
-	return s.repository.GetOfUser(ctx, dto)
+	achievements, err := s.repository.GetOfUser(ctx, dto)
+	if err != nil {
+		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to to achievement progrogress of user")
+	}
+
+	return achievements, nil
 }
 
 func (s *LocalProgressService) Update(ctx context.Context, dto UpdateProgressDTO) error {
 	ctx, span := tracer.Start(ctx, "achievement.progress.service.update")
 	defer span.End()
 
-	return s.repository.Update(ctx, dto)
+	return common.TranslatePostgresError(s.repository.Update(ctx, dto), s.logger).WithMessage("Failed to update achievement progress")
 }
 
 func (s *LocalProgressService) Delete(ctx context.Context, dto DeleteProgressDTO) (ProgressId, error) {
 	ctx, span := tracer.Start(ctx, "achievement.progress.service.delete")
 	defer span.End()
 
-	return s.repository.Delete(ctx, dto)
+	progresID, err := s.repository.Delete(ctx, dto)
+	if err != nil {
+		return ProgressId{Id: 0}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to delete achievement progress")
+	}
+
+	return progresID, nil
 }

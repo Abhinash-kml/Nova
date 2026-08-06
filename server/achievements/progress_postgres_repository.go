@@ -2,9 +2,9 @@ package achievements
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	"github.com/abhinash-kml/nova/server/common"
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -55,8 +55,7 @@ func (r *ProgressPostgresRepository) Create(ctx context.Context, dto CreateProgr
 		&result.UpdatedAt,
 	)
 	if err != nil {
-		r.logger.Error("failed to scan create achievement progress query", zap.Error(err))
-		return AchievementProgress{}, common.TranslatePostgresError(err, r.logger)
+		return AchievementProgress{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return result, nil
@@ -84,8 +83,7 @@ func (r *ProgressPostgresRepository) Get(ctx context.Context, dto GetProgressDTO
 		&result.UpdatedAt,
 	)
 	if err != nil {
-		r.logger.Error("failed to scan row in get achievement progress query", zap.Error(err))
-		return AchievementProgress{}, common.TranslatePostgresError(err, r.logger)
+		return AchievementProgress{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return result, nil
@@ -94,8 +92,7 @@ func (r *ProgressPostgresRepository) Get(ctx context.Context, dto GetProgressDTO
 func (r *ProgressPostgresRepository) GetOfUser(ctx context.Context, dto GetProgressOfUserDTO) ([]AchievementProgress, error) {
 	userId, err := uuid.Parse(dto.UserId)
 	if err != nil {
-		r.logger.Error("failed to parse user id", zap.Error(err))
-		return nil, common.TranslatePostgresError(err, r.logger)
+		return nil, fmt.Errorf("parsing userid: %w", err)
 	}
 
 	query := `SELECT 
@@ -111,8 +108,7 @@ func (r *ProgressPostgresRepository) GetOfUser(ctx context.Context, dto GetProgr
 
 	rows, err := r.pgx.Query(ctx, query, userId)
 	if err != nil {
-		r.logger.Error("failed to execute get achievement of user query", zap.Error(err))
-		return nil, common.TranslatePostgresError(err, r.logger)
+		return nil, fmt.Errorf("getting progress: %w", err)
 	}
 	defer rows.Close()
 
@@ -129,11 +125,14 @@ func (r *ProgressPostgresRepository) GetOfUser(ctx context.Context, dto GetProgr
 			&progress.UpdatedAt,
 		)
 		if err != nil {
-			r.logger.Error("failed to scan achievement progress in ", zap.Error(err))
-			return nil, common.TranslatePostgresError(err, r.logger)
+			return nil, fmt.Errorf("scanning row: %w", err)
 		}
 
 		result = append(result, progress)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating rows: %w", err)
 	}
 
 	return result, nil
@@ -150,8 +149,7 @@ func (r *ProgressPostgresRepository) Update(ctx context.Context, dto UpdateProgr
 	now := time.Now()
 	_, err := r.pgx.Exec(ctx, query, dto.CurrentValue, now, dto.Id)
 	if err != nil {
-		r.logger.Error("failed to update achievement progress", zap.Error(err))
-		return common.TranslatePostgresError(err, r.logger)
+		return fmt.Errorf("updating progress: %w", err)
 	}
 
 	return nil
@@ -166,8 +164,7 @@ func (r *ProgressPostgresRepository) Delete(ctx context.Context, dto DeleteProgr
 	var deletedID int
 	err := r.pgx.QueryRow(ctx, query, dto.Id).Scan(&deletedID)
 	if err != nil {
-		r.logger.Error("failed to execute delete achievement progress query", zap.Error(err))
-		return dto.ProgressId, common.TranslatePostgresError(err, r.logger)
+		return dto.ProgressId, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return ProgressId{Id: deletedID}, nil

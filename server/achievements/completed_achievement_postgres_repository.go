@@ -2,8 +2,8 @@ package achievements
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/abhinash-kml/nova/server/common"
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
@@ -33,8 +33,7 @@ func (r *PostgresCompletedAchievementRepository) Create(ctx context.Context, dto
 
 	_, err := r.pgx.Exec(ctx, rawQuery, dto.UserId, dto.AchievementId)
 	if err != nil {
-		r.logger.Error("Failed to exec add user completed achievement query", zap.Error(err))
-		return common.TranslatePostgresError(err, r.logger)
+		return fmt.Errorf("create completed achievement: %w", err)
 	}
 
 	return nil
