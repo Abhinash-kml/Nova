@@ -3,6 +3,7 @@ package channels
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -160,6 +161,9 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 
 		rows, err = r.pgx.Query(ctx, rawQuery, cursor, limit)
 	}
+	if err != nil {
+		return nil, fmt.Errorf("getting channels: %w", err)
+	}
 	defer rows.Close()
 
 	// Scan returned rows
@@ -169,11 +173,14 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 		err = rows.Scan(&channel.Id, &channel.Name, &channel.ProcessInterval, &channel.IsPersistant,
 			&channel.CreatedBy, &channel.CreatedAt)
 		if err != nil {
-			r.logger.Error("Failed to scan returned row in getall query", zap.Error(err))
-			return nil, common.TranslatePostgresError(err, r.logger)
+			return nil, fmt.Errorf("scanning row: %w", err)
 		}
 
 		channels = append(channels, channel)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating rows: %w", err)
 	}
 
 	return channels, nil
@@ -203,8 +210,7 @@ func (r *PostgresRepository) GetById(ctx context.Context, id uuid.UUID) (Channel
 	err := row.Scan(&channel.Id, &channel.Name, &channel.ProcessInterval, &channel.IsPersistant,
 		&channel.CreatedBy, &channel.CreatedAt, &channel.Updatedby, &channel.UpdatedAt)
 	if err != nil {
-		r.logger.Error("Failed to scan returned row in getbyid query", zap.Error(err))
-		return Channel{}, common.TranslatePostgresError(err, r.logger)
+		return Channel{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return channel, nil
@@ -222,8 +228,7 @@ func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (Channel, e
 	_, err := r.pgx.Exec(ctx, rawQuery, id, dto.Name, dto.ProcessInterval, dto.IsPersistant,
 		dto.CreatedBy, now, uuid.Nil, now)
 	if err != nil {
-		r.logger.Error("Failed to execute sql insert query", zap.Error(err))
-		return Channel{}, common.TranslatePostgresError(err, r.logger)
+		return Channel{}, fmt.Errorf("inserting channel: %w", err)
 	}
 
 	processInterval, _ := time.ParseDuration(dto.ProcessInterval)
@@ -266,8 +271,7 @@ func (r *PostgresRepository) Modify(ctx context.Context, dto UpdateDTO) (Channel
 	err := row.Scan(&channel.Id, &channel.Name, &channel.ProcessInterval, &channel.IsPersistant,
 		&channel.CreatedBy, &channel.CreatedAt, &channel.Updatedby, &channel.UpdatedAt)
 	if err != nil {
-		r.logger.Error("Failed to scan returned row in delete query", zap.Error(err))
-		return Channel{}, common.TranslatePostgresError(err, r.logger)
+		return Channel{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return channel, nil
@@ -303,8 +307,7 @@ func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UU
 	// Scan returned row
 	err := row.Scan(&effectedChannel)
 	if err != nil {
-		r.logger.Error("Failed to scan returned row in delete query", zap.Error(err))
-		return uuid.Nil, common.TranslatePostgresError(err, r.logger)
+		return uuid.Nil, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return effectedChannel, nil
