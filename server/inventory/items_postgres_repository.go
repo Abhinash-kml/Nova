@@ -2,10 +2,10 @@ package inventory
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Masterminds/squirrel"
-	"github.com/abhinash-kml/nova/server/common"
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -72,8 +72,7 @@ func (r *ItemsPostgresRepository) Add(ctx context.Context, dto CreateItemDTO) (P
 	)
 
 	if err != nil {
-		r.logger.Error("Failed to execute player item insert query", zap.Error(err))
-		return PlayerItem{}, common.TranslatePostgresError(err, r.logger)
+		return PlayerItem{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return item, nil
@@ -102,12 +101,9 @@ func (r *ItemsPostgresRepository) GetAll(ctx context.Context, cursor int, limit 
 		cursor,
 		limit,
 	)
-
 	if err != nil {
-		r.logger.Error("Failed to execute get all player items query", zap.Error(err))
-		return nil, common.TranslatePostgresError(err, r.logger)
+		return nil, fmt.Errorf("getting item: %w", err)
 	}
-
 	defer rows.Close()
 
 	var items []PlayerItem
@@ -127,16 +123,14 @@ func (r *ItemsPostgresRepository) GetAll(ctx context.Context, cursor int, limit 
 		)
 
 		if err != nil {
-			r.logger.Error("Failed to scan player item row", zap.Error(err))
-			return nil, common.TranslatePostgresError(err, r.logger)
+			return nil, fmt.Errorf("scanning row: %w", err)
 		}
 
 		items = append(items, item)
 	}
 
 	if err := rows.Err(); err != nil {
-		r.logger.Error("Failed while iterating player item rows", zap.Error(err))
-		return nil, common.TranslatePostgresError(err, r.logger)
+		return nil, fmt.Errorf("iterating rows: %w", err)
 	}
 
 	return items, nil
@@ -175,8 +169,7 @@ func (r *ItemsPostgresRepository) GetById(ctx context.Context, id uuid.UUID) (Pl
 	)
 
 	if err != nil {
-		r.logger.Error("Failed to scan player item", zap.Error(err))
-		return PlayerItem{}, common.TranslatePostgresError(err, r.logger)
+		return PlayerItem{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return item, nil
@@ -222,8 +215,7 @@ func (r *ItemsPostgresRepository) Update(ctx context.Context, dto UpdateItemDTO)
 
 	query, args, err := queryBuilder.ToSql()
 	if err != nil {
-		r.logger.Error("Failed to generate player item update query", zap.Error(err))
-		return PlayerItem{}, common.TranslatePostgresError(err, r.logger)
+		return PlayerItem{}, fmt.Errorf("generate query: %w", err)
 	}
 
 	var item PlayerItem
@@ -244,8 +236,7 @@ func (r *ItemsPostgresRepository) Update(ctx context.Context, dto UpdateItemDTO)
 	)
 
 	if err != nil {
-		r.logger.Error("Failed to scan updated player item", zap.Error(err))
-		return PlayerItem{}, common.TranslatePostgresError(err, r.logger)
+		return PlayerItem{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return item, nil
@@ -297,8 +288,7 @@ func (r *ItemsPostgresRepository) Replace(ctx context.Context, dto ReplaceItemDT
 	)
 
 	if err != nil {
-		r.logger.Error("Failed to execute player item replace query", zap.Error(err))
-		return PlayerItem{}, common.TranslatePostgresError(err, r.logger)
+		return PlayerItem{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return item, nil
@@ -321,8 +311,7 @@ func (r *ItemsPostgresRepository) Delete(ctx context.Context, dto DeleteItemDTO)
 	).Scan(&deletedId)
 
 	if err != nil {
-		r.logger.Error("Failed to scan deleted player item id", zap.Error(err))
-		return uuid.Nil, common.TranslatePostgresError(err, r.logger)
+		return uuid.Nil, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return deletedId, nil

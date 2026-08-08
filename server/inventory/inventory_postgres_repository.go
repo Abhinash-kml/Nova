@@ -2,10 +2,10 @@ package inventory
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Masterminds/squirrel"
-	"github.com/abhinash-kml/nova/server/common"
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -48,12 +48,9 @@ func (r *PostgresInventoryRepository) GetInventoryOfUser(ctx context.Context, dt
 		rawQuery,
 		dto.Id,
 	)
-
 	if err != nil {
-		r.logger.Error("Failed to execute get player inventory query", zap.Error(err))
-		return nil, common.TranslatePostgresError(err, r.logger)
+		return nil, fmt.Errorf("getting inventory: %w", err)
 	}
-
 	defer rows.Close()
 
 	var inventory []PlayerInventory
@@ -69,18 +66,15 @@ func (r *PostgresInventoryRepository) GetInventoryOfUser(ctx context.Context, dt
 			&item.Source,
 			&item.IsEquipped,
 		)
-
 		if err != nil {
-			r.logger.Error("Failed to scan player inventory row", zap.Error(err))
-			return nil, common.TranslatePostgresError(err, r.logger)
+			return nil, fmt.Errorf("scanning row: %w", err)
 		}
 
 		inventory = append(inventory, item)
 	}
 
 	if err := rows.Err(); err != nil {
-		r.logger.Error("Failed while iterating player inventory rows", zap.Error(err))
-		return nil, common.TranslatePostgresError(err, r.logger)
+		return nil, fmt.Errorf("iterating rows: %w", err)
 	}
 
 	return inventory, nil
@@ -98,8 +92,7 @@ func (r *PostgresInventoryRepository) DeleteInventoryOfUser(ctx context.Context,
 	row := r.pgx.QueryRow(ctx, rawQuery, userID)
 	err := row.Scan(&deletedID)
 	if err != nil {
-		r.logger.Error("Failed execute delete user inventory query", zap.Error(err))
-		return UserID{}, common.TranslatePostgresError(err, r.logger)
+		return UserID{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return UserID{Id: deletedID}, nil
@@ -136,8 +129,7 @@ func (r *PostgresInventoryRepository) GetInventoryItemOfUser(ctx context.Context
 	)
 
 	if err != nil {
-		r.logger.Error("Failed to scan player inventory", zap.Error(err))
-		return PlayerInventory{}, common.TranslatePostgresError(err, r.logger)
+		return PlayerInventory{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return inventory, nil
@@ -176,8 +168,7 @@ func (r *PostgresInventoryRepository) AddInventoryItemOfUser(ctx context.Context
 		&item.UpdatedAt,
 	)
 	if err != nil {
-		r.logger.Error("Failed to execute add inventory item of user query", zap.Error(err))
-		return InventoryItem{}, common.TranslatePostgresError(err, r.logger)
+		return InventoryItem{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return item, nil
@@ -218,8 +209,7 @@ func (r *PostgresInventoryRepository) UpdateInventoryItemOfUser(ctx context.Cont
 
 	query, args, err := queryBuilder.ToSql()
 	if err != nil {
-		r.logger.Error("Failed to generate player inventory update query", zap.Error(err))
-		return PlayerInventory{}, common.TranslatePostgresError(err, r.logger)
+		return PlayerInventory{}, fmt.Errorf("generate query: %w", err)
 	}
 
 	var inventory PlayerInventory
@@ -238,8 +228,7 @@ func (r *PostgresInventoryRepository) UpdateInventoryItemOfUser(ctx context.Cont
 	)
 
 	if err != nil {
-		r.logger.Error("Failed to scan updated player inventory", zap.Error(err))
-		return PlayerInventory{}, common.TranslatePostgresError(err, r.logger)
+		return PlayerInventory{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return inventory, nil
@@ -260,10 +249,8 @@ func (r *PostgresInventoryRepository) DeleteInventoryItemOfUser(ctx context.Cont
 		userID,
 		itemID,
 	)
-
 	if err != nil {
-		r.logger.Error("Failed to execute delete player inventory query", zap.Error(err))
-		return common.TranslatePostgresError(err, r.logger)
+		return fmt.Errorf("deleting inventory item: %w", err)
 	}
 
 	return nil

@@ -29,22 +29,31 @@ func NewItemsController(s ItemsService, c *config.Config, l *zap.Logger) *ItemsC
 
 func (c *ItemsController) GetAll(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.items.controller.getall")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto GetAllDTO
 
-	if err := ctx.ShouldBindQuery(&dto); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindQuery(&dto)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	items, err := c.service.GetAll(sctx, dto.Cursor, dto.Limit)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to get all items",
+			zap.Int("cursor", dto.Cursor),
+			zap.Int("limit", dto.Limit),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -53,14 +62,21 @@ func (c *ItemsController) GetAll(ctx *gin.Context) {
 
 func (c *ItemsController) Get(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.items.controller.get")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto GetItemDTO
 
-	if err := ctx.ShouldBindUri(&dto); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindUri(&dto)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
@@ -70,9 +86,10 @@ func (c *ItemsController) Get(ctx *gin.Context) {
 
 	item, err := c.service.GetById(sctx, itemID)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to get item",
+			zap.String("item_id", dto.Id),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -81,22 +98,28 @@ func (c *ItemsController) Get(ctx *gin.Context) {
 
 func (c *ItemsController) Create(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.items.controller.create")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto CreateItemDTO
 
-	if err := ctx.ShouldBindWith(&dto, binding.JSON); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	item, err := c.service.Add(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to create item", zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -105,31 +128,38 @@ func (c *ItemsController) Create(ctx *gin.Context) {
 
 func (c *ItemsController) Modify(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.items.controller.modify")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto UpdateItemDTO
 
-	if err := ctx.ShouldBindUri(&dto.ItemId); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindUri(&dto.ItemId)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	span.SetAttributes(attribute.String("item_id", dto.Id))
 
-	if err := ctx.ShouldBindWith(&dto.ItemUpdateData, binding.JSON); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindWith(&dto.ItemUpdateData, binding.JSON)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	item, err := c.service.Update(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to update item",
+			zap.String("item_id", dto.Id),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -138,31 +168,38 @@ func (c *ItemsController) Modify(ctx *gin.Context) {
 
 func (c *ItemsController) Replace(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.items.controller.replace")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto ReplaceItemDTO
 
-	if err := ctx.ShouldBindUri(&dto.ItemId); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindUri(&dto.ItemId)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("itemid", dto.Id))
+	span.SetAttributes(attribute.String("item_id", dto.Id))
 
-	if err := ctx.ShouldBindWith(&dto.ReplacementData, binding.JSON); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindWith(&dto.ReplacementData, binding.JSON)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	item, err := c.service.Replace(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to replace item",
+			zap.String("item_id", dto.Id),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -171,24 +208,32 @@ func (c *ItemsController) Replace(ctx *gin.Context) {
 
 func (c *ItemsController) Delete(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.items.controller.delete")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto DeleteItemDTO
 
-	if err := ctx.ShouldBindUri(&dto); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindUri(&dto)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("itemid", dto.Id))
+	span.SetAttributes(attribute.String("item_id", dto.Id))
 
-	_, err := c.service.Delete(sctx, dto)
+	_, err = c.service.Delete(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to delete item",
+			zap.String("item_id", dto.Id),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 

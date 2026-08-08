@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/abhinash-kml/nova/server/config"
-	"github.com/abhinash-kml/nova/server/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"go.opentelemetry.io/otel/codes"
@@ -27,21 +26,29 @@ func NewInventoryController(s InventoryService, c *config.Config, l *zap.Logger)
 
 func (c *InventoryController) GetInventoryOfUser(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.getinventoryofuser")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto GetInventoryOfUserDTO
-	if err := ctx.ShouldBindQuery(&dto.UserID); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindQuery(&dto.UserID)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	inventory, err := c.service.GetInventoryOfUser(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to get inventory of user",
+			zap.String("user_id", dto.Id),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -50,21 +57,30 @@ func (c *InventoryController) GetInventoryOfUser(ctx *gin.Context) {
 
 func (c *InventoryController) DeleteInventoryOfUser(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.deleteinventoryofuser")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto DeleteInventoryOfUserDTO
-	if err := ctx.ShouldBindQuery(&dto.UserID); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+
+	err = ctx.ShouldBindQuery(&dto.UserID)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
-	_, err := c.service.DeleteInventoryOfUser(sctx, dto)
+	_, err = c.service.DeleteInventoryOfUser(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to delete inventory of user",
+			zap.String("user_id", dto.Id),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -73,29 +89,37 @@ func (c *InventoryController) DeleteInventoryOfUser(ctx *gin.Context) {
 
 func (c *InventoryController) GetInventoryItemOfUser(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.getinventoryofuser")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto GetInventoryItemOfUserDTO
 
-	if err := ctx.ShouldBindUri(&dto.ItemID); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindUri(&dto.ItemID)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
-	if err := ctx.ShouldBindQuery(&dto.UserID); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindQuery(&dto.UserID)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	item, err := c.service.GetInventoryItemOfUser(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to get inventory item of user",
+			zap.String("user_id", dto.Id),
+			zap.String("item_id", dto.ItemId),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -104,22 +128,31 @@ func (c *InventoryController) GetInventoryItemOfUser(ctx *gin.Context) {
 
 func (c *InventoryController) AddInventoryItemOfUser(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.getinventoryofuser")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto AddInventoryItemOfUserDTO
 
-	if err := ctx.ShouldBindBodyWith(&dto, binding.JSON); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindBodyWith(&dto, binding.JSON)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	item, err := c.service.AddInventoryItemOfUser(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to add inventory item of user",
+			zap.String("user_id", dto.UserID.String()),
+			zap.String("item_id", dto.ItemID.String()),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -128,36 +161,43 @@ func (c *InventoryController) AddInventoryItemOfUser(ctx *gin.Context) {
 
 func (c *InventoryController) UpdateInventoryItemOfUser(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.getinventoryofuser")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto UpdateInventoryItemOfUserDTO
 
-	if err := ctx.ShouldBindUri(&dto.ItemID); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindUri(&dto.ItemID)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
-	if err := ctx.ShouldBindQuery(&dto.UserID); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindQuery(&dto.UserID)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
-	if err := ctx.ShouldBindBodyWith(&dto.UpdateInventoryData, binding.JSON); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+	err = ctx.ShouldBindBodyWith(&dto.UpdateInventoryData, binding.JSON)
+	if err != nil {
+		ctx.Error(err)
 		return
 	}
 
 	updatedItem, err := c.service.UpdateInventoryItemOfUser(sctx, dto)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		c.logger.Error("Failed to update inventory item of user",
+			zap.String("user_id", dto.Id),
+			zap.String("item_id", dto.ItemId),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -166,29 +206,37 @@ func (c *InventoryController) UpdateInventoryItemOfUser(ctx *gin.Context) {
 
 func (c *InventoryController) DeleteInventoryItemOfUser(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.getinventoryofuser")
-	defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
 
 	var dto DeleteInventoryItemOfUserDTO
 
-	if err := ctx.ShouldBindUri(&dto.ItemID); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
-		return
-	}
-
-	if err := ctx.ShouldBindQuery(&dto.UserID); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
-		return
-	}
-
-	err := c.service.DeleteInventoryItemOfUser(sctx, dto)
+	err = ctx.ShouldBindUri(&dto.ItemID)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		utils.SendProblemDetails(ctx, err)
+		ctx.Error(err)
+		return
+	}
+
+	err = ctx.ShouldBindQuery(&dto.UserID)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	err = c.service.DeleteInventoryItemOfUser(sctx, dto)
+	if err != nil {
+		c.logger.Error("Failed to delete inventory item of user",
+			zap.String("user_id", dto.Id),
+			zap.String("item_id", dto.ItemId),
+			zap.Error(err))
+		ctx.Error(err)
 		return
 	}
 
