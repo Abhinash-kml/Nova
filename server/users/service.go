@@ -2,14 +2,15 @@ package users
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"time"
 
 	"github.com/abhinash-kml/nova/server/auth"
+	"github.com/abhinash-kml/nova/server/cache"
 	"github.com/abhinash-kml/nova/server/common"
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
-	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
@@ -42,14 +43,14 @@ type Service interface {
 type LocalUsersService struct {
 	repo   UsersRepository
 	logger *zap.Logger
-	cache  *redis.Client
+	cache  *cache.TieredCache
 	config *config.Config
 }
 
-func NewLocalUsersService(repository UsersRepository, r *redis.Client, c *config.Config, l *zap.Logger) *LocalUsersService {
+func NewLocalUsersService(repository UsersRepository, cache *cache.TieredCache, c *config.Config, l *zap.Logger) *LocalUsersService {
 	return &LocalUsersService{
 		repo:   repository,
-		cache:  r,
+		cache:  cache,
 		logger: l,
 		config: c,
 	}
@@ -97,32 +98,24 @@ func (s *LocalUsersService) GetById(ctx context.Context, id uuid.UUID) (User, er
 
 	key := UserPrefix + id.String()
 
-	// 1. Try cache
-	var user User
-	err := s.cache.Get(ctx, key).Scan(&user)
-	if err == nil && len(user.Username) != 0 {
-		return user, nil
-	}
-
-	// If Redis failed for infra reason, log but continue
-	if err != nil && err != redis.Nil {
-		s.logger.Warn("cache error", zap.Error(err))
-	}
-
-	// 2. Fallback to repo
-	user, err = s.repo.GetById(ctx, id)
-	if err != nil {
-		return User{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to get user by id")
-	}
-
-	// 3. Populate cache asynchronously
-	go func(u User, key string) {
-		bgCtx := context.WithoutCancel(ctx)
-		_, err := s.cache.Set(bgCtx, key, &u, 0).Result()
+	// Get from cache
+	raw, err := s.cache.GetOrLoad(ctx, key, func(ctx context.Context) ([]byte, error) {
+		user, err := s.repo.GetById(ctx, id)
 		if err != nil {
-			s.logger.Error("failed to populate cache", zap.Error(err))
+			return nil, err
 		}
-	}(user, key)
+
+		return json.Marshal(user)
+	})
+	if err != nil {
+		return User{}, err
+	}
+
+	var user User
+	err = json.Unmarshal(raw, &user)
+	if err != nil {
+		return User{}, err
+	}
 
 	return user, nil
 }
@@ -131,10 +124,28 @@ func (s *LocalUsersService) GetByName(ctx context.Context, name string) (User, e
 	ctx, span := tracer.Start(ctx, "users.service.getbyname")
 	defer span.End()
 
-	// Get from cache
+	key := UserPrefix + name
 
-	// Get from repository
-	return s.repo.GetByName(ctx, name)
+	// Get from cache or load into it from db
+	raw, err := s.cache.GetOrLoad(ctx, key, func(ctx context.Context) ([]byte, error) {
+		user, err := s.repo.GetByName(ctx, name)
+		if err != nil {
+			return nil, err
+		}
+
+		return json.Marshal(user)
+	})
+	if err != nil {
+		return User{}, err
+	}
+
+	var user User
+	err = json.Unmarshal(raw, &user)
+	if err != nil {
+		return User{}, err
+	}
+
+	return user, nil
 }
 
 func (s *LocalUsersService) Update(ctx context.Context, dto UpdateDTO) (User, error) {
@@ -148,14 +159,8 @@ func (s *LocalUsersService) Update(ctx context.Context, dto UpdateDTO) (User, er
 	}
 
 	// Invalidate old record from cache, next get call with repopulate it
-	go func() {
-		bgCtx := context.WithoutCancel(ctx)
-		key := UserPrefix + dto.Id
-		err := s.cache.Del(bgCtx, key).Err()
-		if err != nil {
-			s.logger.Error("Failed to delete user from cache", zap.Error(err))
-		}
-	}()
+	key := UserPrefix + dto.Id
+	go s.cache.Delete(ctx, key)
 
 	return user, nil
 }
@@ -171,14 +176,8 @@ func (s *LocalUsersService) Replace(ctx context.Context, dto ReplaceDTO) (User, 
 	}
 
 	// Invalidate old record from cache, next get call with repopulate it
-	go func() {
-		bgCtx := context.WithoutCancel(ctx)
-		key := UserPrefix + dto.Id
-		err := s.cache.Del(bgCtx, key).Err()
-		if err != nil {
-			s.logger.Error("Failed to delete user from cache", zap.Error(err))
-		}
-	}()
+	key := UserPrefix + dto.Id
+	go s.cache.Delete(ctx, key)
 
 	return user, nil
 }
@@ -194,14 +193,8 @@ func (s *LocalUsersService) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUI
 	}
 
 	// Delete from cache
-	go func() {
-		bgCtx := context.WithoutCancel(ctx)
-		key := UserPrefix + dto.Id
-		err := s.cache.Del(bgCtx, key).Err()
-		if err != nil {
-			s.logger.Error("Failed to delete user from cache", zap.Error(err))
-		}
-	}()
+	key := UserPrefix + dto.Id
+	go s.cache.Delete(ctx, key)
 
 	return deletedId, nil
 }
@@ -331,19 +324,34 @@ func (s *LocalUsersService) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]c
 	ctx, span := tracer.Start(ctx, "users.service.bulkadd")
 	defer span.End()
 
-	return s.repo.BulkAdd(ctx, dto)
+	results, err := s.repo.BulkAdd(ctx, dto)
+	if err != nil {
+		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to bulk add users")
+	}
+
+	return results, nil
 }
 
 func (s *LocalUsersService) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
 	ctx, span := tracer.Start(ctx, "users.service.bulkmodify")
 	defer span.End()
 
-	return s.repo.BulkModify(ctx, dto)
+	results, err := s.repo.BulkModify(ctx, dto)
+	if err != nil {
+		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to bulk modify users")
+	}
+
+	return results, nil
 }
 
 func (s *LocalUsersService) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
 	ctx, span := tracer.Start(ctx, "users.service.bulkdelete")
 	defer span.End()
 
-	return s.repo.BulkDelete(ctx, dto)
+	results, err := s.repo.BulkDelete(ctx, dto)
+	if err != nil {
+		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to bulk delete users")
+	}
+
+	return results, nil
 }

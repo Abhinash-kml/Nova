@@ -15,6 +15,7 @@ import (
 	"github.com/abhinash-kml/nova/server/apiserver"
 	"github.com/abhinash-kml/nova/server/auth"
 	"github.com/abhinash-kml/nova/server/auth/providers"
+	"github.com/abhinash-kml/nova/server/cache"
 	"github.com/abhinash-kml/nova/server/channels"
 	"github.com/abhinash-kml/nova/server/clans"
 	"github.com/abhinash-kml/nova/server/comments"
@@ -264,13 +265,15 @@ func main() {
 	redisAuthStore := auth.NewRedisAuthStore(redisClient)
 	auth.SetupJwtService(&config.AuthToken, redisAuthStore, logger)
 
+	tieredCache := cache.NewTieredCache(redisClient, time.Second*30, time.Second*30, time.Second*10)
+
 	// Setup users module
 	{
 		usersRepository := users.NewPostgresRepositoryFromPgxPool(postgresPool, config, logger, config.SeedsConfig.Users)
 		if err = usersRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed users repository", zap.Error(err))
 		}
-		usersService := users.NewLocalUsersService(usersRepository, redisClient, config, logger)
+		usersService := users.NewLocalUsersService(usersRepository, tieredCache, config, logger)
 		usersController := users.NewController(usersService, config, logger)
 		users.SetupRoutes(globalRouter, usersController)
 	}

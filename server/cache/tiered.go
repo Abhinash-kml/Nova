@@ -3,9 +3,11 @@ package cache
 import (
 	"context"
 	"fmt"
+	"math/rand/v2"
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"golang.org/x/sync/singleflight"
 )
 
 type TieredCache struct {
@@ -13,14 +15,15 @@ type TieredCache struct {
 	redis    *redis.Client
 	localTTL time.Duration
 	redisTTL time.Duration
+	sf       singleflight.Group
 }
 
-func NewTieredCache(rc *redis.Client, localTTL, redisTTL time.Duration) *TieredCache {
+func NewTieredCache(rc *redis.Client, localTTL, redisTTL time.Duration, jitterFactor time.Duration) *TieredCache {
 	return &TieredCache{
 		local:    NewLocalCache(100000, 30*time.Second),
 		redis:    rc,
-		localTTL: localTTL,
-		redisTTL: redisTTL,
+		localTTL: localTTL + rand.N(jitterFactor),
+		redisTTL: redisTTL + rand.N(jitterFactor),
 	}
 }
 
@@ -48,10 +51,32 @@ func (c *TieredCache) GetOrLoad(ctx context.Context, key string, loader func(ctx
 	if value, ok := c.Get(ctx, key); ok {
 		return value, nil
 	}
-	value, err := loader(ctx)
+
+	// Use singleflight for cache stampede protection
+	result, err, shared := c.sf.Do(key, func() (any, error) {
+		// Double check
+		// anothe rgoroutine might have populated the local cache
+		if value, ok := c.Get(ctx, key); ok {
+			return value, nil
+		}
+		value, err := loader(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("loader for key %s: %w", key, err)
+		}
+		_ = c.Set(ctx, key, value)
+		return value, nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("loader for key %s: %w", key, err)
+		return nil, err
 	}
-	_ = c.Set(ctx, key, value)
-	return value, nil
+
+	// TODO: Add this is metrics for tracking cache stampedes
+	_ = shared
+
+	return result.([]byte), nil
+}
+
+func (c *TieredCache) Delete(ctx context.Context, key string) error {
+	c.local.Delete(key)
+	return c.redis.Del(ctx, key).Err()
 }

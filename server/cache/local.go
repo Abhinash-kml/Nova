@@ -69,7 +69,7 @@ func (c *LocalCache) evictionLoop(interval time.Duration) {
 	for range ticker.C {
 		now := time.Now()
 		c.data.Range(func(key, value any) bool {
-			if now.After(value.(entry).expiresAt) {
+			if now.After(value.(*entry).expiresAt) {
 				c.data.Delete(key)
 				c.decreaseSize()
 			}
