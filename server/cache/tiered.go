@@ -7,8 +7,11 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"go.opentelemetry.io/otel"
 	"golang.org/x/sync/singleflight"
 )
+
+var tracer = otel.Tracer("tiered-cache")
 
 type TieredCache struct {
 	local    *LocalCache
@@ -28,6 +31,9 @@ func NewTieredCache(rc *redis.Client, localTTL, redisTTL time.Duration, jitterFa
 }
 
 func (c *TieredCache) Get(ctx context.Context, key string) ([]byte, bool) {
+	ctx, span := tracer.Start(ctx, "tieredcache.get")
+	defer span.End()
+
 	// Check local first
 	if val, ok := c.local.Get(key); ok {
 		return val.([]byte), true
@@ -43,11 +49,17 @@ func (c *TieredCache) Get(ctx context.Context, key string) ([]byte, bool) {
 }
 
 func (c *TieredCache) Set(ctx context.Context, key string, value []byte) error {
+	ctx, span := tracer.Start(ctx, "tieredcache.set")
+	defer span.End()
+
 	c.local.Set(key, value, c.localTTL)
 	return c.redis.Set(ctx, key, value, c.redisTTL).Err()
 }
 
 func (c *TieredCache) GetOrLoad(ctx context.Context, key string, loader func(ctx context.Context) ([]byte, error)) ([]byte, error) {
+	ctx, span := tracer.Start(ctx, "tieredcache.getorload")
+	defer span.End()
+
 	if value, ok := c.Get(ctx, key); ok {
 		return value, nil
 	}
@@ -77,6 +89,9 @@ func (c *TieredCache) GetOrLoad(ctx context.Context, key string, loader func(ctx
 }
 
 func (c *TieredCache) Delete(ctx context.Context, key string) error {
+	ctx, span := tracer.Start(ctx, "tieredcache.delete")
+	defer span.End()
+
 	c.local.Delete(key)
 	return c.redis.Del(ctx, key).Err()
 }
