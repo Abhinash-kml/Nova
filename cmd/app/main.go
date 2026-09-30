@@ -284,7 +284,7 @@ func main() {
 		if err = postsRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed posts repository", zap.Error(err))
 		}
-		postsService := posts.NewLocalPostsService(postsRepository, config, redisClient, logger)
+		postsService := posts.NewLocalPostsService(postsRepository, tieredCache, config, logger)
 		postsController := posts.NewController(postsService, config, logger)
 		posts.SetupRoutes(globalRouter, postsController)
 	}
@@ -403,7 +403,11 @@ func main() {
 
 		economy.SetupRoutes(globalRouter, currencyController, walletController)
 	}
+
 	// Setup realtime module
+	// realtimeBroker := realtime.NewRedisBroker(globalCtx, redisClient)
+	// realtime.
+	// realtime.NewHub(globalCtx, realtimeBroker, )
 
 	// Create http api server & start it
 	server := apiserver.New(globalCtx, config.HttpServer, globalRouter, logger)

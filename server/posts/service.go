@@ -2,11 +2,12 @@ package posts
 
 import (
 	"context"
+	"encoding/json"
 
+	"github.com/abhinash-kml/nova/server/cache"
 	"github.com/abhinash-kml/nova/server/common"
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
-	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
@@ -31,14 +32,14 @@ type LocalPostsService struct {
 	repo   PostsRepository
 	config *config.Config
 	logger *zap.Logger
-	cache  *redis.Client
+	cache  *cache.TieredCache
 }
 
-func NewLocalPostsService(repository PostsRepository, c *config.Config, r *redis.Client, l *zap.Logger) *LocalPostsService {
+func NewLocalPostsService(repository PostsRepository, cache *cache.TieredCache, c *config.Config, l *zap.Logger) *LocalPostsService {
 	return &LocalPostsService{
 		repo:   repository,
 		config: c,
-		cache:  r,
+		cache:  cache,
 		logger: l,
 	}
 }
@@ -85,32 +86,26 @@ func (s *LocalPostsService) GetById(ctx context.Context, id uuid.UUID) (Post, er
 
 	key := PostPrefix + id.String()
 
-	// 1. Try cache
-	var post Post
-	err := s.cache.Get(ctx, key).Scan(&post)
-	if err == nil && len(post.Title) != 0 {
-		return post, nil
-	}
-
-	// If Redis failed for infra reason, log but continue
-	if err != nil && err != redis.Nil {
-		s.logger.Warn("cache error", zap.Error(err))
-	}
-
-	// 2. Fallback to repo
-	post, err = s.repo.GetById(ctx, id)
-	if err != nil {
-		return Post{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to get post by id")
-	}
-
-	// 3. Populate cache asynchronously (safe version)
-	go func(p Post, key string) {
-		bgCtx := context.WithoutCancel(ctx)
-		_, err := s.cache.Set(bgCtx, key, &p, 0).Result()
+	// Get from cache or load in it
+	raw, err := s.cache.GetOrLoad(ctx, key, func(ctx context.Context) ([]byte, error) {
+		post, err := s.repo.GetById(ctx, id)
 		if err != nil {
-			s.logger.Error("failed to populate cache", zap.Error(err))
+			return nil, err
 		}
-	}(post, key)
+
+		bytes, err := json.Marshal(post)
+		if err != nil {
+			return nil, err
+		}
+
+		return bytes, nil
+	})
+
+	var post Post
+	err = json.Unmarshal(raw, &post)
+	if err != nil {
+		return Post{}, nil
+	}
 
 	return post, nil
 }
@@ -119,9 +114,27 @@ func (s *LocalPostsService) GetByName(ctx context.Context, name string) (Post, e
 	ctx, span := tracer.Start(ctx, "posts.service.getbyname")
 	defer span.End()
 
-	post, err := s.repo.GetByName(ctx, name)
+	key := PostPrefix + name
+
+	// Get from cache or load in it
+	raw, err := s.cache.GetOrLoad(ctx, key, func(ctx context.Context) ([]byte, error) {
+		post, err := s.repo.GetByName(ctx, key)
+		if err != nil {
+			return nil, err
+		}
+
+		bytes, err := json.Marshal(post)
+		if err != nil {
+			return nil, err
+		}
+
+		return bytes, nil
+	})
+
+	var post Post
+	err = json.Unmarshal(raw, &post)
 	if err != nil {
-		return Post{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to  get post by name")
+		return Post{}, nil
 	}
 
 	return post, nil
@@ -138,14 +151,8 @@ func (s *LocalPostsService) Update(ctx context.Context, dto UpdateDTO) (Post, er
 	}
 
 	// Invalidate old record from cache, next get call with repopulate it
-	go func() {
-		bgCtx := context.WithoutCancel(ctx)
-		key := PostPrefix + dto.Id
-		err := s.cache.Del(bgCtx, key).Err()
-		if err != nil {
-			s.logger.Error("Failed to delete post from cache", zap.Error(err))
-		}
-	}()
+	key := PostPrefix + dto.Id
+	go s.cache.Delete(ctx, key)
 
 	return post, nil
 }
@@ -161,14 +168,8 @@ func (s *LocalPostsService) Replace(ctx context.Context, dto ReplaceDTO) (Post, 
 	}
 
 	// Invalidate old record from cache, next get call with repopulate it
-	go func() {
-		bgCtx := context.WithoutCancel(ctx)
-		key := PostPrefix + dto.Id
-		err := s.cache.Del(bgCtx, key).Err()
-		if err != nil {
-			s.logger.Error("Failed to delete post from cache", zap.Error(err))
-		}
-	}()
+	key := PostPrefix + dto.Id
+	go s.cache.Delete(ctx, key)
 
 	return post, nil
 }
@@ -184,14 +185,8 @@ func (s *LocalPostsService) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUI
 	}
 
 	// Delete from cache
-	go func() {
-		bgCtx := context.WithoutCancel(ctx)
-		key := PostPrefix + dto.Id
-		err := s.cache.Del(bgCtx, key).Err()
-		if err != nil {
-			s.logger.Error("Failed to delete post from cache", zap.Error(err))
-		}
-	}()
+	key := PostPrefix + dto.Id
+	go s.cache.Delete(ctx, key)
 
 	return deletedId, nil
 }
