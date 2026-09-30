@@ -2,11 +2,12 @@ package comments
 
 import (
 	"context"
+	"encoding/json"
 
+	"github.com/abhinash-kml/nova/server/cache"
 	"github.com/abhinash-kml/nova/server/common"
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
-	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
@@ -30,14 +31,14 @@ type LocalCommentsService struct {
 	repo   CommentsRepository
 	config *config.Config
 	logger *zap.Logger
-	cache  *redis.Client
+	cache  *cache.TieredCache
 }
 
-func NewLocalCommentsService(repository CommentsRepository, c *config.Config, r *redis.Client, l *zap.Logger) *LocalCommentsService {
+func NewLocalCommentsService(repository CommentsRepository, cache *cache.TieredCache, c *config.Config, l *zap.Logger) *LocalCommentsService {
 	return &LocalCommentsService{
 		repo:   repository,
 		config: c,
-		cache:  r,
+		cache:  cache,
 		logger: l,
 	}
 }
@@ -84,33 +85,29 @@ func (s *LocalCommentsService) GetById(ctx context.Context, id uuid.UUID) (Comme
 
 	key := CommentPrefix + id.String()
 
-	// 1. Try cache
-	var comment Comment
-	err := s.cache.Get(ctx, key).Scan(&comment)
-	if err == nil && len(comment.Id.String()) != 0 {
-		return comment, nil
-	}
-
-	// If Redis failed for infra reason, log but continue
-	if err != nil && err != redis.Nil {
-		s.logger.Warn("cache error", zap.Error(err))
-	}
-
-	// 2. Fallback to repo
-	comment, err = s.repo.GetById(ctx, id)
-	if err != nil {
-		return Comment{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to get comment by id")
-	}
-
-	// 3. Populate cache asynchronously (safe version)
-	go func(c Comment, key string) {
-		bgCtx := context.WithoutCancel(ctx)
-		_, err := s.cache.Set(bgCtx, key, &c, 0).Result()
-
+	raw, err := s.cache.GetOrLoad(ctx, key, func(ctx context.Context) ([]byte, error) {
+		comment, err := s.repo.GetById(ctx, id)
 		if err != nil {
-			s.logger.Error("failed to populate cache", zap.Error(err))
+			return nil, err
 		}
-	}(comment, key)
+
+		bytes, err := json.Marshal(comment)
+		if err != nil {
+			return nil, err
+		}
+
+		return bytes, nil
+	})
+	if err != nil {
+		return Comment{}, err
+	}
+
+	var comment Comment
+
+	err = json.Unmarshal(raw, &comment)
+	if err != nil {
+		return Comment{}, err
+	}
 
 	return comment, nil
 }
@@ -126,14 +123,8 @@ func (s *LocalCommentsService) Update(ctx context.Context, dto UpdateDTO) (Comme
 	}
 
 	// Invalidate old record from cache, next get call with repopulate it
-	go func() {
-		bgCtx := context.WithoutCancel(ctx)
-		key := CommentPrefix + dto.Id
-		err := s.cache.Del(bgCtx, key).Err()
-		if err != nil {
-			s.logger.Error("Failed to delete comment from cache", zap.Error(err))
-		}
-	}()
+	key := CommentPrefix + dto.Id
+	go s.cache.Delete(ctx, key)
 
 	return comment, nil
 }
@@ -149,14 +140,8 @@ func (s *LocalCommentsService) Replace(ctx context.Context, dto ReplaceDTO) (Com
 	}
 
 	// Invalidate old record from cache, next get call with repopulate it
-	go func() {
-		bgCtx := context.WithoutCancel(ctx)
-		key := CommentPrefix + dto.Id
-		err := s.cache.Del(bgCtx, key).Err()
-		if err != nil {
-			s.logger.Error("Failed to delete comment from cache", zap.Error(err))
-		}
-	}()
+	key := CommentPrefix + dto.Id
+	go s.cache.Delete(ctx, key)
 
 	return comment, nil
 }
@@ -172,14 +157,8 @@ func (s *LocalCommentsService) Delete(ctx context.Context, dto DeleteDTO) (uuid.
 	}
 
 	// Delete from cache
-	go func() {
-		bgCtx := context.WithoutCancel(ctx)
-		key := CommentPrefix + dto.Id
-		err := s.cache.Del(bgCtx, key).Err()
-		if err != nil {
-			s.logger.Error("Failed to delete comment from cache", zap.Error(err))
-		}
-	}()
+	key := CommentPrefix + dto.Id
+	go s.cache.Delete(ctx, key)
 
 	return deletedId, nil
 }
@@ -214,7 +193,7 @@ func (s *LocalCommentsService) BulkDelete(ctx context.Context, dto BulkDeleteDTO
 
 	results, err := s.repo.BulkDelete(ctx, dto)
 	if err != nil {
-		return nil, common.TranslatePostgresError(err, s.logger)
+		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to bulk delete comments")
 	}
 
 	return results, nil

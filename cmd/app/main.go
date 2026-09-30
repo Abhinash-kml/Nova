@@ -295,7 +295,7 @@ func main() {
 		if err = commentsRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed comments repository", zap.Error(err))
 		}
-		commentsService := comments.NewLocalCommentsService(commentsRepository, config, redisClient, logger)
+		commentsService := comments.NewLocalCommentsService(commentsRepository, tieredCache, config, logger)
 		commentsController := comments.NewController(commentsService, config, logger)
 		comments.SetupRoutes(globalRouter, commentsController)
 	}
