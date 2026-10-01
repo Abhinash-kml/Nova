@@ -29,7 +29,7 @@ type Hub struct {
 	logger *zap.Logger
 }
 
-func NewHub(ctx context.Context, pubsub RealtimeBroker, store SessionStore, cfg config.RealtimeHubConfig, l *zap.Logger) *Hub {
+func NewHub(ctx context.Context, broker RealtimeBroker, store SessionStore, cfg config.RealtimeHubConfig, l *zap.Logger) *Hub {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Hub{
 		register:   make(chan *Client, 100),
@@ -37,6 +37,8 @@ func NewHub(ctx context.Context, pubsub RealtimeBroker, store SessionStore, cfg 
 		send:       make(chan Envelope, 100),
 		incoming:   make(chan Envelope, 100),
 		broadcast:  make(chan Envelope, 100),
+		registry:   store,
+		broker:     broker,
 		ctx:        ctx,
 		cancel:     cancel,
 		config:     cfg,

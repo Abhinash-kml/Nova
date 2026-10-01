@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -27,6 +29,7 @@ import (
 	"github.com/abhinash-kml/nova/server/leaderboard"
 	"github.com/abhinash-kml/nova/server/observability"
 	"github.com/abhinash-kml/nova/server/posts"
+	"github.com/abhinash-kml/nova/server/realtime"
 	"github.com/abhinash-kml/nova/server/secretsmanager"
 	"github.com/abhinash-kml/nova/server/social"
 	"github.com/abhinash-kml/nova/server/stats"
@@ -34,6 +37,8 @@ import (
 	"github.com/gin-contrib/cors"
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 	"github.com/redis/go-redis/extra/redisotel/v9"
 	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/contrib/bridges/otelzap"
@@ -405,9 +410,46 @@ func main() {
 	}
 
 	// Setup realtime module
-	// realtimeBroker := realtime.NewRedisBroker(globalCtx, redisClient)
-	// realtime.
-	// realtime.NewHub(globalCtx, realtimeBroker, )
+	realtimeBroker := realtime.NewRedisBroker(globalCtx, redisClient)
+	realtimeSessionStore := realtime.NewInMemorySessionStore(100)
+	realtimeHub := realtime.NewHub(globalCtx, realtimeBroker, realtimeSessionStore, config.Realtime, logger)
+	realtimeHub.Initialize()
+	realtimeHub.Run()
+
+	// Setup ws upgrader and all
+	globalRouter.GET("/ws", func(ctx *gin.Context) {
+		upgrader := websocket.Upgrader{
+			CheckOrigin: func(r *http.Request) bool {
+				return true
+			},
+		}
+
+		conn, err := upgrader.Upgrade(ctx.Writer, ctx.Request, ctx.Request.Header)
+		if err != nil {
+			logger.Error("Failed to upgrade connection to websocket")
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"status": "failed",
+				"error":  err.Error(),
+			})
+			return
+		}
+		// defer conn.Close() <-- Dont do this here, this will close the connection on handler end
+
+		userID, _ := uuid.NewV7()
+		rtClient := realtime.NewClient(&config.Websocket, userID, conn, nil, realtimeHub)
+		realtimeSessionStore.Add(rtClient)
+		realtimeHub.Register(rtClient)
+
+		go rtClient.ReadIncoming()
+		go rtClient.ProcessOutgoing()
+
+		rawBytes := []byte(`{"user_id": 123, "roles": ["admin", "editor"]}`)
+		rtClient.Send(
+			realtime.Envelope{
+				Data: json.RawMessage(rawBytes),
+			},
+		)
+	})
 
 	// Create http api server & start it
 	server := apiserver.New(globalCtx, config.HttpServer, globalRouter, logger)

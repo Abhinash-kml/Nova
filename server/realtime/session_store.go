@@ -15,12 +15,18 @@ type SessionStore interface {
 }
 
 type InMemorySessionStore struct {
-	mu       sync.RWMutex
+	mu       sync.Mutex
 	sessions map[uuid.UUID]*Client
 }
 
+func NewInMemorySessionStore(maxSessions int) *InMemorySessionStore {
+	return &InMemorySessionStore{
+		sessions: make(map[uuid.UUID]*Client, maxSessions),
+	}
+}
+
 func (s *InMemorySessionStore) Add(c *Client) {
-	s.mu.RLock()
+	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.sessions[c.Uid] = c
 }

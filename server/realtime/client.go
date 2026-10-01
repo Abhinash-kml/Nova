@@ -10,13 +10,6 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	WriteWait    = 10 * time.Second
-	PongWait     = 5 * time.Second
-	PingInterval = 5 * time.Second
-	MaxMessages  = 1024
-)
-
 type Client struct {
 	Uid    uuid.UUID
 	send   chan Envelope
@@ -44,26 +37,42 @@ func (c *Client) ReadIncoming() {
 		c.hub.Unregister(c)
 	}()
 
-	c.conn.SetReadLimit(int64(c.config.MessageSize))
-	c.conn.SetReadDeadline(time.Now().Add(time.Duration(c.config.PongWait)))
+	c.conn.SetReadLimit(c.config.MessageSize)
+	c.conn.SetReadDeadline(time.Now().Add(c.config.PongWait))
 	c.conn.SetPongHandler(func(appData string) error {
-		c.conn.SetReadDeadline(time.Now().Add(time.Duration(c.config.PongWait)))
+		c.conn.SetReadDeadline(time.Now().Add(c.config.PongWait))
 		return nil
 	})
 
 	// Read loop
 	for {
-		var incomingEnvelope Envelope
-		err := c.conn.ReadJSON(&incomingEnvelope)
+		messageType, payload, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsCloseError(err, websocket.CloseAbnormalClosure,
 				websocket.CloseNormalClosure,
 				websocket.CloseGoingAway) {
 				return
 			}
+
+			c.hub.Logger().Error("Reading message error", zap.Error(err))
+			break
+		}
+
+		c.conn.SetReadDeadline(time.Now().Add(c.config.PongWait))
+
+		if messageType != websocket.TextMessage && messageType != websocket.BinaryMessage {
+			continue
 		}
 
 		// TODO: Maybe implement a pipeline for this ?
+
+		// Parse incoming message
+		var incomingEnvelope Envelope
+		err = json.Unmarshal(payload, &incomingEnvelope)
+		if err != nil {
+			c.hub.logger.Error("Failed to parse incoming envelope", zap.Error(err))
+			continue
+		}
 
 		// Drop incoming message if it exceeded its ttl (message can be delayed dudee to network issues)
 		if time.Since(incomingEnvelope.Header.CreatedAt) >= incomingEnvelope.Header.TTL {
@@ -82,9 +91,10 @@ func (c *Client) ReadIncoming() {
 // TODO: Subjected to improvement
 func (c *Client) ProcessOutgoing() {
 	// Write loop
-	ticker := time.NewTicker(PingInterval)
+	ticker := time.NewTicker(c.config.PingInterval)
 	defer ticker.Stop()
 
+Loop:
 	for {
 		select {
 		case messageEnvelope, ok := <-c.send:
@@ -93,12 +103,12 @@ func (c *Client) ProcessOutgoing() {
 				return
 			}
 
-			c.conn.SetWriteDeadline(time.Now().Add(time.Duration(c.config.WriteWait)))
+			c.conn.SetWriteDeadline(time.Now().Add(c.config.WriteWait))
 
 			writer, err := c.conn.NextWriter(websocket.TextMessage)
 			if err != nil {
 				c.hub.Logger().Error("Failed to get writer for writing websocket message. Skipped some messages...", zap.Error(err))
-				break
+				break Loop
 			}
 
 			encoder := json.NewEncoder(writer)
@@ -127,17 +137,16 @@ func (c *Client) ProcessOutgoing() {
 
 			if err := writer.Close(); err != nil {
 				c.hub.Logger().Error("Failed to write message using websocket writer", zap.Error(err))
-				continue
+				break Loop
 			}
 		case <-ticker.C:
-			c.conn.SetWriteDeadline(time.Now().Add(time.Duration(c.config.WriteWait)))
+			c.conn.SetWriteDeadline(time.Now().Add(c.config.WriteWait))
 			err := c.conn.WriteMessage(websocket.PingMessage, nil)
 			if err != nil {
 				c.hub.Logger().Error("Failed to send ping message to client", zap.Error(err))
 				return
 			}
 		}
-
 	}
 }
 

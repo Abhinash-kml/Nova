@@ -23,9 +23,9 @@ realtime-hub:
     broker: 10
 
 websocket:
-  ping-interval: 5
-  write-wait: 5
-  pong-wait: 5
+  ping-interval: 3s
+  write-wait: 5s
+  pong-wait: 10s
   message-size: 512
   max-messages: 1024
 

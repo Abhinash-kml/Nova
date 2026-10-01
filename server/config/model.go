@@ -1,5 +1,7 @@
 package config
 
+import "time"
+
 type Config struct {
 	AppName       string              `mapstructure:"appname"`
 	HttpServer    HttpServerConfig    `mapstructure:"http"`
@@ -50,11 +52,11 @@ type RealtimeHubGoroutineConfig struct {
 }
 
 type WebsocketConfig struct {
-	PingInterval int `mapstructure:"ping-interval"`
-	PongWait     int `mapstructure:"pong-wait"`
-	WriteWait    int `mapstructure:"write-wait"`
-	MessageSize  int `mapstructure:"message-size"`
-	MaxMessages  int `mapstructure:"max-messages"`
+	PingInterval time.Duration `mapstructure:"ping-interval"`
+	PongWait     time.Duration `mapstructure:"pong-wait"`
+	WriteWait    time.Duration `mapstructure:"write-wait"`
+	MessageSize  int64         `mapstructure:"message-size"`
+	MaxMessages  int64         `mapstructure:"max-messages"`
 }
 
 type RedisConfig struct {
