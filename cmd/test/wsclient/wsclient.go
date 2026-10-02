@@ -1,15 +1,20 @@
 package main
 
 import (
+	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
+	"github.com/abhinash-kml/nova/server/realtime"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -47,6 +52,9 @@ func main() {
 		conn.Close() // This will force ReadMessage() below to unblock with an error
 	}()
 
+	myId, _ := uuid.NewV7()
+	go ReadFromStdIn(conn, myId)
+
 	// 2. Simple, non-blocking, clean read loop
 	for {
 		messageType, raw, err := conn.ReadMessage()
@@ -63,5 +71,56 @@ func main() {
 		if messageType == websocket.TextMessage {
 			fmt.Println(string(raw))
 		}
+	}
+}
+
+func ReadFromStdIn(conn *websocket.Conn, senderID uuid.UUID) {
+	scanner := bufio.NewScanner(os.Stdin)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		parts := strings.Split(line, "@")
+		message := parts[1]
+		targetID, _ := uuid.NewV7FromReader(strings.NewReader(parts[0]))
+
+		chatMessage := realtime.ChatMessage{
+			ChatId:     uuid.New(),
+			MessageId:  uuid.New(),
+			SenderID:   senderID,
+			ReceiverId: targetID,
+			Body:       message,
+		}
+
+		userID, _ := uuid.NewV7()
+		header := realtime.Header{
+			Type:       realtime.MessageChat,
+			SenderID:   userID,
+			ReceiverID: targetID,
+			CreatedAt:  time.Now(),
+			TTL:        time.Duration(time.Hour * 12),
+		}
+
+		raw, _ := json.Marshal(chatMessage)
+		envelope := realtime.Envelope{
+			Header: header,
+			Data:   json.RawMessage(raw),
+		}
+
+		writer, err := conn.NextWriter(websocket.TextMessage)
+		if err != nil {
+			fmt.Println("Failed to get next writer to write messages")
+			return
+		}
+		defer writer.Close()
+
+		err = json.NewEncoder(writer).Encode(envelope)
+		if err != nil {
+			fmt.Println("Failed to encode and send message", err)
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatalf("Failed to read: %v", err)
 	}
 }

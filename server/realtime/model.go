@@ -10,14 +10,14 @@ import (
 type MessageType int
 
 const (
-	MessageChat MessageType = iota
+	MessageChat MessageType = iota + 1
 	MessagePresence
 )
 
 type Status int
 
 const (
-	StatusOnline Status = iota
+	StatusOnline Status = iota + 1
 	StatusOffline
 	StatusAway
 )
@@ -25,7 +25,7 @@ const (
 type ReceiptType int
 
 const (
-	ReceiptSent ReceiptType = iota
+	ReceiptSent ReceiptType = iota + 1
 	ReceiptDelivered
 	ReceiptRead
 )
@@ -33,7 +33,7 @@ const (
 type ChatMessageType int
 
 const (
-	TypeText ChatMessageType = iota
+	TypeText ChatMessageType = iota + 1
 	TypeImage
 	TypeAudio
 	TypeVideo
@@ -43,7 +43,7 @@ const (
 type FileType int
 
 const (
-	FileText FileType = iota
+	FileText FileType = iota + 1
 	FileAudio
 	FileVideo
 	FileDocument
@@ -52,19 +52,19 @@ const (
 type MessageStatus int
 
 const (
-	StatusSent MessageStatus = iota
+	StatusSent MessageStatus = iota + 1
 	StatusDelivered
 	StatusRead
 )
 
 type Header struct {
 	Type       MessageType   `json:"message_type"`
-	SourceID   uuid.UUID     `json:"source_id"`
-	SenderID   uuid.UUID     `json:"sender_id"`
-	ReceiverID uuid.UUID     `json:"receiver_id"`
+	SourceID   uuid.UUID     `json:"source_id,omitempty"`
+	SenderID   uuid.UUID     `json:"sender_id,omitempty"`
+	ReceiverID uuid.UUID     `json:"receiver_id,omitempty"`
 	CreatedAt  time.Time     `json:"created_at"`
 	TTL        time.Duration `json:"ttl"`
-	Hops       int           `json:"hops"`
+	Hops       int           `json:"hops,omitempty"`
 }
 
 type Envelope struct {
@@ -74,19 +74,19 @@ type Envelope struct {
 
 type ChatMessage struct {
 	MessageId   uuid.UUID       `json:"id"`
-	ChatId      uuid.UUID       `json:"chat_id"`
-	SenderID    string          `json:"sender_id"`
-	ReceiverId  uuid.UUID       `json:"receiver_id"`
 	MessageType ChatMessageType `json:"message_type"`
+	SenderID    uuid.UUID       `json:"sender_id"`
+	ReceiverId  uuid.UUID       `json:"receiver_id"`
+	ChatId      uuid.UUID       `json:"chat_id"`
 	ParentId    uuid.UUID       `json:"parent_id,omitempty"`
 
 	Body         string       `json:"body"`
 	Attachements []Attachment `json:"attachments,omitempty"`
 
 	Forwarded bool          `json:"forwarded,omitempty"`
-	Deleted   bool          `json:"deleted"`
-	ViewCount int           `json:"view_count"`
-	Status    MessageStatus `json:"status"`
+	Deleted   bool          `json:"deleted,omitempty"`
+	ViewCount int           `json:"view_count,omitempty"`
+	Status    MessageStatus `json:"status,omitempty"`
 	EditedAt  time.Time     `json:"edited_at,omitempty"`
 	CreatedAt time.Time     `json:"created_at"`
 }

@@ -2,6 +2,7 @@ package realtime
 
 import (
 	"encoding/json"
+	"os"
 	"time"
 
 	"github.com/abhinash-kml/nova/server/config"
@@ -11,22 +12,22 @@ import (
 )
 
 type Client struct {
-	Uid    uuid.UUID
-	send   chan Envelope
-	conn   *websocket.Conn
-	hub    *Hub
-	pm     *PresenceManager
-	config *config.WebsocketConfig
+	Uid            uuid.UUID
+	queuedMessages chan Envelope
+	conn           *websocket.Conn
+	hub            *Hub
+	pm             *PresenceManager
+	config         *config.WebsocketConfig
 }
 
 func NewClient(config *config.WebsocketConfig, uid uuid.UUID, connection *websocket.Conn, pm *PresenceManager, hub *Hub) *Client {
 	return &Client{
-		Uid:    uid,
-		conn:   connection,
-		pm:     pm,
-		hub:    hub,
-		send:   make(chan Envelope, 1000),
-		config: config,
+		Uid:            uid,
+		conn:           connection,
+		pm:             pm,
+		hub:            hub,
+		queuedMessages: make(chan Envelope, 1000),
+		config:         config,
 	}
 }
 
@@ -74,6 +75,28 @@ func (c *Client) ReadIncoming() {
 			continue
 		}
 
+		encoder := json.NewEncoder(os.Stdout)
+		encoder.SetIndent("", "   ")
+		encoder.Encode(incomingEnvelope)
+
+		// Send back MessageReceipt
+		var data ChatMessage
+		json.Unmarshal(incomingEnvelope.Data, &data)
+		receipt := ReadReceipt{
+			MessageId: data.MessageId,
+			Status:    ReceiptSent,
+		}
+		raw, _ := json.Marshal(receipt)
+		envelope := Envelope{
+			Header: Header{
+				Type:       MessageChat,
+				SourceID:   uuid.New(),
+				ReceiverID: incomingEnvelope.Header.SenderID,
+			},
+			Data: json.RawMessage(raw),
+		}
+		c.Send(envelope)
+
 		// Drop incoming message if it exceeded its ttl (message can be delayed dudee to network issues)
 		if time.Since(incomingEnvelope.Header.CreatedAt) >= incomingEnvelope.Header.TTL {
 			continue
@@ -97,7 +120,7 @@ func (c *Client) ProcessOutgoing() {
 Loop:
 	for {
 		select {
-		case messageEnvelope, ok := <-c.send:
+		case messageEnvelope, ok := <-c.queuedMessages:
 			if !ok {
 				c.conn.WriteMessage(websocket.CloseMessage, nil)
 				return
@@ -113,20 +136,21 @@ Loop:
 
 			encoder := json.NewEncoder(writer)
 			if encoder == nil {
-				c.hub.Logger().Error("Failed to create json encoder. Websocker messages skipped")
+				c.hub.Logger().Error("Failed to create json encoder. Skipped message")
 				continue
 			}
+
 			err = encoder.Encode(messageEnvelope)
 			if err != nil {
-				c.hub.Logger().Error("Failed to encode envelope type to json. Skipped message", zap.Error(err))
+				c.hub.Logger().Error("Failed to encode outgoing envelope. Skipped message", zap.Error(err))
 				continue
 			}
 
 			// Batch all messages in the send channel using newline \n character
-			len := len(c.send)
+			len := len(c.queuedMessages)
 			for range len {
 				writer.Write([]byte{'\n'})
-				message := <-c.send
+				message := <-c.queuedMessages
 				encoder := json.NewEncoder(writer)
 				err := encoder.Encode(message)
 				if err != nil {
@@ -136,7 +160,7 @@ Loop:
 			}
 
 			if err := writer.Close(); err != nil {
-				c.hub.Logger().Error("Failed to write message using websocket writer", zap.Error(err))
+				c.hub.Logger().Error("Failed to write message using writer", zap.Error(err))
 				break Loop
 			}
 		case <-ticker.C:
@@ -151,5 +175,5 @@ Loop:
 }
 
 func (c *Client) Send(message Envelope) {
-	c.send <- message
+	c.queuedMessages <- message
 }

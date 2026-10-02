@@ -26,7 +26,7 @@ websocket:
   ping-interval: 3s
   write-wait: 5s
   pong-wait: 10s
-  message-size: 512
+  message-size: 5000
   max-messages: 1024
 
 redis:
