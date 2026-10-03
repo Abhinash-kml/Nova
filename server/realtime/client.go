@@ -18,6 +18,7 @@ type Client struct {
 	hub            *Hub
 	pm             *PresenceManager
 	config         *config.WebsocketConfig
+	persister      MessagePersister
 }
 
 func NewClient(config *config.WebsocketConfig, uid uuid.UUID, connection *websocket.Conn, pm *PresenceManager, hub *Hub) *Client {
@@ -65,8 +66,6 @@ func (c *Client) ReadIncoming() {
 			continue
 		}
 
-		// TODO: Maybe implement a pipeline for this ?
-
 		// Parse incoming message
 		var incomingEnvelope Envelope
 		err = json.Unmarshal(payload, &incomingEnvelope)
@@ -78,36 +77,6 @@ func (c *Client) ReadIncoming() {
 		encoder := json.NewEncoder(os.Stdout)
 		encoder.SetIndent("", "   ")
 		encoder.Encode(incomingEnvelope)
-
-		// Send back MessageReceipt
-		var data ChatMessage
-		json.Unmarshal(incomingEnvelope.Data, &data)
-		receipt := ReadReceipt{
-			MessageId: data.MessageId,
-			Status:    ReceiptSent,
-		}
-		raw, _ := json.Marshal(receipt)
-		envelope := Envelope{
-			Header: Header{
-				Type:       MessageChat,
-				SourceID:   uuid.New(),
-				ReceiverID: incomingEnvelope.Header.SenderID,
-			},
-			Data: json.RawMessage(raw),
-		}
-		c.Send(envelope)
-
-		// Drop incoming message if it exceeded its ttl (message can be delayed dudee to network issues)
-		if time.Since(incomingEnvelope.Header.CreatedAt) >= incomingEnvelope.Header.TTL {
-			continue
-		}
-
-		// If message type is Presence event - simply send it to Presence manager
-		if incomingEnvelope.Header.Type == MessagePresence {
-			c.pm.SetStatus(c.Uid, incomingEnvelope)
-		}
-
-		c.hub.Send(incomingEnvelope)
 	}
 }
 
@@ -176,4 +145,60 @@ Loop:
 
 func (c *Client) Send(message Envelope) {
 	c.queuedMessages <- message
+}
+
+func (c *Client) ProcessMessage() {
+	message := <-c.queuedMessages
+
+	// 1. Filter using meta-data
+	if time.Since(message.Header.CreatedAt) >= message.Header.TTL {
+		return
+	}
+
+	// If message type is Presence event - simply send it to Presence manager
+	if message.Header.Type == MessagePresence {
+		c.pm.SetStatus(c.Uid, message)
+	}
+
+	// 2. Persist
+	c.PersistMessage(message)
+
+	// 3. Send Acknowledgement receipt
+	c.SendAcknowledgement(message)
+
+	// 4. Forward it to hub for realtime forwarding
+	c.hub.Send(message)
+}
+
+func (c *Client) PersistMessage(message Envelope) bool {
+	err := c.persister.Persist(message)
+	if err != nil {
+		return false
+	}
+
+	return true
+}
+
+func (c *Client) SendAcknowledgement(message Envelope) bool {
+	var data ChatMessage
+	json.Unmarshal(message.Data, &data)
+
+	receipt := ReadReceipt{
+		MessageId: data.MessageId,
+		Status:    ReceiptSent,
+	}
+
+	raw, _ := json.Marshal(receipt)
+	envelope := Envelope{
+		Header: Header{
+			Type:       MessageChat,
+			SourceID:   uuid.New(),
+			ReceiverID: message.Header.SenderID,
+		},
+		Data: json.RawMessage(raw),
+	}
+
+	c.Send(envelope)
+
+	return true
 }

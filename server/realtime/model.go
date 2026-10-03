@@ -75,8 +75,6 @@ type Envelope struct {
 type ChatMessage struct {
 	MessageId   uuid.UUID       `json:"id"`
 	MessageType ChatMessageType `json:"message_type"`
-	SenderID    uuid.UUID       `json:"sender_id"`
-	ReceiverId  uuid.UUID       `json:"receiver_id"`
 	ChatId      uuid.UUID       `json:"chat_id"`
 	ParentId    uuid.UUID       `json:"parent_id,omitempty"`
 

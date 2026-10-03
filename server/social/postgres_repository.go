@@ -2,10 +2,13 @@ package social
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/abhinash-kml/nova/server/config"
+	"github.com/abhinash-kml/nova/server/realtime"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
@@ -428,4 +431,137 @@ func (r *PostgresRepository) GetMutualFriends(ctx context.Context, dto GetMutual
 	}
 
 	return mutualFriendIDs, nil
+}
+
+func (r *PostgresRepository) SendMessage(ctx context.Context, envelope realtime.Envelope) error {
+	query := `
+		INSERT INTO messages(
+			sender_id,
+			conversation_id,
+			body,
+			created_at
+		) VALUES (
+			$1,
+			$2,
+			$3,
+			$4 
+		);
+	`
+
+	var chatMessage realtime.ChatMessage
+	err := json.Unmarshal(envelope.Data, &chatMessage)
+	if err != nil {
+		return fmt.Errorf("unmarshalling message: %w", err)
+	}
+
+	_, err = r.pgx.Exec(
+		ctx,
+		query,
+		envelope.Header.SenderID,
+		chatMessage.ChatId,
+		chatMessage.Body,
+		chatMessage.CreatedAt,
+	)
+	if err != nil {
+		return fmt.Errorf("inserting message: %w", err)
+	}
+
+	return nil
+}
+
+func (r *PostgresRepository) CheckIfConversationExists(ctx context.Context) (bool, error) {
+	return true, nil
+}
+
+func (r *PostgresRepository) CreateConversation(ctx context.Context, dto CreateConversationDTO) (ConversationDetailsDTO, error) {
+	query := `
+		INSERT INTO conversations(
+			id,
+			type,
+			name
+		)
+		VALUES (
+			$1,
+			$2,
+			$3
+		)
+		RETURNING
+			id,
+			type,
+			name;
+	`
+
+	id, _ := uuid.NewV7()
+
+	row := r.pgx.QueryRow(
+		ctx,
+		query,
+		id,
+		dto.Type,
+		dto.Name,
+	)
+
+	var cd ConversationDetailsDTO
+	err := row.Scan(
+		&cd.ID,
+		&cd.Type,
+		&cd.Name,
+	)
+	if err != nil {
+		return ConversationDetailsDTO{}, fmt.Errorf("scanning row: %w", err)
+	}
+
+	return cd, nil
+}
+
+func (r *PostgresRepository) AddConversationParticipant(ctx context.Context, dto AddConversationParticipantDTO) error {
+	query := `
+		INSERT INTO conversation_participant(
+			conversation_id,
+			user_id,
+			joined_at
+		) VALUES (
+			$1,
+			$2,
+			$3
+		);
+	`
+
+	now := time.Now()
+
+	_, err := r.pgx.Exec(
+		ctx,
+		query,
+		dto.ConversationID,
+		dto.UserID,
+		now,
+	)
+	if err != nil {
+		return fmt.Errorf("adding participant: %w", err)
+	}
+
+	return nil
+}
+
+func (r *PostgresRepository) RemoveConversationParticipant(ctx context.Context, dto RemoveConversationParticipantDTO) error {
+	query := `
+		DELETE FROM 
+			conversation_participants
+		WHERE
+			conversation_id = $1
+			AND
+			user_id IN($2);
+	`
+
+	_, err := r.pgx.Exec(
+		ctx,
+		query,
+		dto.ConversationID,
+		dto.UserID,
+	)
+	if err != nil {
+		return fmt.Errorf("removing participants: %w", err)
+	}
+
+	return nil
 }

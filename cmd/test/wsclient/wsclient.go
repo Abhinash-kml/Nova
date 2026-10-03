@@ -85,11 +85,9 @@ func ReadFromStdIn(conn *websocket.Conn, senderID uuid.UUID) {
 		targetID, _ := uuid.NewV7FromReader(strings.NewReader(parts[0]))
 
 		chatMessage := realtime.ChatMessage{
-			ChatId:     uuid.New(),
-			MessageId:  uuid.New(),
-			SenderID:   senderID,
-			ReceiverId: targetID,
-			Body:       message,
+			ChatId:    uuid.New(),
+			MessageId: uuid.New(),
+			Body:      message,
 		}
 
 		userID, _ := uuid.NewV7()
