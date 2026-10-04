@@ -1,1 +1,7 @@
 DROP TABLE IF EXISTS friendships CASCADE;
+
+DROP TABLE IF EXISTS conversations CASCADE;
+
+DROP TABLE IF EXISTS messages CASCADE;
+
+DROP TABLE IF EXISTS conversation_participants;

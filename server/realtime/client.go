@@ -76,11 +76,15 @@ func (c *Client) ReadIncoming() {
 			continue
 		}
 
+		fmt.Println("========== BEGIN MESSAGE ==========")
+
 		encoder := json.NewEncoder(os.Stdout)
 		encoder.SetIndent("", "   ")
 		encoder.Encode(incomingEnvelope)
 
 		c.ProcessMessage(incomingEnvelope)
+
+		fmt.Println("========== END MESSAGE ==========")
 	}
 }
 
@@ -152,15 +156,21 @@ func (c *Client) Send(message Envelope) {
 }
 
 func (c *Client) ProcessMessage(message Envelope) {
-
 	// 1. Filter using meta-data
-	if time.Since(message.Header.CreatedAt) >= message.Header.TTL {
+	if time.Since(message.Header.CreatedAt) > message.Header.TTL {
 		return
 	}
 
 	// If message type is Presence event - simply send it to Presence manager
 	if message.Header.Type == MessagePresence {
 		c.pm.SetStatus(c.Uid, message)
+	}
+
+	// If message type is Chat Receipt - dont persist just forward
+	if message.Header.Type == MessageReceipt {
+		fmt.Println("Sending receipt message to hub")
+		c.hub.Send(message)
+		return
 	}
 
 	// 2. Persist
@@ -189,15 +199,15 @@ func (c *Client) SendAcknowledgement(message Envelope) bool {
 	var data ChatMessage
 	json.Unmarshal(message.Data, &data)
 
-	receipt := ReadReceipt{
+	receipt := ChatReceipt{
 		MessageId: data.MessageId,
-		Status:    ReceiptSent,
+		Status:    StatusSent,
 	}
 
 	raw, _ := json.Marshal(receipt)
 	envelope := Envelope{
 		Header: Header{
-			Type:       MessageChat,
+			Type:       MessageReceipt,
 			SourceID:   uuid.New(),
 			ReceiverID: message.Header.SenderID,
 		},

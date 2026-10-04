@@ -29,20 +29,6 @@ CREATE TABLE IF NOT EXISTS conversations(
     updated_at TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS conversation_participants(
-    conversation_id UUID NOT NULL,
-    user_id UUID NOT NULL,
-    joined_at TIMESTAMP,
-    last_read_message_id BIGINT,
-
-    FOREIGN KEY(conversation_id) REFERENCES conversations(id)
-    ON DELETE CASCADE,
-    FOREIGN KEY(user_id) REFERENCES users(id)
-    ON DELETE CASCADE,
-    FOREIGN KEY(last_read_message_id) REFERENCES messages(id)
-    ON DELETE CASCADE
-);
-
 CREATE TABLE IF NOT EXISTS messages(
     id BIGSERIAL PRIMARY KEY NOT NULL,
     sender_id UUID NOT NULL,
@@ -54,5 +40,19 @@ CREATE TABLE IF NOT EXISTS messages(
     FOREIGN KEY(sender_id) REFERENCES users(id)
     ON DELETE CASCADE,
     FOREIGN KEY(conversation_id) REFERENCES conversations(id)
+    ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS conversation_participants(
+    conversation_id UUID NOT NULL,
+    user_id UUID NOT NULL,
+    joined_at TIMESTAMP,
+    last_read_message_id BIGINT,
+
+    FOREIGN KEY(conversation_id) REFERENCES conversations(id)
+    ON DELETE CASCADE,
+    FOREIGN KEY(user_id) REFERENCES users(id)
+    ON DELETE CASCADE,
+    FOREIGN KEY(last_read_message_id) REFERENCES messages(id)
     ON DELETE CASCADE
 );

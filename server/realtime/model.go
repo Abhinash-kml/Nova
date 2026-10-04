@@ -12,22 +12,26 @@ type MessageType int
 const (
 	MessageChat MessageType = iota + 1
 	MessagePresence
+	MessageReceipt
+	MessageNotification
 )
 
-type Status int
+type PresenceType int
 
 const (
-	StatusOnline Status = iota + 1
-	StatusOffline
-	StatusAway
+	PresenceOnline PresenceType = iota + 1
+	PresenceOffline
+	PresenceDND
+	PresenceAway
+	PresenceCustom
 )
 
-type ReceiptType int
+type MessageStatus int
 
 const (
-	ReceiptSent ReceiptType = iota + 1
-	ReceiptDelivered
-	ReceiptRead
+	StatusSent MessageStatus = iota + 1
+	StatusDelivered
+	StatusRead
 )
 
 type ChatMessageType int
@@ -47,14 +51,6 @@ const (
 	FileAudio
 	FileVideo
 	FileDocument
-)
-
-type MessageStatus int
-
-const (
-	StatusSent MessageStatus = iota + 1
-	StatusDelivered
-	StatusRead
 )
 
 type Header struct {
@@ -97,16 +93,17 @@ type GroupMessageReceipt struct {
 	UpdatedTime time.Time     `json:"updated_time"`
 }
 
-type StatusEvent struct {
-	UserID    uuid.UUID `json:"user_id"`
-	Status    Status    `json:"status"`
-	UpdatedAt time.Time `json:"updated_at"`
+type PresenceEvent struct {
+	UserID    uuid.UUID     `json:"user_id"`
+	Status    MessageStatus `json:"status"`
+	UpdatedAt time.Time     `json:"updated_at"`
+	meta      map[string]any
 }
 
-type ReadReceipt struct {
-	ChatId    uuid.UUID   `json:"chat_id"`
-	MessageId uuid.UUID   `json:"message_id"`
-	Status    ReceiptType `json:"status"`
+type ChatReceipt struct {
+	ChatId    uuid.UUID     `json:"chat_id"`
+	MessageId uuid.UUID     `json:"message_id"`
+	Status    MessageStatus `json:"status"`
 }
 
 type Attachment struct {

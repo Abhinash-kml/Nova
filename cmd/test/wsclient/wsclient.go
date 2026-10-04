@@ -23,8 +23,7 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancel()
 
-	userID, _ := uuid.NewV7()
-	recieverID := userID
+	userID := SetupUser()
 
 	dialer := websocket.Dialer{}
 	header := http.Header{}
@@ -58,7 +57,7 @@ func main() {
 		conn.Close() // This will force ReadMessage() below to unblock with an error
 	}()
 
-	go ReadFromStdIn(conn, userID, recieverID)
+	go ReadFromStdIn(conn, userID)
 
 	// 2. Simple, non-blocking, clean read loop
 	for {
@@ -74,21 +73,78 @@ func main() {
 
 		// Handle normal text/binary messages
 		if messageType == websocket.TextMessage {
+			var envelope realtime.Envelope
+			json.Unmarshal(raw, &envelope)
+
+			var cd realtime.ChatMessage
+			json.Unmarshal(envelope.Data, &cd)
+
 			buffer := bytes.NewBuffer(make([]byte, len(raw)))
 			json.Indent(buffer, raw, " ", "   ")
 
 			fmt.Println(buffer)
+
+			// Send back acknowledgement
+			if envelope.Header.Type == realtime.MessageChat {
+				SendAcknowledgement(conn, cd.ChatId, cd.MessageId, userID, envelope.Header.SenderID)
+			}
 		}
 	}
 }
 
-func ReadFromStdIn(conn *websocket.Conn, senderID, receiverID uuid.UUID) {
+func SetupUser() uuid.UUID {
+	fmt.Println("Enter username:")
+
+	scanner := bufio.NewScanner(os.Stdin)
+	scanner.Scan()
+	username := scanner.Text()
+	return NameToUUID(username)
+}
+
+func NameToUUID(name string) uuid.UUID {
+	namespace := uuid.NameSpaceDNS
+	return uuid.NewSHA1(namespace, []byte(name))
+}
+
+func SendAcknowledgement(conn *websocket.Conn, chatID, messageID, senderID, receiverID uuid.UUID) {
+	header := realtime.Header{
+		Type:       realtime.MessageReceipt,
+		SenderID:   senderID,
+		ReceiverID: receiverID,
+		TTL:        time.Second * 5,
+	}
+
+	data := realtime.ChatReceipt{
+		ChatId:    chatID,
+		MessageId: messageID,
+		Status:    realtime.StatusRead,
+	}
+
+	bytes, _ := json.Marshal(data)
+
+	envelope := realtime.Envelope{
+		Header: header,
+		Data:   bytes,
+	}
+
+	finalBytes, _ := json.Marshal(envelope)
+
+	err := conn.WriteMessage(websocket.TextMessage, finalBytes)
+	if err != nil {
+		fmt.Println("Failed to send acknowledgement message:", err)
+	}
+
+	fmt.Println("Acknowledgement sent")
+}
+
+func ReadFromStdIn(conn *websocket.Conn, senderID uuid.UUID) {
 	scanner := bufio.NewScanner(os.Stdin)
 
 	for scanner.Scan() {
 		line := scanner.Text()
-
 		parts := strings.Split(line, "@")
+
+		receiverID := NameToUUID(parts[0])
 		message := parts[1]
 
 		chatMessage := realtime.ChatMessage{

@@ -62,7 +62,7 @@ func (pm *PresenceManager) SetupUser(id uuid.UUID) {
 // 1.2.1.3. Find subscribed to list
 // 1.2.1.4. Use the list a key in inverted mapping and remove userid from it
 func (pm *PresenceManager) SetStatus(id uuid.UUID, status Envelope) {
-	var currentStatus StatusEvent
+	var currentStatus PresenceEvent
 	err := json.Unmarshal(status.Data, &currentStatus)
 	if err != nil {
 		fmt.Println("Failed to unmarshal json and set status")

@@ -410,7 +410,7 @@ func main() {
 	persister := realtime.NewLocalMessagePersister(logger)
 	realtime.SetGlobalPersistor(persister)
 	ch := persister.Channel()
-	listener := social.NewMessageListener(socialService, ch)
+	listener := social.NewMessageListener(socialService, ch, logger)
 	listener.Listen()
 
 	// Setup realtime module
@@ -448,12 +448,18 @@ func main() {
 		go rtClient.ReadIncoming()
 		go rtClient.ProcessOutgoing()
 
-		rawBytes := []byte(`{"user_id": 123, "roles": ["admin", "editor"]}`)
+		info := map[string]any{
+			"user_id":      userID,
+			"connected_at": time.Now(),
+		}
+		bytes, _ := json.Marshal(info)
 		rtClient.Send(
 			realtime.Envelope{
-				Data: json.RawMessage(rawBytes),
+				Data: json.RawMessage(bytes),
 			},
 		)
+
+		logger.Info("Realtime user connected", zap.String("user_id", userID.String()))
 	})
 
 	// Create http api server & start it
