@@ -2,6 +2,7 @@ package realtime
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"time"
 
@@ -29,6 +30,7 @@ func NewClient(config *config.WebsocketConfig, uid uuid.UUID, connection *websoc
 		hub:            hub,
 		queuedMessages: make(chan Envelope, 1000),
 		config:         config,
+		persister:      GetLocalMessagePersistor(),
 	}
 }
 
@@ -77,6 +79,8 @@ func (c *Client) ReadIncoming() {
 		encoder := json.NewEncoder(os.Stdout)
 		encoder.SetIndent("", "   ")
 		encoder.Encode(incomingEnvelope)
+
+		c.ProcessMessage(incomingEnvelope)
 	}
 }
 
@@ -147,8 +151,7 @@ func (c *Client) Send(message Envelope) {
 	c.queuedMessages <- message
 }
 
-func (c *Client) ProcessMessage() {
-	message := <-c.queuedMessages
+func (c *Client) ProcessMessage(message Envelope) {
 
 	// 1. Filter using meta-data
 	if time.Since(message.Header.CreatedAt) >= message.Header.TTL {
@@ -162,12 +165,15 @@ func (c *Client) ProcessMessage() {
 
 	// 2. Persist
 	c.PersistMessage(message)
+	fmt.Println("After Persisting")
 
 	// 3. Send Acknowledgement receipt
 	c.SendAcknowledgement(message)
+	fmt.Println("Sending acknowledgemenet")
 
 	// 4. Forward it to hub for realtime forwarding
 	c.hub.Send(message)
+	fmt.Println("After fowarding to hub")
 }
 
 func (c *Client) PersistMessage(message Envelope) bool {

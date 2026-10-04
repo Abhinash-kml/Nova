@@ -386,14 +386,6 @@ func main() {
 		inventory.SetupRoutes(globalRouter, itemsController, inventoryController)
 	}
 
-	// Setup social module
-	{
-		socialRepository := social.NewPostgreRepository(postgresPool, config, logger)
-		socialService := social.NewLocalSocialService(socialRepository, config, logger)
-		socialController := social.NewController(socialService, config, logger)
-		social.SetupRoutes(globalRouter, socialController)
-	}
-
 	//	Setup economy module
 	{
 		// Setup currency
@@ -408,6 +400,18 @@ func main() {
 
 		economy.SetupRoutes(globalRouter, currencyController, walletController)
 	}
+
+	// Setup social module
+	socialRepository := social.NewPostgreRepository(postgresPool, config, logger)
+	socialService := social.NewLocalSocialService(socialRepository, config, logger)
+	socialController := social.NewController(socialService, config, logger)
+	social.SetupRoutes(globalRouter, socialController)
+
+	persister := realtime.NewLocalMessagePersister(logger)
+	realtime.SetGlobalPersistor(persister)
+	ch := persister.Channel()
+	listener := social.NewMessageListener(socialService, ch)
+	listener.Listen()
 
 	// Setup realtime module
 	realtimeBroker := realtime.NewRedisBroker(globalCtx, redisClient)
@@ -424,6 +428,8 @@ func main() {
 			},
 		}
 
+		userID, _ := uuid.Parse(ctx.GetHeader("userid"))
+
 		conn, err := upgrader.Upgrade(ctx.Writer, ctx.Request, ctx.Request.Header)
 		if err != nil {
 			logger.Error("Failed to upgrade connection to websocket")
@@ -435,7 +441,6 @@ func main() {
 		}
 		// defer conn.Close() <-- Dont do this here, this will close the connection on handler end
 
-		userID, _ := uuid.NewV7()
 		rtClient := realtime.NewClient(&config.Websocket, userID, conn, nil, realtimeHub)
 		realtimeSessionStore.Add(rtClient)
 		realtimeHub.Register(rtClient)

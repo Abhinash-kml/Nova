@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -22,8 +23,13 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancel()
 
+	userID, _ := uuid.NewV7()
+	recieverID := userID
+
 	dialer := websocket.Dialer{}
-	conn, response, err := dialer.DialContext(ctx, "ws://localhost:8000/ws", http.Header{})
+	header := http.Header{}
+	header.Add("userid", userID.String())
+	conn, response, err := dialer.DialContext(ctx, "ws://localhost:8000/ws", header)
 	if err != nil {
 		log.Fatalf("Failed to connect to websocket: %v", err)
 	}
@@ -52,8 +58,7 @@ func main() {
 		conn.Close() // This will force ReadMessage() below to unblock with an error
 	}()
 
-	myId, _ := uuid.NewV7()
-	go ReadFromStdIn(conn, myId)
+	go ReadFromStdIn(conn, userID, recieverID)
 
 	// 2. Simple, non-blocking, clean read loop
 	for {
@@ -69,12 +74,15 @@ func main() {
 
 		// Handle normal text/binary messages
 		if messageType == websocket.TextMessage {
-			fmt.Println(string(raw))
+			buffer := bytes.NewBuffer(make([]byte, len(raw)))
+			json.Indent(buffer, raw, " ", "   ")
+
+			fmt.Println(buffer)
 		}
 	}
 }
 
-func ReadFromStdIn(conn *websocket.Conn, senderID uuid.UUID) {
+func ReadFromStdIn(conn *websocket.Conn, senderID, receiverID uuid.UUID) {
 	scanner := bufio.NewScanner(os.Stdin)
 
 	for scanner.Scan() {
@@ -82,7 +90,6 @@ func ReadFromStdIn(conn *websocket.Conn, senderID uuid.UUID) {
 
 		parts := strings.Split(line, "@")
 		message := parts[1]
-		targetID, _ := uuid.NewV7FromReader(strings.NewReader(parts[0]))
 
 		chatMessage := realtime.ChatMessage{
 			ChatId:    uuid.New(),
@@ -90,11 +97,10 @@ func ReadFromStdIn(conn *websocket.Conn, senderID uuid.UUID) {
 			Body:      message,
 		}
 
-		userID, _ := uuid.NewV7()
 		header := realtime.Header{
 			Type:       realtime.MessageChat,
-			SenderID:   userID,
-			ReceiverID: targetID,
+			SenderID:   senderID,
+			ReceiverID: receiverID,
 			CreatedAt:  time.Now(),
 			TTL:        time.Duration(time.Hour * 12),
 		}

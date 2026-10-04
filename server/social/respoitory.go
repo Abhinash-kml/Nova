@@ -20,7 +20,7 @@ type Repository interface {
 	GetAllBlocked(ctx context.Context, dto GetAllBlockedDTO) ([]uuid.UUID, error)
 	GetMutualFriends(ctx context.Context, dto GetMutualFriendsDTO) ([]uuid.UUID, error)
 
-	CheckIfConversationExists(ctx context.Context) bool
+	CheckIfConversationExists(ctx context.Context) (bool, error)
 	CreateConversation(ctx context.Context, dto CreateConversationDTO) (ConversationDetailsDTO, error)
 	AddConversationParticipant(ctx context.Context, dto AddConversationParticipantDTO) error
 	RemoveConversationParticipant(ctx context.Context, dto RemoveConversationParticipantDTO) error

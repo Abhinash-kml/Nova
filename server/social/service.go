@@ -5,6 +5,7 @@ import (
 
 	"github.com/abhinash-kml/nova/server/common"
 	"github.com/abhinash-kml/nova/server/config"
+	"github.com/abhinash-kml/nova/server/realtime"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -21,6 +22,12 @@ type Service interface {
 	GetAllFriends(ctx context.Context, dto GetAllFriendsDTO) ([]uuid.UUID, error)
 	GetAllBlocked(ctx context.Context, dto GetAllBlockedDTO) ([]uuid.UUID, error)
 	GetMutualFriends(ctx context.Context, dto GetMutualFriendsDTO) ([]uuid.UUID, error)
+
+	CheckIfConversationExists(ctx context.Context) (bool, error)
+	CreateConversation(ctx context.Context, dto CreateConversationDTO) (ConversationDetailsDTO, error)
+	AddConversationParticipant(ctx context.Context, dto AddConversationParticipantDTO) error
+	RemoveConversationParticipant(ctx context.Context, dto RemoveConversationParticipantDTO) error
+	SendMessage(ctx context.Context, envelope realtime.Envelope) error
 }
 
 type LocalSocialService struct {
@@ -155,4 +162,24 @@ func (s *LocalSocialService) GetMutualFriends(ctx context.Context, dto GetMutual
 	}
 
 	return mutualFriends, nil
+}
+
+func (s *LocalSocialService) CheckIfConversationExists(ctx context.Context) (bool, error) {
+	return s.repo.CheckIfConversationExists(ctx)
+}
+
+func (s *LocalSocialService) CreateConversation(ctx context.Context, dto CreateConversationDTO) (ConversationDetailsDTO, error) {
+	return s.repo.CreateConversation(ctx, dto)
+}
+
+func (s *LocalSocialService) AddConversationParticipant(ctx context.Context, dto AddConversationParticipantDTO) error {
+	return s.repo.AddConversationParticipant(ctx, dto)
+}
+
+func (s *LocalSocialService) RemoveConversationParticipant(ctx context.Context, dto RemoveConversationParticipantDTO) error {
+	return s.repo.RemoveConversationParticipant(ctx, dto)
+}
+
+func (s *LocalSocialService) SendMessage(ctx context.Context, envelope realtime.Envelope) error {
+	return s.repo.SendMessage(ctx, envelope)
 }

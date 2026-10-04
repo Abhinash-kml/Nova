@@ -2,6 +2,7 @@ package realtime
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
@@ -90,16 +91,20 @@ func (h *Hub) Send(message Envelope) {
 // 2.1. If yes send to its send channel, client goroutine will handle writing to socket
 // 2.2. If no send to the pubsub using reciever id
 func (h *Hub) handleSend(message Envelope) {
+	fmt.Println("inside hub handle send")
 	receiverId := message.Header.ReceiverID
 	if h.registry.Exists(receiverId) {
+		fmt.Println("user exists locally, forwarding")
 		client := h.registry.Get(receiverId)
 		client.Send(message)
 		return
 	}
 
+	fmt.Println("user doesnt exist locally forwarding to broker")
 	err := h.broker.Publish(receiverId.String(), message)
 	if err != nil {
 		// Handle
+		fmt.Println("failed to forward to broker:", err)
 	}
 }
 
