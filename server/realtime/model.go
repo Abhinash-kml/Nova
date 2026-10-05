@@ -14,6 +14,7 @@ const (
 	MessagePresence
 	MessageReceipt
 	MessageNotification
+	MessageLobbyEvent
 )
 
 type PresenceType int

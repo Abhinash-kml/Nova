@@ -163,7 +163,12 @@ func (c *Client) ProcessMessage(message Envelope) {
 
 	// If message type is Presence event - simply send it to Presence manager
 	if message.Header.Type == MessagePresence {
-		c.pm.SetStatus(c.Uid, message)
+		//c.pm.SetStatus(c.Uid, message)
+	}
+
+	// If message type is lobby event - send it to lobby manager
+	if message.Header.Type == MessageLobbyEvent {
+		// GetLobbyManager().Send(message)
 	}
 
 	// If message type is Chat Receipt - dont persist just forward
