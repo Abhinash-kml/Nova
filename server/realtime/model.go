@@ -95,9 +95,9 @@ type GroupMessageReceipt struct {
 }
 
 type PresenceEvent struct {
-	UserID    uuid.UUID     `json:"user_id"`
-	Status    MessageStatus `json:"status"`
-	UpdatedAt time.Time     `json:"updated_at"`
+	UserID    uuid.UUID    `json:"user_id"`
+	Status    PresenceType `json:"status"`
+	UpdatedAt time.Time    `json:"updated_at"`
 	meta      map[string]any
 }
 
