@@ -22,7 +22,7 @@ import (
 	"github.com/abhinash-kml/nova/server/clans"
 	"github.com/abhinash-kml/nova/server/comments"
 	"github.com/abhinash-kml/nova/server/common"
-	"github.com/abhinash-kml/nova/server/config"
+	configs "github.com/abhinash-kml/nova/server/config"
 	"github.com/abhinash-kml/nova/server/economy"
 	"github.com/abhinash-kml/nova/server/infra"
 	"github.com/abhinash-kml/nova/server/inventory"
@@ -91,12 +91,12 @@ func main() {
 	fmt.Println("Migrate steps", migratetionSteps)
 
 	// 1. Load configs
-	config.Initialize(configFile, configFileType, "./")
-	if !config.Load() {
+	configs.Initialize(configFile, configFileType, "./")
+	if !configs.Load() {
 		log.Fatal("Failed to load configs....")
 	}
 	log.Printf("Loaded configs from file: %s", configFile+configFileSeparator+configFileType)
-	config := config.GetInstance()
+	config := configs.GetInstance()
 
 	// Open file for writing logs
 	file, err := os.OpenFile("./logs/temp.log", os.O_CREATE|os.O_APPEND, 0755)
@@ -123,13 +123,29 @@ func main() {
 	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	consoleEncoder := zapcore.NewConsoleEncoder(encoderConfig)
 	fileEncoder := zapcore.NewJSONEncoder(encoderConfig)
-	logLevel := zap.NewAtomicLevelAt(zapcore.DebugLevel)
+	var level zap.AtomicLevel
+	level, err = zap.ParseAtomicLevel(config.Logging.Level)
+	if err != nil {
+		fmt.Println("Failed to parse logging level from configs:", err)
+		fmt.Println("Setting default level to info")
+		level = zap.NewAtomicLevelAt(zap.InfoLevel)
+	}
+	logLevel := level
 	fileCore := zapcore.NewCore(fileEncoder, fileSyncer, logLevel)
 	stdOutCore := zapcore.NewCore(consoleEncoder, stdOutSyncer, logLevel)
 	otelLogCore := otelzap.NewCore("nova", otelzap.WithLoggerProvider(observability.LoggerProvider()))
 	teeCore := zapcore.NewTee(fileCore, stdOutCore, otelLogCore)
 	logger := zap.New(teeCore).WithOptions(zap.AddCaller())
 	defer logger.Sync()
+	configs.RegisterOnChangeHook(func(c *configs.Config) {
+		newLevel, err := zapcore.ParseLevel(c.Logging.Level)
+		if err != nil {
+			logger.Info("Failed to parse new incoming log level", zap.Error(err))
+		} else {
+			logger.Info("Logging level changed", zap.String("level", c.Logging.Level))
+			level.SetLevel(newLevel)
+		}
+	})
 
 	logger.Sugar().Infof("Server started at: %w", time.Now())
 

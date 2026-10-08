@@ -9,9 +9,12 @@ import (
 	"github.com/spf13/viper"
 )
 
+type onChangeHook func(*Config)
+
 var (
 	instance *Config
 	once     sync.Once
+	hooks    []onChangeHook
 )
 
 func SetDefaults() {
@@ -44,9 +47,17 @@ func Load() bool {
 		} else {
 			fmt.Println("Loaded new configs via hot-reload")
 		}
+
+		for _, hook := range hooks {
+			hook(instance)
+		}
 	})
 
 	return true
+}
+
+func RegisterOnChangeHook(hook onChangeHook) {
+	hooks = append(hooks, hook)
 }
 
 func Reload() bool {

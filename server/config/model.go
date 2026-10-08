@@ -4,6 +4,7 @@ import "time"
 
 type Config struct {
 	AppName       string              `mapstructure:"appname"`
+	Logging       LoggingConfig       `mapstructure:"logging"`
 	HttpServer    HttpServerConfig    `mapstructure:"http"`
 	Observability ObservabilityConfig `mapstructure:"observability"`
 	Realtime      RealtimeHubConfig   `mapstructure:"realtime-hub"`
@@ -12,6 +13,11 @@ type Config struct {
 	Postgres      PostgresConfig      `mapstructure:"postgres"`
 	AuthToken     AuthTokenConfig     `mapstructure:"authentication"`
 	SeedsConfig   SeedsConfig         `mapstructure:"seeds"`
+}
+
+type LoggingConfig struct {
+	Level    string `mapstructure:"level"`
+	FilePath string `mapstructure:"path"`
 }
 
 type HttpServerConfig struct {
