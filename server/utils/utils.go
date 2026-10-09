@@ -70,13 +70,17 @@ func DecodeCursorUUID(c string) (uuid.UUID, error) {
 	if c == "" {
 		return uuid.Nil, nil
 	}
-	bytes, err := base64.URLEncoding.DecodeString(c)
+
+	// 1. Decode directly to raw 16 bytes
+	bytes, err := base64.RawURLEncoding.DecodeString(c)
 	if err != nil {
-		return uuid.Nil, err
+		return uuid.Nil, fmt.Errorf("base64 decode failed: %w", err)
 	}
+
+	// 2. Parse the bytes natively without any string manipulation overhead
 	id, err := uuid.FromBytes(bytes)
 	if err != nil {
-		return uuid.Nil, err
+		return uuid.Nil, fmt.Errorf("invalid binary uuid layout: %w", err)
 	}
 
 	return id, nil

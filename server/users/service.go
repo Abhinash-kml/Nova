@@ -17,7 +17,7 @@ import (
 type Service interface {
 	// General operations
 	Add(ctx context.Context, dto CreateDTO) (User, error)
-	GetAll(ctx context.Context, cursor int, limit int) ([]User, error)
+	GetAll(ctx context.Context, cursor uuid.UUID, limit int) ([]User, error)
 	GetAllByAttribute(ctx context.Context, attribute string) ([]User, error)
 	GetById(ctx context.Context, id uuid.UUID) (User, error)
 	GetByName(ctx context.Context, name string) (User, error)
@@ -68,7 +68,7 @@ func (s *LocalUsersService) Add(ctx context.Context, user CreateDTO) (User, erro
 	return createdUser, nil
 }
 
-func (s *LocalUsersService) GetAll(ctx context.Context, cursor, count int) ([]User, error) {
+func (s *LocalUsersService) GetAll(ctx context.Context, cursor uuid.UUID, count int) ([]User, error) {
 	ctx, span := tracer.Start(ctx, "users.service.getall")
 	defer span.End()
 

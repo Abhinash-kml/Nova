@@ -1,6 +1,7 @@
 package users
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/abhinash-kml/nova/server/auth"
@@ -49,16 +50,18 @@ func (c *Controller) GetAll(ctx *gin.Context) {
 		return
 	}
 
-	decodedCursor, err := utils.DecodeCursor(dto.Cursor)
+	fmt.Println("Passed cursor:", dto.Cursor)
+	decodedCursor, err := utils.DecodeCursorUUID(dto.Cursor)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
+	fmt.Println("decoded cursor:", decodedCursor.String())
 
 	users, err := c.service.GetAll(sctx, decodedCursor, dto.Limit)
 	if err != nil {
 		c.logger.Error("Failed to get all users",
-			zap.Int("cursor", decodedCursor),
+			zap.String("cursor", decodedCursor.String()),
 			zap.Int("limit", dto.Limit),
 			zap.Error(err))
 		ctx.Error(err)

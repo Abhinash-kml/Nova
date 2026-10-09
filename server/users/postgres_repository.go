@@ -171,7 +171,7 @@ func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (User, erro
 	}, nil
 }
 
-func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) ([]User, error) {
+func (r *PostgresRepository) GetAll(ctx context.Context, cursor uuid.UUID, limit int) ([]User, error) {
 	var rows pgx.Rows
 	var err error
 
@@ -190,7 +190,7 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 					updated_at, 
 					verified_at
 				FROM users`
-	if cursor == 0 {
+	if cursor == uuid.Nil {
 		rawQuery += ` ORDER BY id
 					LIMIT $1;`
 
