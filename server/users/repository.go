@@ -14,7 +14,7 @@ type UsersRepository interface {
 
 	// General operations
 	Add(ctx context.Context, dto CreateDTO) (User, error)
-	GetAll(ctx context.Context, cursor uuid.UUID, limit int) ([]User, error)
+	GetAll(ctx context.Context, cursor uuid.UUID, limit int, sortBy, sortDirection string) ([]User, error)
 	GetAllByAttribute(ctx context.Context, attribute string) ([]User, error)
 	GetById(ctx context.Context, id uuid.UUID) (User, error)
 	GetByName(ctx context.Context, name string) (User, error)

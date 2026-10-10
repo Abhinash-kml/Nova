@@ -58,7 +58,7 @@ func (c *Controller) GetAll(ctx *gin.Context) {
 	}
 	fmt.Println("decoded cursor:", decodedCursor.String())
 
-	users, err := c.service.GetAll(sctx, decodedCursor, dto.Limit)
+	users, err := c.service.GetAll(sctx, decodedCursor, dto.Limit, dto.SortBy, dto.SortDirection)
 	if err != nil {
 		c.logger.Error("Failed to get all users",
 			zap.String("cursor", decodedCursor.String()),

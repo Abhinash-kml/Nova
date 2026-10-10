@@ -17,7 +17,7 @@ import (
 type Service interface {
 	// General operations
 	Add(ctx context.Context, dto CreateDTO) (User, error)
-	GetAll(ctx context.Context, cursor uuid.UUID, limit int) ([]User, error)
+	GetAll(ctx context.Context, cursor uuid.UUID, limit int, sortBy, sortDirection string) ([]User, error)
 	GetAllByAttribute(ctx context.Context, attribute string) ([]User, error)
 	GetById(ctx context.Context, id uuid.UUID) (User, error)
 	GetByName(ctx context.Context, name string) (User, error)
@@ -68,11 +68,11 @@ func (s *LocalUsersService) Add(ctx context.Context, user CreateDTO) (User, erro
 	return createdUser, nil
 }
 
-func (s *LocalUsersService) GetAll(ctx context.Context, cursor uuid.UUID, count int) ([]User, error) {
+func (s *LocalUsersService) GetAll(ctx context.Context, cursor uuid.UUID, limit int, sortBy, sortDirection string) ([]User, error) {
 	ctx, span := tracer.Start(ctx, "users.service.getall")
 	defer span.End()
 
-	users, err := s.repo.GetAll(ctx, cursor, count)
+	users, err := s.repo.GetAll(ctx, cursor, limit, sortBy, sortDirection)
 	if err != nil {
 		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to get all users")
 	}

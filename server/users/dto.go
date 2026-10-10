@@ -15,8 +15,11 @@ type GetDTO struct {
 }
 
 type GetAllDTO struct {
-	Cursor string `form:"cursor,default=AAAAAAAAAAAAAAAAAAAAAA" binding:"required"`
-	Limit  int    `form:"limit,default=10" binding:"required,gte=10,lte=20"`
+	Cursor        string `form:"cursor,default=AAAAAAAAAAAAAAAAAAAAAA" binding:"required"`
+	Limit         int    `form:"limit,default=10" binding:"required,gte=10,lte=20"`
+	SortDirection string `form:"sort,default=asc" binding:"required,oneof=asc desc"`
+	SortBy        string `form:"sortby,default=id" binding:"required"`
+	// Filter string `form:"filter,default=id" binding:"required"`
 }
 
 type CreateDTO struct {

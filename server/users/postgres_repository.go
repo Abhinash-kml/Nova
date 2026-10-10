@@ -171,12 +171,9 @@ func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (User, erro
 	}, nil
 }
 
-func (r *PostgresRepository) GetAll(ctx context.Context, cursor uuid.UUID, limit int) ([]User, error) {
-	var rows pgx.Rows
-	var err error
-
+func (r *PostgresRepository) GetAll(ctx context.Context, cursor uuid.UUID, limit int, sortBy, sortDirection string) ([]User, error) {
 	// Create and execute query
-	rawQuery := `SELECT 
+	baseQuery := `SELECT 
 					id, 
 					username, 
 					displayname, 
@@ -189,19 +186,29 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor uuid.UUID, limit
 					created_at, 
 					updated_at, 
 					verified_at
-				FROM users`
-	if cursor == uuid.Nil {
-		rawQuery += ` ORDER BY id
-					LIMIT $1;`
+				FROM users
+				WHERE id > $1`
 
-		rows, err = r.pgx.Query(ctx, rawQuery, limit)
-	} else {
-		rawQuery += ` WHERE 
-						id > $1
-					ORDER BY 
-						id
-					LIMIT $2;`
-		rows, err = r.pgx.Query(ctx, rawQuery, cursor, limit)
+	allowedColumns := map[string]bool{
+		"id":         true,
+		"username":   true,
+		"created_at": true,
+	}
+
+	if !allowedColumns[strings.ToLower(sortBy)] {
+		return nil, fmt.Errorf("invalid sort column: %s", sortBy)
+	}
+	sortDirection = strings.ToUpper(sortDirection)
+	if sortDirection != "ASC" && sortDirection != "DESC" {
+		return nil, fmt.Errorf("invalid sort direction: %s", sortDirection)
+	}
+
+	addition := fmt.Sprintf(" ORDER BY %s %s LIMIT %d", sortBy, sortDirection, limit)
+	finalQuery := baseQuery + addition
+
+	rows, err := r.pgx.Query(ctx, finalQuery, cursor)
+	if err != nil {
+		return nil, fmt.Errorf("getting users: %w", err)
 	}
 	defer rows.Close()
 
