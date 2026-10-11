@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"slices"
-	"strconv"
 	"sync"
 	"time"
 
@@ -150,26 +149,17 @@ func (r *InMemoryPostsRepository) Update(ctx context.Context, dto UpdateDTO) (Po
 	parsedId, _ := uuid.Parse(dto.Id)
 	var updatedPostIndex int = -1
 
-	for targetIndex := range r.posts {
-		if r.posts[targetIndex].Id == parsedId {
-			updatedPostIndex = targetIndex
-
+	for index := range r.posts {
+		if r.posts[index].Id == parsedId {
 			r.mu.Lock()
 
-			for index := range dto.Updates {
-				currentUpdate := dto.Updates[index]
-				switch currentUpdate.Field {
-				case "title":
-					r.posts[targetIndex].Title = currentUpdate.Value
-				case "body":
-					r.posts[targetIndex].Body = currentUpdate.Value
-				case "likes":
-					value, _ := strconv.Atoi(currentUpdate.Value)
-					r.posts[targetIndex].Likes = value
-				}
-
-				r.posts[targetIndex].UpdatedAt = time.Now()
+			if dto.Title != nil {
+				r.posts[index].Title = *dto.Title
 			}
+			if dto.Body != nil {
+				r.posts[index].Body = *dto.Body
+			}
+			updatedPostIndex = index
 			r.mu.Unlock()
 			break
 		}

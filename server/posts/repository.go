@@ -13,7 +13,7 @@ type PostsRepository interface {
 
 	// General operations
 	Add(ctx context.Context, dto CreateDTO) (Post, error)
-	GetAll(ctx context.Context, cursor int, limit int) ([]Post, error)
+	GetAll(ctx context.Context, cursor uuid.UUID, limit int, sortBy, sortDirection string) ([]Post, error)
 	GetAllByAttribute(ctx context.Context, attribute string) ([]Post, error)
 	GetById(ctx context.Context, id uuid.UUID) (Post, error)
 	GetByName(ctx context.Context, name string) (Post, error)

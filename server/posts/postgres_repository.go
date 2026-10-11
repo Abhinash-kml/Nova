@@ -150,12 +150,9 @@ func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (Post, erro
 	}, nil
 }
 
-func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) ([]Post, error) {
-	var rows pgx.Rows
-	var err error
-
+func (r *PostgresRepository) GetAll(ctx context.Context, cursor uuid.UUID, limit int, sortBy, sortDirection string) ([]Post, error) {
 	// Create and execute query based on cursor value
-	rawQuery := `SELECT 
+	baseQuery := `SELECT 
 					id, 
 					title, 
 					body, 
@@ -165,21 +162,25 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 					created_at, 
 					updated_at
 				FROM
-					posts`
-	if cursor == 0 {
-		rawQuery += ` ORDER BY id 
-					LIMIT $1;`
+					posts
+				WHERE id > $1`
 
-		rows, err = r.pgx.Query(ctx, rawQuery, limit)
-	} else {
-		rawQuery += ` WHERE 
-						id > $1
-					ORDER BY 
-						id
-					LIMIT $2;`
-
-		rows, err = r.pgx.Query(ctx, rawQuery, cursor, limit)
+	allowedColumns := map[string]bool{
+		"id":         true,
+		"name":       true,
+		"created_at": true,
 	}
+	if !allowedColumns[strings.ToLower(sortBy)] {
+		return nil, fmt.Errorf("invalid sort column: %s", sortBy)
+	}
+	sortDirection = strings.ToUpper(sortDirection)
+	if sortDirection != "ASC" && sortDirection != "DESC" {
+		return nil, fmt.Errorf("invalid sort direction: %s", sortDirection)
+	}
+
+	addition := fmt.Sprintf(" ORDER BY %s %s LIMIT %d;", sortBy, sortDirection, limit)
+	finalQuery := baseQuery + addition
+	rows, err := r.pgx.Query(ctx, finalQuery, cursor)
 	if err != nil {
 		return nil, fmt.Errorf("getting all posts: %w", err)
 	}
@@ -268,8 +269,11 @@ func (r *PostgresRepository) GetByName(ctx context.Context, name string) (Post, 
 func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (Post, error) {
 	// Generate dynamic update query using squirrel
 	queryBuilder := r.statementBuilder.Update("posts").Where(squirrel.Eq{"id": dto.Id})
-	for i := range dto.Updates {
-		queryBuilder = queryBuilder.Set(dto.Updates[i].Field, dto.Updates[i].Value)
+	if dto.Title != nil {
+		queryBuilder = queryBuilder.Set("title", dto.Title)
+	}
+	if dto.Body != nil {
+		queryBuilder = queryBuilder.Set("body", dto.Body)
 	}
 	queryBuilder = queryBuilder.Suffix("RETURNING *")
 	query, args, err := queryBuilder.ToSql()
@@ -279,31 +283,12 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (Post, e
 
 	var post Post
 
-	// Begin transaction
-	tx, err := r.pgx.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
-	if err != nil {
-		return Post{}, fmt.Errorf("begin transaction: %w", err)
-	}
-	defer tx.Rollback(ctx)
-
-	// Lock row inside transaction
-	_, err = tx.Exec(ctx, "SELECT id FROM posts WHERE id = $1 FOR UPDATE;", dto.Id)
-	if err != nil {
-		return Post{}, fmt.Errorf("locking row: %w", err)
-	}
-
 	// Execute query
-	row := tx.QueryRow(ctx, query, args...)
+	row := r.pgx.QueryRow(ctx, query, args...)
 	err = row.Scan(&post.Id, &post.Title, &post.Body, &post.AuthorId, &post.Likes, &post.Comments,
 		&post.CreatedAt, &post.UpdatedAt)
 	if err != nil {
 		return Post{}, fmt.Errorf("scanning row: %w", err)
-	}
-
-	// Commit trasnsaction
-	err = tx.Commit(ctx)
-	if err != nil {
-		return Post{}, fmt.Errorf("commit transaction: %w", err)
 	}
 
 	return post, nil

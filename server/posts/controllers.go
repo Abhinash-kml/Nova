@@ -48,17 +48,19 @@ func (c *Controller) GetAll(ctx *gin.Context) {
 		return
 	}
 
-	decodedCursor, err := utils.DecodeCursor(dto.Cursor)
+	decodedCursor, err := utils.DecodeCursorUUID(dto.Cursor)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	posts, err := c.service.GetAll(sctx, decodedCursor, dto.Limit)
+	posts, err := c.service.GetAll(sctx, decodedCursor, dto.Limit, dto.SortBy, dto.SortDirection)
 	if err != nil {
 		c.logger.Error("Failed to get all posts",
-			zap.String("cursor", dto.Cursor),
+			zap.String("cursor", decodedCursor.String()),
 			zap.Int("limit", dto.Limit),
+			zap.String("sort_by", dto.SortBy),
+			zap.String("sort_direction", dto.SortDirection),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -155,7 +157,7 @@ func (c *Controller) Modify(ctx *gin.Context) {
 
 	span.SetAttributes(attribute.String("post_id", dto.Id))
 
-	err = ctx.ShouldBindWith(&dto.FieldUpdates, binding.JSON)
+	err = ctx.ShouldBindBodyWithJSON(&dto)
 	if err != nil {
 		ctx.Error(err)
 		return

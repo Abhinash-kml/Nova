@@ -30,9 +30,9 @@ type MetaContainer struct {
 }
 
 type PaginatedResponse[T any] struct {
-	Data  []T            `json:"data"`
-	Links LinksContainer `json:"_links"`
-	Meta  MetaContainer  `json:"metadata"`
+	Data []T `json:"data"`
+	//Links LinksContainer `json:"_links"`
+	Meta MetaContainer `json:"metadata"`
 }
 
 type ProblemDetailErrors struct {
@@ -92,9 +92,9 @@ func EncodeToCursor(c int) string {
 
 func Paginate[T any](data []T) PaginatedResponse[T] {
 	response := PaginatedResponse[T]{
-		Data:  data,
-		Links: LinksContainer{},
-		Meta:  MetaContainer{},
+		Data: data,
+		// Links: LinksContainer{},
+		Meta: MetaContainer{},
 	}
 
 	return response

@@ -14,7 +14,7 @@ import (
 type Service interface {
 	// General operations
 	Add(ctx context.Context, dto CreateDTO) (Post, error)
-	GetAll(ctx context.Context, cursor int, limit int) ([]Post, error)
+	GetAll(ctx context.Context, cursor uuid.UUID, limit int, sortBy, sortDirection string) ([]Post, error)
 	GetAllByAttribute(ctx context.Context, attribute string) ([]Post, error)
 	GetById(ctx context.Context, id uuid.UUID) (Post, error)
 	GetByName(ctx context.Context, name string) (Post, error)
@@ -56,11 +56,11 @@ func (s *LocalPostsService) Add(ctx context.Context, dto CreateDTO) (Post, error
 	return post, nil
 }
 
-func (s *LocalPostsService) GetAll(ctx context.Context, cursor, count int) ([]Post, error) {
+func (s *LocalPostsService) GetAll(ctx context.Context, cursor uuid.UUID, limit int, sortBy, sortDirection string) ([]Post, error) {
 	ctx, span := tracer.Start(ctx, "posts.service.getall")
 	defer span.End()
 
-	posts, err := s.repo.GetAll(ctx, cursor, count)
+	posts, err := s.repo.GetAll(ctx, cursor, limit, sortBy, sortDirection)
 	if err != nil {
 		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to get all posts")
 	}

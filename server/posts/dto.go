@@ -7,8 +7,10 @@ type GetDTO struct {
 }
 
 type GetAllDTO struct {
-	Cursor string `form:"cursor" binding:"required"`
-	Limit  int    `form:"limit" binding:"required,gte=10,lte=20"`
+	Cursor        string `form:"cursor,default=AAAAAAAAAAAAAAAAAAAAAA" binding:"required"`
+	Limit         int    `form:"limit,default=10" binding:"required,gte=10,lte=20,numeric"`
+	SortDirection string `form:"sort,default=asc" binding:"required,oneof=asc desc"`
+	SortBy        string `form:"sortby,default=id" binding:"required"`
 }
 
 type CreateDTO struct {
@@ -33,7 +35,8 @@ type FieldUpdates struct {
 
 type UpdateDTO struct {
 	PostId
-	FieldUpdates
+	Title *string `json:"title"`
+	Body  *string `json:"body"`
 }
 
 type ReplacementData struct {
