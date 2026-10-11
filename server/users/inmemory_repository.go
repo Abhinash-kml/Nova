@@ -157,30 +157,33 @@ func (r *InMemoryUsersRepository) Update(ctx context.Context, dto UpdateDTO) (Us
 	parsedId, _ := uuid.Parse(dto.Id)
 	var updatedUserindex int = -1
 
-	for targetIndex := range r.users {
-		if r.users[targetIndex].Id == parsedId {
-			updatedUserindex = targetIndex
-
+	for index := range r.users {
+		if r.users[index].Id == parsedId {
 			r.mu.Lock()
 
-			for index := range dto.Updates {
-				currentUpdate := dto.Updates[index]
-				switch currentUpdate.Field {
-				case "display_name":
-					r.users[targetIndex].DisplayName = currentUpdate.Value
-				case "email":
-					r.users[targetIndex].Email = currentUpdate.Value
-				case "username":
-					r.users[targetIndex].Username = currentUpdate.Value
-				case "country":
-					r.users[targetIndex].Country = currentUpdate.Value
-				case "state":
-					r.users[targetIndex].State = currentUpdate.Value
-				}
-
-				r.users[targetIndex].UpdatedAt = time.Now()
+			if dto.Username != nil {
+				r.users[index].Username = *dto.Username
+			}
+			if dto.DisplayName != nil {
+				r.users[index].DisplayName = *dto.DisplayName
+			}
+			if dto.Email != nil {
+				r.users[index].Email = *dto.Email
+			}
+			if dto.Country != nil {
+				r.users[index].Country = *dto.Country
+			}
+			if dto.State != nil {
+				r.users[index].State = *dto.State
+			}
+			if dto.LangTag != nil {
+				r.users[index].LangTag = *dto.LangTag
+			}
+			if dto.Timezone != nil {
+				r.users[index].Timezone = *dto.Timezone
 			}
 			r.mu.Unlock()
+			updatedUserindex = index
 			break
 		}
 	}

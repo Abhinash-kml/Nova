@@ -106,8 +106,20 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 	}
 
 	for i := range users {
-		queryBuilder = queryBuilder.Values(users[i].Id, users[i].Username, users[i].DisplayName, users[i].Email, users[i].Country, users[i].State,
-			users[i].AvatarURL, users[i].LangTag, users[i].Timezone, users[i].CreatedAt, users[i].UpdatedAt, users[i].VerifiedAt)
+		queryBuilder = queryBuilder.Values(
+			users[i].Id,
+			users[i].Username,
+			users[i].DisplayName,
+			users[i].Email,
+			users[i].Country,
+			users[i].State,
+			users[i].AvatarURL,
+			users[i].LangTag,
+			users[i].Timezone,
+			users[i].CreatedAt,
+			users[i].UpdatedAt,
+			users[i].VerifiedAt,
+		)
 	}
 
 	// Generate query
@@ -214,12 +226,24 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor uuid.UUID, limit
 
 	// Scan returned rows
 	var users []User
+
 	for rows.Next() {
 		var user User
-		err = rows.Scan(&user.Id, &user.Username, &user.DisplayName, &user.Email, &user.Country, &user.State, &user.AvatarURL, &user.LangTag, &user.Timezone,
-			&user.CreatedAt, &user.UpdatedAt, &user.VerifiedAt)
+		err = rows.Scan(
+			&user.Id,
+			&user.Username,
+			&user.DisplayName,
+			&user.Email,
+			&user.Country,
+			&user.State,
+			&user.AvatarURL,
+			&user.LangTag,
+			&user.Timezone,
+			&user.CreatedAt,
+			&user.UpdatedAt,
+			&user.VerifiedAt,
+		)
 		if err != nil {
-			r.logger.Error("Failed to sca nreturned row in getall query", zap.Error(err))
 			return nil, fmt.Errorf("scanning row: %w", err)
 		}
 
@@ -260,8 +284,21 @@ func (r *PostgresRepository) GetById(ctx context.Context, id uuid.UUID) (User, e
 	var disabledAt *time.Time
 
 	// Scan returned row
-	err := row.Scan(&user.Id, &user.Username, &user.DisplayName, &user.Email, &user.Country, &user.State, &user.AvatarURL, &user.LangTag, &user.Timezone,
-		&user.CreatedAt, &user.UpdatedAt, &user.VerifiedAt, &disabledAt)
+	err := row.Scan(
+		&user.Id,
+		&user.Username,
+		&user.DisplayName,
+		&user.Email,
+		&user.Country,
+		&user.State,
+		&user.AvatarURL,
+		&user.LangTag,
+		&user.Timezone,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+		&user.VerifiedAt,
+		&disabledAt,
+	)
 	if err != nil {
 		return User{}, fmt.Errorf("scanning row: %w", err)
 	}
@@ -300,8 +337,21 @@ func (r *PostgresRepository) GetByName(ctx context.Context, name string) (User, 
 	var disabledAt *time.Time
 
 	// Scasn returned row
-	err := row.Scan(&user.Id, &user.Username, &user.DisplayName, &user.Email, &user.Country, &user.State, &user.AvatarURL, &user.LangTag, &user.Timezone,
-		&user.CreatedAt, &user.UpdatedAt, &user.VerifiedAt, &disabledAt)
+	err := row.Scan(
+		&user.Id,
+		&user.Username,
+		&user.DisplayName,
+		&user.Email,
+		&user.Country,
+		&user.State,
+		&user.AvatarURL,
+		&user.LangTag,
+		&user.Timezone,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+		&user.VerifiedAt,
+		&disabledAt,
+	)
 	if err != nil {
 		return User{}, fmt.Errorf("scanning row: %w", err)
 	}
@@ -316,8 +366,26 @@ func (r *PostgresRepository) GetByName(ctx context.Context, name string) (User, 
 func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (User, error) {
 	// build dynamic query using squirrel
 	queryBuilder := r.statementBuilder.Update("users").Where(squirrel.Eq{"id": dto.Id})
-	for i := range dto.Updates {
-		queryBuilder = queryBuilder.Set(dto.Updates[i].Field, dto.Updates[i].Value)
+	if dto.Username != nil {
+		queryBuilder = queryBuilder.Set("username", dto.Username)
+	}
+	if dto.DisplayName != nil {
+		queryBuilder = queryBuilder.Set("displayname", dto.DisplayName)
+	}
+	if dto.Email != nil {
+		queryBuilder = queryBuilder.Set("email", dto.Email)
+	}
+	if dto.Country != nil {
+		queryBuilder = queryBuilder.Set("country", dto.Country)
+	}
+	if dto.State != nil {
+		queryBuilder = queryBuilder.Set("state", dto.State)
+	}
+	if dto.LangTag != nil {
+		queryBuilder = queryBuilder.Set("langtag", dto.LangTag)
+	}
+	if dto.Timezone != nil {
+		queryBuilder = queryBuilder.Set("timezone", dto.Timezone)
 	}
 	queryBuilder = queryBuilder.Suffix("RETURNING *")
 	query, args, err := queryBuilder.ToSql()
@@ -328,36 +396,29 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (User, e
 	var user User
 	var disabledAt *time.Time
 
-	// Begin transaction
-	tx, err := r.pgx.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
-	if err != nil {
-		return User{}, fmt.Errorf("begin transaction: %w", err)
-	}
-	defer tx.Rollback(ctx)
-
-	// Lock row inside transaction
-	_, err = tx.Exec(ctx, "SELECT username FROM users WHERE id = $1 FOR UPDATE;", dto.Id)
-	if err != nil {
-		return User{}, fmt.Errorf("locking row: %w", err)
-	}
-
 	// Execute query
-	result := tx.QueryRow(ctx, query, args...)
-	err = result.Scan(&user.Id, &user.Username, &user.DisplayName, &user.Email, &user.Country, &user.State, &user.AvatarURL, &user.LangTag, &user.Timezone,
-		&user.CreatedAt, &user.UpdatedAt, &user.VerifiedAt, &disabledAt)
+	result := r.pgx.QueryRow(ctx, query, args...)
+	err = result.Scan(
+		&user.Id,
+		&user.Username,
+		&user.DisplayName,
+		&user.Email,
+		&user.Country,
+		&user.State,
+		&user.AvatarURL,
+		&user.LangTag,
+		&user.Timezone,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+		&user.VerifiedAt,
+		&disabledAt,
+	)
 	if err != nil {
 		return User{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	if disabledAt != nil && !disabledAt.IsZero() {
 		user.DisabledAt = *disabledAt
-	}
-
-	// Commit transaction
-	err = tx.Commit(ctx)
-	if err != nil {
-		r.logger.Error("Failed to commit transaction in update query", zap.Error(err))
-		return User{}, fmt.Errorf("commit transaction: %w", err)
 	}
 
 	return user, nil
@@ -560,8 +621,21 @@ func (r *PostgresRepository) GetBySocialProfileId(ctx context.Context, provider,
 	var disabledAt *time.Time
 
 	row := r.pgx.QueryRow(ctx, query, socialUserId, provider)
-	err := row.Scan(&user.Id, &user.Username, &user.DisplayName, &user.Email, &user.Country, &user.State, &user.AvatarURL, &user.LangTag, &user.Timezone,
-		&user.CreatedAt, &user.UpdatedAt, &user.VerifiedAt, &disabledAt)
+	err := row.Scan(
+		&user.Id,
+		&user.Username,
+		&user.DisplayName,
+		&user.Email,
+		&user.Country,
+		&user.State,
+		&user.AvatarURL,
+		&user.LangTag,
+		&user.Timezone,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+		&user.VerifiedAt,
+		&disabledAt,
+	)
 	if err != nil {
 		return User{}, fmt.Errorf("scanning row: %w", err)
 	}
@@ -600,8 +674,20 @@ func (r *PostgresRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]
 		id, _ := uuid.NewV7()
 		now := time.Now()
 		dummyAvatarUrl := "-"
-		queryBuilder = queryBuilder.Values(id, dto.Users[i].Username, dto.Users[i].DisplayName, dto.Users[i].Email, dto.Users[i].Country, dto.Users[i].State,
-			dummyAvatarUrl, dto.Users[i].LangTag, dto.Users[i].Timezone, now, now, now)
+		queryBuilder = queryBuilder.Values(
+			id,
+			dto.Users[i].Username,
+			dto.Users[i].DisplayName,
+			dto.Users[i].Email,
+			dto.Users[i].Country,
+			dto.Users[i].State,
+			dummyAvatarUrl,
+			dto.Users[i].LangTag,
+			dto.Users[i].Timezone,
+			now,
+			now,
+			now,
+		)
 
 		var result common.BulkOpResult
 		result.Id = id
@@ -634,20 +720,7 @@ func (r *PostgresRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) 
 
 	var results []common.BulkOpResult
 
-	for i := range dto.Updates {
-		currentUser := dto.Updates[i]
-		for j := range currentUser.Updates {
-			queryBuilder = queryBuilder.Set(currentUser.Updates[j].Field, currentUser.Updates[j].Value)
-		}
-
-		var result common.BulkOpResult
-		id, _ := uuid.Parse(currentUser.Id)
-		result.Id = id
-		result.Status = 1
-		result.Success = true
-		result.Message = "modified"
-		results = append(results, result)
-	}
+	// To be decided
 
 	query, args, err := queryBuilder.ToSql()
 	if err != nil {

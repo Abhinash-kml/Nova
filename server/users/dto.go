@@ -45,7 +45,13 @@ type FieldUpdates struct {
 
 type UpdateDTO struct {
 	UserId
-	FieldUpdates
+	Username    *string `json:"username"`
+	DisplayName *string `json:"display_name"`
+	Email       *string `json:"email"`
+	Country     *string `json:"country"`
+	State       *string `json:"state"`
+	LangTag     *string `json:"lang_tag"`
+	Timezone    *string `json:"timezone"`
 }
 
 type ReplacementData struct {

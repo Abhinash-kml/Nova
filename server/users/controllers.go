@@ -159,7 +159,7 @@ func (c *Controller) Modify(ctx *gin.Context) {
 
 	span.SetAttributes(attribute.String("user_id", dto.Id))
 
-	if err := ctx.ShouldBindWith(&dto.FieldUpdates, binding.JSON); err != nil {
+	if err := ctx.ShouldBindBodyWithJSON(&dto); err != nil {
 		ctx.Error(err)
 		return
 	}
