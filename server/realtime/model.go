@@ -11,6 +11,7 @@ type MessageType int
 
 const (
 	MessageChat MessageType = iota + 1
+	MessagePresenceAction
 	MessagePresence
 	MessageReceipt
 	MessageNotification
@@ -94,11 +95,29 @@ type GroupMessageReceipt struct {
 	UpdatedTime time.Time     `json:"updated_time"`
 }
 
+type PresenceAction struct {
+	UserID   uuid.UUID         `json:"user_id"`
+	Action   string            `json:"action"` // subscribe, unsubscribe, online, offline, custom
+	Targets  []uuid.UUID       `json:"targets"`
+	Data     map[string]string `json:"data"`
+	ActionAt time.Time         `json:"action_at"`
+}
+
+// {
+// 	userid: "xxx"
+// 	action: "sub" | "unsub" | "set"
+// 	targets: ["aaa", "bbb"]
+// 	data: {
+// 		state: "online" | "offline" | "custom"
+// 		custom_state: "Playing in Erangel 3/4"
+// 	}
+// }
+
 type PresenceEvent struct {
-	UserID    uuid.UUID    `json:"user_id"`
-	Status    PresenceType `json:"status"`
-	UpdatedAt time.Time    `json:"updated_at"`
-	meta      map[string]any
+	UserID    uuid.UUID         `json:"user_id"`
+	Status    PresenceType      `json:"status"`
+	UpdatedAt time.Time         `json:"updated_at"`
+	Data      map[string]string `json:"data"`
 }
 
 type ChatReceipt struct {

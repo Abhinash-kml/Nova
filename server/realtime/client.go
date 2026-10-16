@@ -156,14 +156,17 @@ func (c *Client) Send(message Envelope) {
 }
 
 func (c *Client) ProcessMessage(message Envelope) {
+	var err error
+
 	// 1. Filter using meta-data
 	if time.Since(message.Header.CreatedAt) > message.Header.TTL {
 		return
 	}
 
 	// If message type is Presence event - simply send it to Presence manager
-	if message.Header.Type == MessagePresence {
-		//c.pm.SetStatus(c.Uid, message)
+	if message.Header.Type == MessagePresenceAction {
+		c.pm.Process(message)
+		return
 	}
 
 	// If message type is lobby event - send it to lobby manager
@@ -179,28 +182,36 @@ func (c *Client) ProcessMessage(message Envelope) {
 	}
 
 	// 2. Persist
-	c.PersistMessage(message)
+	err = c.PersistMessage(message)
+	if err != nil {
+		c.hub.logger.Error("Failed to persist message", zap.Error(err))
+		return
+	}
+
 	fmt.Println("After Persisting")
 
 	// 3. Send Acknowledgement receipt
-	c.SendAcknowledgement(message)
-	fmt.Println("Sending acknowledgemenet")
+	err = c.SendAcknowledgement(message)
+	if err != nil {
+		c.hub.logger.Error("Failed to send acknowledgement", zap.Error(err))
+	}
+	// fmt.Println("Sending acknowledgemenet")
 
 	// 4. Forward it to hub for realtime forwarding
 	c.hub.Send(message)
 	fmt.Println("After fowarding to hub")
 }
 
-func (c *Client) PersistMessage(message Envelope) bool {
+func (c *Client) PersistMessage(message Envelope) error {
 	err := c.persister.Persist(message)
 	if err != nil {
-		return false
+		return fmt.Errorf("persisting message: %w", err)
 	}
 
-	return true
+	return nil
 }
 
-func (c *Client) SendAcknowledgement(message Envelope) bool {
+func (c *Client) SendAcknowledgement(message Envelope) error {
 	var data ChatMessage
 	json.Unmarshal(message.Data, &data)
 
@@ -209,7 +220,11 @@ func (c *Client) SendAcknowledgement(message Envelope) bool {
 		Status:    StatusSent,
 	}
 
-	raw, _ := json.Marshal(receipt)
+	raw, err := json.Marshal(receipt)
+	if err != nil {
+		return fmt.Errorf("marshalling reciept: %w", err)
+	}
+
 	envelope := Envelope{
 		Header: Header{
 			Type:       MessageReceipt,
@@ -221,5 +236,5 @@ func (c *Client) SendAcknowledgement(message Envelope) bool {
 
 	c.Send(envelope)
 
-	return true
+	return nil
 }

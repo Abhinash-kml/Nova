@@ -76,9 +76,6 @@ func main() {
 			var envelope realtime.Envelope
 			json.Unmarshal(raw, &envelope)
 
-			var cd realtime.ChatMessage
-			json.Unmarshal(envelope.Data, &cd)
-
 			buffer := bytes.NewBuffer(make([]byte, len(raw)))
 			json.Indent(buffer, raw, " ", "   ")
 
@@ -86,6 +83,9 @@ func main() {
 
 			// Send back acknowledgement
 			if envelope.Header.Type == realtime.MessageChat {
+				var cd realtime.ChatMessage
+				json.Unmarshal(envelope.Data, &cd)
+
 				SendAcknowledgement(conn, cd.ChatId, cd.MessageId, userID, envelope.Header.SenderID)
 			}
 		}
@@ -141,31 +141,18 @@ func ReadFromStdIn(conn *websocket.Conn, senderID uuid.UUID) {
 	scanner := bufio.NewScanner(os.Stdin)
 
 	for scanner.Scan() {
+		var envelope realtime.Envelope
 		line := scanner.Text()
-		parts := strings.Split(line, "@")
+		parts := strings.Split(line, " ")
 
-		receiverID := NameToUUID(parts[0])
-		message := parts[1]
-
-		chatMessage := realtime.ChatMessage{
-			ChatId:    uuid.New(),
-			MessageId: uuid.New(),
-			Body:      message,
+		// Chat message
+		if parts[0] != "sub" && parts[0] != "unsub" && parts[0] != "status" {
+			reciverID := NameToUUID(parts[0])
+			envelope = ConstuctChatMessage(senderID, reciverID, parts[1])
 		}
 
-		header := realtime.Header{
-			Type:       realtime.MessageChat,
-			SenderID:   senderID,
-			ReceiverID: receiverID,
-			CreatedAt:  time.Now(),
-			TTL:        time.Duration(time.Hour * 12),
-		}
-
-		raw, _ := json.Marshal(chatMessage)
-		envelope := realtime.Envelope{
-			Header: header,
-			Data:   json.RawMessage(raw),
-		}
+		// Presence action
+		envelope = ConstructPresenceSubUnsub(senderID, parts[0], parts[1:])
 
 		writer, err := conn.NextWriter(websocket.TextMessage)
 		if err != nil {
@@ -183,4 +170,63 @@ func ReadFromStdIn(conn *websocket.Conn, senderID uuid.UUID) {
 	if err := scanner.Err(); err != nil {
 		log.Fatalf("Failed to read: %v", err)
 	}
+}
+
+func ConstuctChatMessage(senderID, receiverID uuid.UUID, message string) realtime.Envelope {
+	chatMessage := realtime.ChatMessage{
+		ChatId:    uuid.New(),
+		MessageId: uuid.New(),
+		Body:      message,
+	}
+
+	header := realtime.Header{
+		Type:       realtime.MessageChat,
+		SenderID:   senderID,
+		ReceiverID: receiverID,
+		CreatedAt:  time.Now(),
+		TTL:        time.Duration(time.Hour * 12),
+	}
+
+	raw, _ := json.Marshal(chatMessage)
+	envelope := realtime.Envelope{
+		Header: header,
+		Data:   json.RawMessage(raw),
+	}
+
+	return envelope
+}
+
+func ConstructPresenceSubUnsub(actionTakerID uuid.UUID, action string, targets []string) realtime.Envelope {
+	presenceActionEvent := realtime.PresenceAction{
+		UserID:   actionTakerID,
+		ActionAt: time.Now(),
+	}
+
+	switch action {
+	case "sub":
+		presenceActionEvent.Action = "sub"
+	case "unsub":
+		presenceActionEvent.Action = "unsub"
+	case "status":
+		presenceActionEvent.Action = "status"
+	}
+
+	for i := range targets {
+		ID := NameToUUID(targets[i])
+		presenceActionEvent.Targets = append(presenceActionEvent.Targets, ID)
+	}
+
+	marshalledAction, _ := json.Marshal(presenceActionEvent)
+
+	envelope := realtime.Envelope{
+		Header: realtime.Header{
+			SenderID:  actionTakerID,
+			Type:      realtime.MessagePresenceAction,
+			CreatedAt: time.Now(),
+			TTL:       time.Second * 30,
+		},
+		Data: marshalledAction,
+	}
+
+	return envelope
 }

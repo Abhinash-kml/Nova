@@ -436,6 +436,9 @@ func main() {
 	realtimeHub.Initialize()
 	realtimeHub.Run()
 
+	// Presence manager
+	presenceManager := realtime.NewPresenceManager(redisClient, realtimeHub.SendChannel())
+
 	// Setup ws upgrader and all
 	globalRouter.GET("/ws", func(ctx *gin.Context) {
 		upgrader := websocket.Upgrader{
@@ -457,7 +460,7 @@ func main() {
 		}
 		// defer conn.Close() <-- Dont do this here, this will close the connection on handler end
 
-		rtClient := realtime.NewClient(&config.Websocket, userID, conn, nil, realtimeHub)
+		rtClient := realtime.NewClient(&config.Websocket, userID, conn, presenceManager, realtimeHub)
 		realtimeSessionStore.Add(rtClient)
 		realtimeHub.Register(rtClient)
 
