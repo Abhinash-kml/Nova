@@ -485,3 +485,63 @@ func (c *Controller) Refresh(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, response)
 }
+
+func (c *Controller) Ban(ctx *gin.Context) {
+	sctx, span := tracer.Start(ctx.Request.Context(), "users.controller.ban")
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			c.logger.Error("Failed to ban user", zap.Error(err))
+		}
+		span.End()
+	}()
+
+	var dto BanDTO
+
+	err = ctx.ShouldBindBodyWithJSON(&dto)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	bannedUser, err := c.service.Ban(sctx, dto)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, bannedUser)
+}
+
+func (c *Controller) Unban(ctx *gin.Context) {
+	sctx, span := tracer.Start(ctx.Request.Context(), "users.controller.unban")
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			c.logger.Error("Failed to unban user", zap.Error(err))
+		}
+		span.End()
+	}()
+
+	var dto UnbanDTO
+
+	err = ctx.ShouldBindBodyWithJSON(&dto)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	err = c.service.UnBan(sctx, dto)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.Status(http.StatusOK)
+}

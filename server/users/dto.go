@@ -92,3 +92,21 @@ type BulkModifyDTO struct {
 type BulkDeleteDTO struct {
 	Users []DeleteDTO `json:"users" binding:"required"`
 }
+type BanDTO struct {
+	UserID   string    `json:"user_id" binding:"required,uuid"`
+	Reason   string    `json:"reason" binding:"required"`
+	Type     string    `json:"ban_type" binding:"required"`
+	Duration time.Time `json:"duration" binding:"required"`
+}
+
+type BannedUser struct {
+	UserID     string    `json:"user_id"`
+	Reason     string    `json:"reason"`
+	Type       string    `json:"ban_type"`
+	BannedBy   string    `json:"banned_by"`
+	BannedTill time.Time `json:"banned_till"`
+}
+
+type UnbanDTO struct {
+	UserID string `json:"user_id" binding:"required,uuid"`
+}

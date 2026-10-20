@@ -21,5 +21,9 @@ func SetupRoutes(router *gin.Engine, c *Controller) {
 		group.POST("/bulk", c.BulkAdd)
 		group.PATCH("/bulk", c.BulkModify)
 		group.DELETE("/bulk", c.BulkDelete)
+
+		// Moderations
+		group.POST("/ban", c.Ban)
+		group.POST("/unban", c.Unban)
 	}
 }

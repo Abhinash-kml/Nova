@@ -34,6 +34,9 @@ type Service interface {
 	FindOrCreateUserFromSocialProfile(ctx context.Context, profile auth.UnifiedUserProfile) (uuid.UUID, bool, error)
 	CheckIfUserIsBanned(ctx context.Context, userId uuid.UUID) bool
 
+	Ban(ctx context.Context, dto BanDTO) (BannedUser, error)
+	UnBan(ctx context.Context, dto UnbanDTO) error
+
 	// Bulk operations
 	BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error)
 	BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error)
@@ -230,7 +233,10 @@ func (s *LocalUsersService) Login(ctx context.Context, loginRequest auth.LoginRe
 
 	// 3. User exists -> Check if account is banned
 	if !createdRightNow {
-		isBanned := s.CheckIfUserIsBanned(ctx, userId)
+		isBanned, err := s.CheckIfUserIsBanned(ctx, userId)
+		if err != nil {
+			return auth.LoginResponse{}, err
+		}
 		if isBanned {
 			return auth.LoginResponse{
 				Status: "failed",
@@ -313,7 +319,7 @@ func (s *LocalUsersService) FindOrCreateUserFromSocialProfile(ctx context.Contex
 	return s.repo.FindOrCreateUserFromSocialProfile(ctx, profile)
 }
 
-func (s *LocalUsersService) CheckIfUserIsBanned(ctx context.Context, userId uuid.UUID) bool {
+func (s *LocalUsersService) CheckIfUserIsBanned(ctx context.Context, userId uuid.UUID) (bool, error) {
 	ctx, span := tracer.Start(ctx, "users.service.checkifuserisbanned")
 	defer span.End()
 
@@ -354,4 +360,28 @@ func (s *LocalUsersService) BulkDelete(ctx context.Context, dto BulkDeleteDTO) (
 	}
 
 	return results, nil
+}
+
+func (s *LocalUsersService) Ban(ctx context.Context, dto BanDTO) (BannedUser, error) {
+	ctx, span := tracer.Start(ctx, "users.service.ban")
+	defer span.End()
+
+	bannedUser, err := s.repo.Ban(ctx, dto)
+	if err != nil {
+		return BannedUser{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to ban user")
+	}
+
+	return bannedUser, nil
+}
+
+func (s *LocalUsersService) UnBan(ctx context.Context, dto UnbanDTO) error {
+	ctx, span := tracer.Start(ctx, "users.service.unban")
+	defer span.End()
+
+	err := s.repo.UnBan(ctx, dto)
+	if err != nil {
+		return common.TranslatePostgresError(err, s.logger).WithMessage("Failed to unban user")
+	}
+
+	return nil
 }

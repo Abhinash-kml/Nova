@@ -461,9 +461,34 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (User,
 	}
 
 	// Execute query
-	result := tx.QueryRow(ctx, rawQuery, dto.Id, dto.Username, dto.DisplayName, dto.Email, dto.Country, dto.State, dto.LangTag, dto.Timezone, now, now)
-	err = result.Scan(&user.Id, &user.Username, &user.DisplayName, &user.Email, &user.Country, &user.State, &user.AvatarURL, &user.LangTag, &user.Timezone,
-		&user.CreatedAt, &user.UpdatedAt, &user.VerifiedAt, &disabledAt)
+	result := tx.QueryRow(
+		ctx,
+		rawQuery,
+		dto.Id,
+		dto.Username,
+		dto.DisplayName,
+		dto.Email,
+		dto.Country,
+		dto.State,
+		dto.LangTag,
+		dto.Timezone,
+		now,
+		now)
+	err = result.Scan(
+		&user.Id,
+		&user.Username,
+		&user.DisplayName,
+		&user.Email,
+		&user.Country,
+		&user.State,
+		&user.AvatarURL,
+		&user.LangTag,
+		&user.Timezone,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+		&user.VerifiedAt,
+		&disabledAt,
+	)
 	if err != nil {
 		return User{}, fmt.Errorf("scanning row: %w", err)
 	}
@@ -580,9 +605,16 @@ func (r *PostgresRepository) CheckIfUserWithSocialProviderIdExists(ctx context.C
 
 func (r *PostgresRepository) MapUserWithSocialProvider(ctx context.Context, userId uuid.UUID, providerUserId, provider string) error {
 	mappingQuery := `INSERT INTO 
-						user_mappings(user_id, provider_id, provider) 
-					VALUES
-						($1, $2, $3);`
+						user_mappings(
+							user_id,
+							provider_id, 
+							provider
+						) 
+						VALUES(
+							$1, 
+							$2, 
+							$3
+						);`
 
 	_, err := r.pgx.Exec(ctx, mappingQuery, userId, providerUserId, provider)
 	if err != nil {
@@ -594,29 +626,30 @@ func (r *PostgresRepository) MapUserWithSocialProvider(ctx context.Context, user
 
 func (r *PostgresRepository) GetBySocialProfileId(ctx context.Context, provider, socialUserId string) (User, error) {
 	query := `SELECT
-								id, 
-								username, 
-								displayname, 
-								email, 
-								country, 
-								state, 
-								avatar_url, 
-								lang_tag, 
-								timezone, 
-								created_at, 
-								updated_at, 
-								verified_at, 
-								disabled_at
-							FROM 
-								users u
-							INNER JOIN
-								user_mappings m
-							ON
-								u.id = m.user_id
-							WHERE
-								m.provider_id = $1
-							AND
-								m.provider = $2;`
+				id, 
+				username, 
+				displayname, 
+				email, 
+				country, 
+				state, 
+				avatar_url, 
+				lang_tag, 
+				timezone, 
+				created_at, 
+				updated_at, 
+				verified_at, 
+				disabled_at
+			FROM 
+				users u
+			INNER JOIN
+				user_mappings m
+			ON
+				u.id = m.user_id
+			WHERE
+				m.provider_id = $1
+			AND
+				m.provider = $2;`
+
 	var user User
 	var disabledAt *time.Time
 
@@ -647,8 +680,31 @@ func (r *PostgresRepository) GetBySocialProfileId(ctx context.Context, provider,
 	return user, nil
 }
 
-func (r *PostgresRepository) CheckIfUserIsBanned(ctx context.Context, userId uuid.UUID) bool {
-	return false
+func (r *PostgresRepository) CheckIfUserIsBanned(ctx context.Context, userId uuid.UUID) (bool, error) {
+	rawQuery := `
+		SELECT EXISTS(
+			SELECT
+				id
+			FROM
+				users_banned
+			WHERE
+				id = $1
+		);
+	`
+
+	var banned bool
+
+	row := r.pgx.QueryRow(
+		ctx,
+		rawQuery,
+		userId,
+	)
+	err := row.Scan(&banned)
+	if err != nil {
+		return false, fmt.Errorf("checking for banned user: %w", err)
+	}
+
+	return banned, nil
 }
 
 // Bulk operations - subject to change for improvement (dont use these queries right now)
@@ -774,4 +830,71 @@ func (r *PostgresRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) 
 	}
 
 	return results, nil
+}
+
+func (r *PostgresRepository) Ban(ctx context.Context, dto BanDTO) (BannedUser, error) {
+	rawQuery := `
+		INSERT INTO users_banned(
+			id,
+			reason,
+			ban_type,
+			banned_at,
+			banned_till,
+			banned_by
+		) VALUES (
+			$1,
+			$2,
+			$3,
+			$4,
+			$5,
+			$6 
+		);
+	`
+
+	userID, _ := uuid.Parse(dto.UserID)
+	currentTimeUTC := time.Now().UTC()
+
+	_, err := r.pgx.Exec(
+		ctx,
+		rawQuery,
+		userID,
+		dto.Reason,
+		dto.Type,
+		currentTimeUTC,
+		dto.Duration.UTC(),
+		SystemUser,
+	)
+	if err != nil {
+		return BannedUser{}, fmt.Errorf("banning user: %w", err)
+	}
+
+	return BannedUser{
+		UserID:     dto.UserID,
+		Reason:     dto.Reason,
+		Type:       dto.Type,
+		BannedBy:   "system",
+		BannedTill: dto.Duration,
+	}, nil
+}
+
+func (r *PostgresRepository) UnBan(ctx context.Context, dto UnbanDTO) error {
+	rawQuery := `
+		DELETE FROM
+			users_banned
+		WHERE
+			id = $1;
+	`
+
+	userID, _ := uuid.Parse(dto.UserID)
+
+	_, err := r.pgx.Query(
+		ctx,
+		rawQuery,
+		userID,
+	)
+	if err != nil {
+		return fmt.Errorf("unbanning user: %w", err)
+	}
+
+	return nil
 }
