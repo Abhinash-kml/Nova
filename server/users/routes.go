@@ -25,5 +25,9 @@ func SetupRoutes(router *gin.Engine, c *Controller) {
 		// Moderations
 		group.POST("/ban", c.Ban)
 		group.POST("/unban", c.Unban)
+
+		// Username
+		group.GET("/checkusername", c.CheckUsername)
+		group.GET("/usernames/:id", c.GetAllUsernames)
 	}
 }

@@ -35,4 +35,7 @@ type UsersRepository interface {
 	BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error)
 	BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error)
 	BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error)
+
+	CheckUsername(ctx context.Context, dto CheckUsernameDTO) (bool, error)
+	GetAllUsernames(ctx context.Context, dto UserId) ([]string, error)
 }

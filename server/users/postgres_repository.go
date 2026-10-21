@@ -898,3 +898,62 @@ func (r *PostgresRepository) UnBan(ctx context.Context, dto UnbanDTO) error {
 
 	return nil
 }
+
+func (r *PostgresRepository) CheckUsername(ctx context.Context, dto CheckUsernameDTO) (bool, error) {
+	rawQuery := `
+		SELECT EXISTS(
+			SELECT 
+				1 
+			FROM 
+				users 
+			WHERE 
+				username = $1
+		);
+	`
+
+	row := r.pgx.QueryRow(ctx, rawQuery, dto.Username)
+
+	var valid bool
+
+	err := row.Scan(&valid)
+	if err != nil {
+		return false, fmt.Errorf("scanning row: %w", err)
+	}
+
+	return valid, nil
+}
+
+func (r *PostgresRepository) GetAllUsernames(ctx context.Context, dto UserId) ([]string, error) {
+	rawQuery := `SELECT 
+					display_name
+				FROM 
+					user_name_audit
+				WHERE
+					id = $1;`
+
+	userID, _ := uuid.Parse(dto.Id)
+	rows, err := r.pgx.Query(ctx, rawQuery, userID)
+	if err != nil {
+		return nil, fmt.Errorf("getting usernames: %w", err)
+	}
+	defer rows.Close()
+
+	var usernames []string
+
+	for rows.Next() {
+		var username string
+
+		err = rows.Scan(&username)
+		if err != nil {
+			return nil, fmt.Errorf("scanning row: %w", err)
+		}
+
+		usernames = append(usernames, username)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating rows: %w", err)
+	}
+
+	return usernames, nil
+}

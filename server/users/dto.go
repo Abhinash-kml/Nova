@@ -110,3 +110,7 @@ type BannedUser struct {
 type UnbanDTO struct {
 	UserID string `json:"user_id" binding:"required,uuid"`
 }
+
+type CheckUsernameDTO struct {
+	Username string `json:"username" binding:"required"`
+}

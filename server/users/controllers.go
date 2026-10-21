@@ -545,3 +545,63 @@ func (c *Controller) Unban(ctx *gin.Context) {
 
 	ctx.Status(http.StatusOK)
 }
+
+func (c *Controller) CheckUsername(ctx *gin.Context) {
+	sctx, span := tracer.Start(ctx.Request.Context(), "users.controller.checkusername")
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			c.logger.Error("Failed to check username", zap.Error(err))
+		}
+		span.End()
+	}()
+
+	var dto CheckUsernameDTO
+
+	err = ctx.ShouldBindBodyWithJSON(&dto)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	valid, err := c.service.CheckUsername(sctx, dto)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, valid)
+}
+
+func (c *Controller) GetAllUsernames(ctx *gin.Context) {
+	sctx, span := tracer.Start(ctx.Request.Context(), "users.controller.getallusernames")
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			c.logger.Error("Failed to get all usernames", zap.Error(err))
+		}
+		span.End()
+	}()
+
+	var dto UserId
+
+	err = ctx.ShouldBindUri(&dto)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	usernames, err := c.service.GetAllUsernames(sctx, dto)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, usernames)
+}

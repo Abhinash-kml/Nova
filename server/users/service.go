@@ -41,6 +41,9 @@ type Service interface {
 	BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error)
 	BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error)
 	BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error)
+
+	CheckUsername(ctx context.Context, dto CheckUsernameDTO) (bool, error)
+	GetAllUsernames(ctx context.Context, dto UserId) ([]string, error)
 }
 
 type LocalUsersService struct {
@@ -384,4 +387,28 @@ func (s *LocalUsersService) UnBan(ctx context.Context, dto UnbanDTO) error {
 	}
 
 	return nil
+}
+
+func (s *LocalUsersService) CheckUsername(ctx context.Context, dto CheckUsernameDTO) (bool, error) {
+	ctx, span := tracer.Start(ctx, "users.service.checkusername")
+	defer span.End()
+
+	valid, err := s.repo.CheckUsername(ctx, dto)
+	if err != nil {
+		return false, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to check username")
+	}
+
+	return valid, nil
+}
+
+func (s *LocalUsersService) GetAllUsernames(ctx context.Context, dto UserId) ([]string, error) {
+	ctx, span := tracer.Start(ctx, "users.service.getallusername")
+	defer span.End()
+
+	usernames, err := s.repo.GetAllUsernames(ctx, dto)
+	if err != nil {
+		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to get all usernames")
+	}
+
+	return usernames, nil
 }
