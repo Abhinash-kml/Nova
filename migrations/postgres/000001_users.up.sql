@@ -51,7 +51,7 @@ LANGUAGE PLPGSQL
 AS $$
     BEGIN
         INSERT INTO user_name_audit(id, display_name, changed_on)
-        VALUES (NEW.id, NEW.display_name, CURRENT_TIMESTAMP);
+        VALUES (NEW.id, NEW.displayname, CURRENT_TIMESTAMP);
 
         RETURN NEW;
     END;

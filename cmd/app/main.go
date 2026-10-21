@@ -430,14 +430,25 @@ func main() {
 	listener.Listen()
 
 	// Setup realtime module
+	// Setup broker
 	realtimeBroker := realtime.NewRedisBroker(globalCtx, redisClient)
+	// Setup session store
 	realtimeSessionStore := realtime.NewInMemorySessionStore(100)
+	// Setup hub
 	realtimeHub := realtime.NewHub(globalCtx, realtimeBroker, realtimeSessionStore, config.Realtime, logger)
 	realtimeHub.Initialize()
 	realtimeHub.Run()
+	err = realtime.SetGlobalHub(realtimeHub)
+	if err != nil {
+		panic(err)
+	}
 
 	// Presence manager
 	presenceManager := realtime.NewPresenceManager(redisClient, realtimeHub.SendChannel())
+	err = realtime.SetGlobalPresenceManager(presenceManager)
+	if err != nil {
+		panic(err)
+	}
 
 	// Setup ws upgrader and all
 	globalRouter.GET("/ws", func(ctx *gin.Context) {
@@ -460,7 +471,7 @@ func main() {
 		}
 		// defer conn.Close() <-- Dont do this here, this will close the connection on handler end
 
-		rtClient := realtime.NewClient(&config.Websocket, userID, conn, presenceManager, realtimeHub)
+		rtClient := realtime.NewClient(&config.Websocket, userID, conn)
 		realtimeSessionStore.Add(rtClient)
 		realtimeHub.Register(rtClient)
 

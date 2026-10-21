@@ -2,11 +2,18 @@ package realtime
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
+)
+
+var (
+	hubGlobal *Hub
+	hubOnce   sync.Once
 )
 
 type Hub struct {
@@ -32,6 +39,8 @@ type Hub struct {
 
 func NewHub(ctx context.Context, broker RealtimeBroker, store SessionStore, cfg config.RealtimeHubConfig, l *zap.Logger) *Hub {
 	ctx, cancel := context.WithCancel(ctx)
+	ID, _ := uuid.NewV7()
+
 	return &Hub{
 		register:   make(chan *Client, 100),
 		unregister: make(chan *Client, 100),
@@ -44,7 +53,25 @@ func NewHub(ctx context.Context, broker RealtimeBroker, store SessionStore, cfg 
 		cancel:     cancel,
 		config:     cfg,
 		logger:     l,
+		nodeId:     ID,
 	}
+}
+
+func SetGlobalHub(h *Hub) error {
+	if h == nil {
+		return errors.New("Cannot set global hub with nil pointer")
+	}
+	hubOnce.Do(func() {
+		hubGlobal = h
+	})
+	return nil
+}
+
+func GetGlobalHub() *Hub {
+	if hubGlobal == nil {
+		panic("global instance of hub is nil")
+	}
+	return hubGlobal
 }
 
 func (h *Hub) Initialize() {

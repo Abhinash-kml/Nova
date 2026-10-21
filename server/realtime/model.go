@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
+//go:generate stringer -type=MessageType
 type MessageType int
 
 const (
@@ -18,6 +19,7 @@ const (
 	MessageLobbyEvent
 )
 
+//go:generate stringer -type=PresenceType
 type PresenceType int
 
 const (
@@ -28,6 +30,7 @@ const (
 	PresenceCustom
 )
 
+//go:generate stringer -type=MessageStatus
 type MessageStatus int
 
 const (
@@ -36,6 +39,7 @@ const (
 	StatusRead
 )
 
+//go:generate stringer -type=ChatMessageType
 type ChatMessageType int
 
 const (
@@ -46,6 +50,7 @@ const (
 	TypeDocument
 )
 
+//go:generate stringer -type=FileType
 type FileType int
 
 const (

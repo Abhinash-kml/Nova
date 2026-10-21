@@ -149,10 +149,10 @@ func ReadFromStdIn(conn *websocket.Conn, senderID uuid.UUID) {
 		if parts[0] != "sub" && parts[0] != "unsub" && parts[0] != "status" {
 			reciverID := NameToUUID(parts[0])
 			envelope = ConstuctChatMessage(senderID, reciverID, parts[1])
+		} else {
+			// Presence action
+			envelope = ConstructPresenceSubUnsub(senderID, parts[0], parts[1:])
 		}
-
-		// Presence action
-		envelope = ConstructPresenceSubUnsub(senderID, parts[0], parts[1:])
 
 		writer, err := conn.NextWriter(websocket.TextMessage)
 		if err != nil {
@@ -173,10 +173,12 @@ func ReadFromStdIn(conn *websocket.Conn, senderID uuid.UUID) {
 }
 
 func ConstuctChatMessage(senderID, receiverID uuid.UUID, message string) realtime.Envelope {
+	chatID, _ := uuid.Parse("912426f3-ccb0-5dcd-b937-8aebce8f2ecd")
 	chatMessage := realtime.ChatMessage{
-		ChatId:    uuid.New(),
+		ChatId:    chatID,
 		MessageId: uuid.New(),
 		Body:      message,
+		CreatedAt: time.Now(),
 	}
 
 	header := realtime.Header{

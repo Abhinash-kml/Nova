@@ -32,7 +32,7 @@ type Service interface {
 
 	// Operations
 	FindOrCreateUserFromSocialProfile(ctx context.Context, profile auth.UnifiedUserProfile) (uuid.UUID, bool, error)
-	CheckIfUserIsBanned(ctx context.Context, userId uuid.UUID) bool
+	CheckIfUserIsBanned(ctx context.Context, userId uuid.UUID) (bool, error)
 
 	Ban(ctx context.Context, dto BanDTO) (BannedUser, error)
 	UnBan(ctx context.Context, dto UnbanDTO) error

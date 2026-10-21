@@ -3,7 +3,9 @@ package realtime
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,6 +15,11 @@ import (
 var (
 	SessionTTL        = time.Second * 30
 	HeartbeatInterval = time.Second * 10
+)
+
+var (
+	pmGlobal *PresenceManager
+	pmOnce   sync.Once
 )
 
 type PresenceManager struct {
@@ -26,6 +33,23 @@ func NewPresenceManager(r *redis.Client, hubChan chan Envelope) *PresenceManager
 		redis:   r,
 		hubSend: hubChan,
 	}
+}
+
+func SetGlobalPresenceManager(pm *PresenceManager) error {
+	if pm == nil {
+		return errors.New("cannot set presence manager with nil pointer")
+	}
+	pmOnce.Do(func() {
+		pmGlobal = pm
+	})
+	return nil
+}
+
+func GetPresenceManager() *PresenceManager {
+	if pmGlobal == nil {
+		panic("global instance of presence manager is nil")
+	}
+	return pmGlobal
 }
 
 func subToKey(userID string) string {
