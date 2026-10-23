@@ -1,20 +1,24 @@
 CREATE TABLE IF NOT EXISTS stats(
-    id SERIAL PRIMARY KEY UNIQUE,
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     key VARCHAR(64) UNIQUE,
     name VARCHAR(64) UNIQUE,
     description TEXT,
     start_value INT,
-    created_at TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS player_stats_progression(
     player_id UUID REFERENCES users(id),
     stat_id INT REFERENCES stats(id),
-    current_value INT,
-    updated_at TIMESTAMP,
+    current_value BIGINT,
+    updated_at TIMESTAMPTZ,
 
     -- Composite primary key for uniqueness accross both columns
-    PRIMARY KEY(player_id, stat_id)
-);
+    PRIMARY KEY(player_id, stat_id),
 
-CREATE INDEX idx_player_stats_progression_player_id ON player_stats_progression(player_id);
+    FOREIGN KEY(player_id) REFERENCES users(id)
+    ON DELETE CASCADE,
+
+    FOREIGN KEY(stat_id) REFERENCES stats(id)
+    ON DELETE CASCADE
+);

@@ -12,5 +12,3 @@ CREATE TABLE IF NOT EXISTS player_inventory(
     -- constraint to prevent negative item count from dev mistake
     CONSTRAINT chk_player_inventory_quantity_positive CHECK(quantity >= 0)
 );
-
-CREATE INDEX idx_player_inventory_player_id ON player_inventory(user_id);

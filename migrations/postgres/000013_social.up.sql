@@ -5,8 +5,8 @@ CREATE TABLE IF NOT EXISTS friendships(
     user_two_id UUID NOT NULL,
     status relationship_status DEFAULT 'pending',
     action_user_id UUID NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 
     PRIMARY KEY(user_one_id, user_two_id),
     FOREIGN KEY(user_one_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -26,16 +26,16 @@ CREATE TABLE IF NOT EXISTS conversations(
     type VARCHAR NOT NULL,
     name VARCHAR UNIQUE,
     last_message_id BIGINT,
-    updated_at TIMESTAMP
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS messages(
-    id BIGSERIAL PRIMARY KEY NOT NULL,
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     sender_id UUID NOT NULL,
     conversation_id UUID NOT NULL,
     body VARCHAR NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMPTZ,
 
     FOREIGN KEY(sender_id) REFERENCES users(id)
     ON DELETE CASCADE,
@@ -43,10 +43,12 @@ CREATE TABLE IF NOT EXISTS messages(
     ON DELETE CASCADE
 );
 
+CREATE INDEX idx_messages_user_conversation ON messages(conversation_id, sender_id);
+
 CREATE TABLE IF NOT EXISTS conversation_participants(
-    conversation_id UUID NOT NULL,
+    conversation_id UUID PRIMARY KEY,
     user_id UUID NOT NULL,
-    joined_at TIMESTAMP,
+    joined_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     last_read_message_id BIGINT,
 
     FOREIGN KEY(conversation_id) REFERENCES conversations(id)

@@ -1,16 +1,26 @@
 CREATE TABLE IF NOT EXISTS clans (
-    id UUID NOT NULL PRIMARY KEY DEFAULT uuidv7(),
+    id UUID PRIMARY KEY DEFAULT uuidv7(),
     name VARCHAR NOT NULL,
     tag VARCHAR NOT NULL,
     description VARCHAR NOT NULL,
-    leader_id UUID NOT NULL REFERENCES users(id),
-    coleader_ids UUID[] DEFAULT '{}',
     level INT DEFAULT 1,
-    member_ids UUID[] DEFAULT '{}',
     max_members INT, 
-    islocked BOOL DEFAULT false,
-    created_at TIMESTAMP DEFAULT now(),
-    updated_at TIMESTAMP
+    is_locked BOOL DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ
 );
 
-CREATE INDEX idx_clans_id ON clans(id);
+CREATE ROLE IF NOT EXISTS CLAN_MEMBER_ROLE AS ENUM (
+    'LEADER',
+    'CO-LEADER',
+    'ELITE',
+    'MEMBER'
+);
+
+CREATE TABLE IF NOT EXISTS clan_members (
+    clan_id UUID,
+    user_id UUID,
+    role CLAN_MEMBER_ROLE DEFAULT 'MEMBER'
+    joined_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+);
+

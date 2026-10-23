@@ -1,12 +1,12 @@
 CREATE TABLE IF NOT EXISTS achievements(
-    id SERIAL UNIQUE NOT NULL,
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     key VARCHAR(64) UNIQUE NOT NULL,
     name VARCHAR(64) NOT NULL,
     description TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS achievement_criteria(
-    id SERIAL PRIMARY KEY,
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     achievement_id INT REFERENCES achievements(id) ON DELETE CASCADE NOT NULL,
     stat_id INT REFERENCES stats(id) ON DELETE CASCADE NOT NULL,
     target_value INT CHECK (target_value >= 1),
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS achievement_criteria(
 );
 
 CREATE TABLE IF NOT EXISTS achievement_progress(
-    id SERIAL PRIMARY KEY,
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id UUID REFERENCES users(id) NOT NULL,
     criterion_id INT REFERENCES achievement_criteria(id) ON DELETE CASCADE NOT NULL,
     current_value INT NOT NULL CHECK (current_value >= 0),

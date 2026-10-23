@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS channels(
     persistant BOOLEAN DEFAULT false,
     process_interval INT,
     created_by UUID,
-    created_at TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_by UUID,
-    updated_at TIMESTAMP
+    updated_at TIMESTAMPTZ
 );

@@ -1,12 +1,13 @@
 CREATE TABLE IF NOT EXISTS posts (
-    id UUID PRIMARY KEY NOT NULL DEFAULT uuidv7(),
+    id UUID PRIMARY KEY DEFAULT uuidv7(),
     title VARCHAR,
     body VARCHAR,
-    author_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    likes INT,
-    comments INT,
-    created_at TIMESTAMP DEFAULT now(),
-    updated_at TIMESTAMP
-);
+    author_id UUID,
+    likes BIGINT,
+    comments BIGINT,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ,
 
-CREATE INDEX idx_posts_id ON posts(id);
+    FOREIGN KEY(author_id) REFERENCES users(id)
+    ON DELETE CASCADE
+);
