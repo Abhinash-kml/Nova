@@ -139,27 +139,96 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 
 // General operations
 func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (Clan, error) {
-	rawQuery := `INSERT INTO
-					clans(id, name, tag, description, leader_id, coleader_ids, level, member_ids, max_members, islocked, created_at, updated_at)
-				VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);`
+	createClanQuery := `INSERT INTO
+					clans (
+						id, 
+						name, 
+						tag, 
+						description, 
+						level, 
+						max_members, 
+						is_locked, 
+						created_at, 
+						updated_at
+					)
+					VALUES (
+						$1, 
+						$2, 
+						$3, 
+						$4, 
+						$5, 
+						$6, 
+						$7, 
+						$8, 
+						$9
+					);`
 
-	id, _ := uuid.NewV7()
-	now := time.Now()
-	_, err := r.pgx.Exec(ctx, rawQuery, id, dto.Name, dto.Tag, dto.Description, dto.LeaderId, dto.ColeaderId, dto.Level,
-		dto.Members, dto.MaxMembers, dto.IsLocked, now, now)
+	makeLeaderQuery := `
+		INSERT INTO
+			clan_members (
+				clan_id,
+				user_id,
+				role,
+				joined_at
+			) VALUES (
+				$1,
+				$2,
+				'LEADER',
+				$3 
+			);
+	`
+
+	clanID, err := uuid.NewV7()
 	if err != nil {
-		return Clan{}, fmt.Errorf("create clan: %w", err)
+		return Clan{}, fmt.Errorf("generating id: %w", err)
+	}
+	now := time.Now()
+
+	tx, err := r.pgx.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
+	if err != nil {
+		return Clan{}, fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	_, err = tx.Exec(
+		ctx,
+		createClanQuery,
+		clanID,
+		dto.Name,
+		dto.Tag,
+		dto.Description,
+		dto.Level,
+		dto.MaxMembers,
+		dto.IsLocked,
+		now,
+		now,
+	)
+	if err != nil {
+		return Clan{}, fmt.Errorf("creating clan: %w", err)
+	}
+
+	_, err = tx.Exec(
+		ctx,
+		makeLeaderQuery,
+		clanID,
+		dto.LeaderID,
+		now,
+	)
+	if err != nil {
+		return Clan{}, fmt.Errorf("making leader: %w", err)
+	}
+	err = tx.Commit(ctx)
+	if err != nil {
+		return Clan{}, fmt.Errorf("commiting transaction: %w", err)
 	}
 
 	return Clan{
-		Id:          id,
+		Id:          clanID,
 		Name:        dto.Name,
 		Tag:         dto.Tag,
 		Description: dto.Description,
-		LeaderId:    dto.LeaderId,
-		ColeaderId:  dto.ColeaderId,
+		LeaderID:    dto.LeaderID,
 		Level:       dto.Level,
-		Members:     dto.Members,
 		MaxMembers:  dto.MaxMembers,
 		IsLocked:    dto.IsLocked,
 		CreatedAt:   now,
@@ -174,11 +243,9 @@ func (r *PostgresRepository) GetById(ctx context.Context, id uuid.UUID) (Clan, e
 					tag,
 					description,
 					leader_id,
-					coleader_ids,
 					level,
-					member_ids,
 					max_members,
-					islocked,
+					is_locked,
 					created_at,
 					updated_at
 				FROM
@@ -192,8 +259,18 @@ func (r *PostgresRepository) GetById(ctx context.Context, id uuid.UUID) (Clan, e
 	row := r.pgx.QueryRow(ctx, rawQuery, id)
 
 	// Scan returned row
-	err := row.Scan(&clan.Id, &clan.Name, &clan.Tag, &clan.Description, &clan.LeaderId, &clan.ColeaderId,
-		&clan.Level, &clan.Members, &clan.MaxMembers, &clan.IsLocked, &clan.CreatedAt, &clan.UpdatedAt)
+	err := row.Scan(
+		&clan.Id,
+		&clan.Name,
+		&clan.Tag,
+		&clan.Description,
+		&clan.LeaderID,
+		&clan.Level,
+		&clan.Members,
+		&clan.IsLocked,
+		&clan.CreatedAt,
+		&clan.UpdatedAt,
+	)
 	if err != nil {
 		return Clan{}, fmt.Errorf("scanning row: %w", err)
 	}
@@ -208,11 +285,9 @@ func (r *PostgresRepository) GetByName(ctx context.Context, name string) (Clan, 
 					tag,
 					description,
 					leader_id,
-					coleader_ids,
 					level,
-					member_ids,
 					max_members,
-					islocked,
+					is_locked,
 					created_at,
 					updated_at
 				FROM
@@ -226,8 +301,18 @@ func (r *PostgresRepository) GetByName(ctx context.Context, name string) (Clan, 
 	row := r.pgx.QueryRow(ctx, rawQuery, name)
 
 	// Scan returned row
-	err := row.Scan(&clan.Id, &clan.Name, &clan.Tag, &clan.Description, &clan.LeaderId, &clan.ColeaderId,
-		&clan.Level, &clan.Members, &clan.MaxMembers, &clan.IsLocked, &clan.CreatedAt, &clan.UpdatedAt)
+	err := row.Scan(
+		&clan.Id,
+		&clan.Name,
+		&clan.Tag,
+		&clan.Description,
+		&clan.LeaderID,
+		&clan.Level,
+		&clan.MaxMembers,
+		&clan.IsLocked,
+		&clan.CreatedAt,
+		&clan.UpdatedAt,
+	)
 	if err != nil {
 		return Clan{}, fmt.Errorf("scanning row: %w", err)
 	}
@@ -246,11 +331,9 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 					tag,
 					description,
 					leader_id,
-					coleader_ids,
 					level,
-					member_ids,
 					max_members,
-					islocked,
+					is_locked,
 					created_at,
 					updated_at
 				FROM 
@@ -277,8 +360,18 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 	var clans []Clan
 	for rows.Next() {
 		var clan Clan
-		err = rows.Scan(&clan.Id, &clan.Name, &clan.Tag, &clan.Description, &clan.LeaderId, &clan.ColeaderId,
-			&clan.Level, &clan.Members, &clan.MaxMembers, &clan.IsLocked, &clan.CreatedAt, &clan.UpdatedAt)
+		err = rows.Scan(
+			&clan.Id,
+			&clan.Name,
+			&clan.Tag,
+			&clan.Description,
+			&clan.LeaderID,
+			&clan.Level,
+			&clan.Members,
+			&clan.IsLocked,
+			&clan.CreatedAt,
+			&clan.UpdatedAt,
+		)
 		if err != nil {
 			return nil, fmt.Errorf("scanning row: %w", err)
 		}
@@ -290,52 +383,7 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 }
 
 func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (Clan, error) {
-	// Setup query builder
-	queryBuilder := r.statementBuilder.Update("clans").Where(squirrel.Eq{"id": dto.Id})
-	for i := range dto.Updates {
-		queryBuilder = queryBuilder.Set(dto.Updates[i].Field, dto.Updates[i].Value)
-	}
-	queryBuilder = queryBuilder.Suffix("RETURNING *")
-
-	// Generate query
-	query, args, err := queryBuilder.ToSql()
-	if err != nil {
-		return Clan{}, fmt.Errorf("generate query: %w", err)
-	}
-
-	var clan Clan
-
-	// Begin transaction
-	tx, err := r.pgx.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
-	if err != nil {
-		return Clan{}, fmt.Errorf("begin transaction: %w", err)
-	}
-	defer tx.Rollback(ctx)
-
-	// Lock row in transaction
-	_, err = tx.Exec(ctx, "SELECT name FROM clans WHERE id = $1 FOR UPDATE;", dto.Id)
-	if err != nil {
-		return Clan{}, fmt.Errorf("locking row: %w", err)
-	}
-
-	// Execute query
-	row := r.pgx.QueryRow(ctx, query, args...)
-
-	// Scan returned row
-	err = row.Scan(&clan.Id, &clan.Name, &clan.Tag, &clan.Description, &clan.LeaderId, &clan.ColeaderId,
-		&clan.Level, &clan.Members, &clan.MaxMembers, &clan.IsLocked, &clan.CreatedAt, &clan.UpdatedAt)
-	if err != nil {
-		return Clan{}, fmt.Errorf("scanning row: %w", err)
-	}
-
-	// Commit transaction
-	err = tx.Commit(ctx)
-	if err != nil {
-		return Clan{}, fmt.Errorf("commit transaction: %w", err)
-	}
-
-	return clan, nil
-
+	return Clan{}, nil
 }
 
 func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {

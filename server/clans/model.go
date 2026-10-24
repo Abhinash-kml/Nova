@@ -17,9 +17,7 @@ type Clan struct {
 	Name        string      `json:"name" redis:"name"`
 	Tag         string      `json:"tag" redis:"tag"`
 	Description string      `json:"description" redis:"description"`
-	LeaderId    uuid.UUID   `json:"leader_id" redis:"leader_id"`
-	ColeaderId  []uuid.UUID `json:"coleader_ids,omitempty" redis:"coleader_ids"`
-	EliteId     []uuid.UUID `json:"elite_ids,omitempty" redis:"elite_ids"`
+	LeaderID    uuid.UUID   `json:"leader_id" redis:"leader_id"`
 	Level       int         `json:"level" redis:"level"`
 	Members     []uuid.UUID `json:"members" redis:"members"`
 	MaxMembers  int         `json:"max_members" redis:"max_members"`

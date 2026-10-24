@@ -15,9 +15,7 @@ type CreateDTO struct {
 	Name        string      `json:"name" binding:"required,min=10,max=10"`
 	Description string      `json:"description" binding:"required,min=5,max=40"`
 	Tag         string      `json:"tag" binding:"required"`
-	LeaderId    uuid.UUID   `json:"leader_id" binding:"required"`
-	ColeaderId  []uuid.UUID `json:"coleader_ids,omitempty" binding:"required"`
-	EliteId     []uuid.UUID `json:"elite_ids,omitempty" binding:"required"`
+	LeaderID    uuid.UUID   `json:"leader_id" binding:"required"`
 	Level       int         `json:"level" binding:"required"`
 	Members     []uuid.UUID `json:"members" binding:"required"`
 	MaxMembers  int         `json:"max_members" binding:"required"`
