@@ -46,15 +46,19 @@ CREATE TABLE IF NOT EXISTS messages(
 CREATE INDEX idx_messages_user_conversation ON messages(conversation_id, sender_id);
 
 CREATE TABLE IF NOT EXISTS conversation_participants(
-    conversation_id UUID PRIMARY KEY,
+    conversation_id UUID,
     user_id UUID NOT NULL,
     joined_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     last_read_message_id BIGINT,
 
+    PRIMARY KEY(conversation_id, user_id),
+
     FOREIGN KEY(conversation_id) REFERENCES conversations(id)
     ON DELETE CASCADE,
+
     FOREIGN KEY(user_id) REFERENCES users(id)
     ON DELETE CASCADE,
+    
     FOREIGN KEY(last_read_message_id) REFERENCES messages(id)
     ON DELETE CASCADE
 );

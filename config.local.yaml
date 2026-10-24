@@ -1,7 +1,7 @@
 app_name: "nova backend"
 
 logging:
-  level: info
+  level: debug
 
 http:
   address: :8000
@@ -26,9 +26,9 @@ realtime-hub:
     broker: 10
 
 websocket:
-  ping-interval: 3s
+  ping-interval: 15s
   write-wait: 5s
-  pong-wait: 10s
+  pong-wait: 5s
   message-size: 5000
   max-messages: 1024
 

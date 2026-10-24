@@ -10,6 +10,7 @@ import (
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/abhinash-kml/nova/server/realtime"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
@@ -469,8 +470,68 @@ func (r *PostgresRepository) SendMessage(ctx context.Context, envelope realtime.
 	return nil
 }
 
-func (r *PostgresRepository) CheckIfConversationExists(ctx context.Context) (bool, error) {
-	return true, nil
+func (r *PostgresRepository) CreateConversationSendMessage(ctx context.Context, message realtime.ChatMessage, senderID, targetID uuid.UUID) error {
+	createConversationQuery := `
+		INSERT INTO conversations(id, type)
+		VALUES ($1, $2)
+		ON CONFLICT (id) DO NOTHING;
+	`
+
+	insertMessageQuery := `
+		INSERT INTO 
+			messages(
+				sender_id,
+				conversation_id,
+				body,
+				created_at
+			) VALUES (
+				$1,
+				$2,
+				$3,
+				$4 
+			);
+	`
+
+	tx, err := r.pgx.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	_, err = tx.Exec(ctx, createConversationQuery, message.ChatId, message.ConversationType)
+	if err != nil {
+		return fmt.Errorf("creating conversation: %w", err)
+	}
+
+	_, err = tx.Exec(ctx, insertMessageQuery, senderID, message.ChatId, message.Body, message.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("insering message: %w", err)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return fmt.Errorf("commiting transaction: %w", err)
+	}
+
+	return nil
+}
+
+func (r *PostgresRepository) CheckIfConversationExists(ctx context.Context, conversationID uuid.UUID) (bool, error) {
+	rawQuery := `
+		SELECT EXISTS(
+			SELECT 1 FROM conversations WHERE id = $1
+		);
+	`
+
+	var exists bool
+
+	row := r.pgx.QueryRow(ctx, rawQuery, conversationID)
+	err := row.Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("scanning row: %w", err)
+	}
+
+	return exists, nil
 }
 
 func (r *PostgresRepository) CreateConversation(ctx context.Context, dto CreateConversationDTO) (ConversationDetailsDTO, error) {
@@ -564,4 +625,40 @@ func (r *PostgresRepository) RemoveConversationParticipant(ctx context.Context, 
 	}
 
 	return nil
+}
+
+func (r *PostgresRepository) GetConversationParticipants(ctx context.Context, conversationID uuid.UUID) ([]uuid.UUID, error) {
+	rawQuery := `
+		SELECT 
+			user_id
+		FROM 
+			conversation_participants
+		WHERE 
+			conversation_id = $1;
+	`
+
+	var participants []uuid.UUID
+	var err error
+
+	rows, err := r.pgx.Query(ctx, rawQuery, conversationID)
+	if err != nil {
+		return nil, fmt.Errorf("ffetching rows: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var participant uuid.UUID
+		err = rows.Scan(&participant)
+		if err != nil {
+			return nil, fmt.Errorf("scanning row: %w", err)
+		}
+
+		participants = append(participants, participant)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating rows: %w", err)
+	}
+
+	return participants, nil
 }

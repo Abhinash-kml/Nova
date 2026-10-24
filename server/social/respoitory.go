@@ -20,9 +20,11 @@ type Repository interface {
 	GetAllBlocked(ctx context.Context, dto GetAllBlockedDTO) ([]uuid.UUID, error)
 	GetMutualFriends(ctx context.Context, dto GetMutualFriendsDTO) ([]uuid.UUID, error)
 
-	CheckIfConversationExists(ctx context.Context) (bool, error)
+	CheckIfConversationExists(ctx context.Context, conversationID uuid.UUID) (bool, error)
 	CreateConversation(ctx context.Context, dto CreateConversationDTO) (ConversationDetailsDTO, error)
+	GetConversationParticipants(ctx context.Context, conversationID uuid.UUID) ([]uuid.UUID, error)
 	AddConversationParticipant(ctx context.Context, dto AddConversationParticipantDTO) error
 	RemoveConversationParticipant(ctx context.Context, dto RemoveConversationParticipantDTO) error
 	SendMessage(ctx context.Context, envelope realtime.Envelope) error
+	CreateConversationSendMessage(ctx context.Context, message realtime.ChatMessage, senderID, targetID uuid.UUID) error
 }

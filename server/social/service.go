@@ -23,11 +23,13 @@ type Service interface {
 	GetAllBlocked(ctx context.Context, dto GetAllBlockedDTO) ([]uuid.UUID, error)
 	GetMutualFriends(ctx context.Context, dto GetMutualFriendsDTO) ([]uuid.UUID, error)
 
-	CheckIfConversationExists(ctx context.Context) (bool, error)
+	CheckIfConversationExists(ctx context.Context, conversationID uuid.UUID) (bool, error)
 	CreateConversation(ctx context.Context, dto CreateConversationDTO) (ConversationDetailsDTO, error)
+	GetConversationParticipants(ctx context.Context, conversationID uuid.UUID) ([]uuid.UUID, error)
 	AddConversationParticipant(ctx context.Context, dto AddConversationParticipantDTO) error
 	RemoveConversationParticipant(ctx context.Context, dto RemoveConversationParticipantDTO) error
 	SendMessage(ctx context.Context, envelope realtime.Envelope) error
+	CreateConversationSendMessage(ctx context.Context, message realtime.ChatMessage, senderID, targetID uuid.UUID) error
 }
 
 type LocalSocialService struct {
@@ -164,12 +166,16 @@ func (s *LocalSocialService) GetMutualFriends(ctx context.Context, dto GetMutual
 	return mutualFriends, nil
 }
 
-func (s *LocalSocialService) CheckIfConversationExists(ctx context.Context) (bool, error) {
-	return s.repo.CheckIfConversationExists(ctx)
+func (s *LocalSocialService) CheckIfConversationExists(ctx context.Context, conversationID uuid.UUID) (bool, error) {
+	return s.repo.CheckIfConversationExists(ctx, conversationID)
 }
 
 func (s *LocalSocialService) CreateConversation(ctx context.Context, dto CreateConversationDTO) (ConversationDetailsDTO, error) {
 	return s.repo.CreateConversation(ctx, dto)
+}
+
+func (s LocalSocialService) GetConversationParticipants(ctx context.Context, conversationID uuid.UUID) ([]uuid.UUID, error) {
+	return s.repo.GetConversationParticipants(ctx, conversationID)
 }
 
 func (s *LocalSocialService) AddConversationParticipant(ctx context.Context, dto AddConversationParticipantDTO) error {
@@ -182,4 +188,8 @@ func (s *LocalSocialService) RemoveConversationParticipant(ctx context.Context, 
 
 func (s *LocalSocialService) SendMessage(ctx context.Context, envelope realtime.Envelope) error {
 	return s.repo.SendMessage(ctx, envelope)
+}
+
+func (s *LocalSocialService) CreateConversationSendMessage(ctx context.Context, message realtime.ChatMessage, senderID, targetID uuid.UUID) error {
+	return s.repo.CreateConversationSendMessage(ctx, message, senderID, targetID)
 }

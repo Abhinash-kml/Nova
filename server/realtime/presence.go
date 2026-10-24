@@ -14,7 +14,7 @@ import (
 
 var (
 	SessionTTL        = time.Second * 30
-	HeartbeatInterval = time.Second * 10
+	HeartbeatInterval = time.Second * 15
 )
 
 var (

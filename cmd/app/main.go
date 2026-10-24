@@ -97,6 +97,9 @@ func main() {
 	}
 	log.Printf("Loaded configs from file: %s", configFile+configFileSeparator+configFileType)
 	config := configs.GetInstance()
+	configs.RegisterOnChangeHook(func(newConfig *configs.Config) {
+		config = newConfig
+	})
 
 	// Open file for writing logs
 	file, err := os.OpenFile("./logs/temp.log", os.O_CREATE|os.O_APPEND, 0755)
@@ -136,6 +139,7 @@ func main() {
 	otelLogCore := otelzap.NewCore("nova", otelzap.WithLoggerProvider(observability.LoggerProvider()))
 	teeCore := zapcore.NewTee(fileCore, stdOutCore, otelLogCore)
 	logger := zap.New(teeCore).WithOptions(zap.AddCaller())
+	zap.ReplaceGlobals(logger)
 	defer logger.Sync()
 	configs.RegisterOnChangeHook(func(c *configs.Config) {
 		newLevel, err := zapcore.ParseLevel(c.Logging.Level)
@@ -479,8 +483,9 @@ func main() {
 		go rtClient.ProcessOutgoing()
 
 		info := map[string]any{
-			"user_id":      userID,
-			"connected_at": time.Now(),
+			"user_id":       userID,
+			"connected_at":  time.Now(),
+			"ping_interval": config.Websocket.PingInterval, // Send this to client so clients dont need manual intervention
 		}
 		bytes, _ := json.Marshal(info)
 		rtClient.Send(

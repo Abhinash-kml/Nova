@@ -76,10 +76,11 @@ type Envelope struct {
 }
 
 type ChatMessage struct {
-	MessageId   uuid.UUID       `json:"id"`
-	MessageType ChatMessageType `json:"message_type"`
-	ChatId      uuid.UUID       `json:"chat_id"`
-	ParentId    uuid.UUID       `json:"parent_id,omitempty"`
+	ConversationType int             `json:"conversation_type"`
+	MessageId        uuid.UUID       `json:"id"`
+	MessageType      ChatMessageType `json:"message_type"`
+	ChatId           uuid.UUID       `json:"chat_id"`
+	ParentId         uuid.UUID       `json:"parent_id,omitempty"`
 
 	Body         string       `json:"body"`
 	Attachements []Attachment `json:"attachments,omitempty"`

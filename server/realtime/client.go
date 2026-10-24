@@ -22,6 +22,10 @@ type Client struct {
 }
 
 func NewClient(config *config.WebsocketConfig, uid uuid.UUID, connection *websocket.Conn) *Client {
+	fmt.Println("Ping:", config.PingInterval)
+	fmt.Println("Pong:", config.PongWait)
+	fmt.Println("WriteWait:", config.WriteWait)
+
 	return &Client{
 		Uid:            uid,
 		conn:           connection,
@@ -39,11 +43,17 @@ func (c *Client) ReadIncoming() {
 	}()
 
 	c.conn.SetReadLimit(c.config.MessageSize)
-	c.conn.SetReadDeadline(time.Now().Add(c.config.PongWait))
+	err := c.conn.SetReadDeadline(time.Now().Add(c.config.PingInterval + c.config.PongWait))
+	if err != nil {
+		zap.L().Error("Failed to set read deadline", zap.Error(err))
+		return
+	}
 
 	c.conn.SetPongHandler(func(appData string) error {
-		c.conn.SetReadDeadline(time.Now().Add(c.config.PongWait))
+		c.conn.SetReadDeadline(time.Now().Add(c.config.PingInterval + c.config.PongWait))
 		GetPresenceManager().RefreshSession(context.Background(), c.Uid.String())
+
+		zap.L().Debug("Pong received from client", zap.String("uid", c.Uid.String()))
 		return nil
 	})
 
@@ -61,7 +71,7 @@ func (c *Client) ReadIncoming() {
 			break
 		}
 
-		c.conn.SetReadDeadline(time.Now().Add(c.config.PongWait))
+		c.conn.SetReadDeadline(time.Now().Add(c.config.PingInterval + c.config.PongWait))
 
 		if messageType != websocket.TextMessage && messageType != websocket.BinaryMessage {
 			continue
@@ -75,7 +85,7 @@ func (c *Client) ReadIncoming() {
 			continue
 		}
 
-		fmt.Println("========== BEGIN MESSAGE ==========")
+		zap.L().Sugar().Debug("========== BEGIN MESSAGE ==========")
 
 		encoder := json.NewEncoder(os.Stdout)
 		encoder.SetIndent("", "   ")
@@ -83,7 +93,7 @@ func (c *Client) ReadIncoming() {
 
 		c.ProcessMessage(incomingEnvelope)
 
-		fmt.Println("========== END MESSAGE ==========")
+		zap.L().Sugar().Debug("========== END MESSAGE ==========")
 	}
 }
 
@@ -102,7 +112,11 @@ Loop:
 				return
 			}
 
-			c.conn.SetWriteDeadline(time.Now().Add(c.config.WriteWait))
+			err := c.conn.SetWriteDeadline(time.Now().Add(c.config.WriteWait))
+			if err != nil {
+				zap.L().Error("Failed to set write deadline", zap.Error(err))
+				return
+			}
 
 			writer, err := c.conn.NextWriter(websocket.TextMessage)
 			if err != nil {
@@ -139,13 +153,31 @@ Loop:
 				zap.L().Error("Failed to write message using writer", zap.Error(err))
 				break Loop
 			}
+
+			// err = c.conn.SetWriteDeadline(time.Time{}) // Expirement
+			// if err != nil {
+			// 	zap.L().Error("Failed to set write deadline", zap.Error(err))
+			// 	return
+			// }
 		case <-ticker.C:
-			c.conn.SetWriteDeadline(time.Now().Add(c.config.WriteWait))
-			err := c.conn.WriteMessage(websocket.PingMessage, nil)
+			err := c.conn.SetWriteDeadline(time.Now().Add(c.config.WriteWait))
+			if err != nil {
+				zap.L().Error("Failed to set write deadline", zap.Error(err))
+				return
+			}
+			err = c.conn.WriteMessage(websocket.PingMessage, nil)
 			if err != nil {
 				zap.L().Error("Failed to send ping message to client", zap.Error(err))
 				return
 			}
+
+			// err = c.conn.SetWriteDeadline(time.Time{}) // Expirement
+			// if err != nil {
+			// 	zap.L().Error("Failed to set write deadline", zap.Error(err))
+			// 	return
+			// }
+
+			zap.L().Debug("Sent ping to client", zap.String("uid", c.Uid.String()))
 		}
 	}
 }

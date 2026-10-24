@@ -2,6 +2,7 @@ package social
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/abhinash-kml/nova/server/realtime"
@@ -32,7 +33,14 @@ func (ml *MessageListener) Listen() {
 
 			fmt.Println("Got message:", message.Header.SenderID)
 
-			err := ml.service.SendMessage(context.Background(), message)
+			var cMessage realtime.ChatMessage
+			err := json.Unmarshal(message.Data, &cMessage)
+			if err != nil {
+				ml.logger.Error("Failed to unmarshall chat message", zap.Error(err))
+				continue
+			}
+
+			err = ml.service.CreateConversationSendMessage(context.Background(), cMessage, message.Header.SenderID, message.Header.ReceiverID)
 			if err != nil {
 				ml.logger.Error("Failed to persist merssage in db", zap.Error(err))
 			}

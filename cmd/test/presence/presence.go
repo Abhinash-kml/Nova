@@ -19,6 +19,11 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+var (
+	SERVER_PING_INTERVAL time.Duration = time.Second * 15
+	READ_DEADLINE                      = SERVER_PING_INTERVAL + (time.Second * 5)
+)
+
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancel()
@@ -55,10 +60,10 @@ func ConnectNClients(ctx context.Context) map[uuid.UUID]*websocket.Conn {
 			fmt.Println("Response:\n", string(res))
 
 			// 1. Set up your deadlines and handlers exactly as you did
-			conn.SetReadDeadline(time.Now().Add(time.Second * 5))
+			conn.SetReadDeadline(time.Now().Add(READ_DEADLINE))
 
 			conn.SetPingHandler(func(appData string) error {
-				conn.SetReadDeadline(time.Now().Add(time.Second * 5))
+				conn.SetReadDeadline(time.Now().Add(READ_DEADLINE))
 				// Send the Pong back to the server
 				return conn.WriteMessage(websocket.PongMessage, []byte(appData))
 			})
@@ -92,7 +97,7 @@ func ListenForMessages(conn *websocket.Conn) {
 		}
 
 		// Refresh the read deadline when a normal data message is received too!
-		conn.SetReadDeadline(time.Now().Add(time.Second * 5))
+		conn.SetReadDeadline(time.Now().Add(READ_DEADLINE))
 
 		// Handle normal text/binary messages
 		if messageType == websocket.TextMessage {
@@ -123,9 +128,13 @@ func ReadAndSendMessages(connections map[uuid.UUID]*websocket.Conn) {
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		text := scanner.Text()
-		parts := strings.Split(text, " ")
+		parts := strings.Split(text, ":")
 		userID := NameToUUID(parts[0])
-		status := parts[1]
+		status := strings.TrimSpace(parts[1])
+
+		// name: online
+		// name: offline
+		// name: playing in erangel
 
 		presenceEvent := realtime.PresenceAction{
 			UserID:   userID,
@@ -142,12 +151,11 @@ func ReadAndSendMessages(connections map[uuid.UUID]*websocket.Conn) {
 			presenceEvent.Data = map[string]string{
 				"status": "offline",
 			}
-		case strings.Contains(status, "custom"):
-			customStatus := strings.Split(status, "|")[1]
-			fmt.Println("Custom Status:", customStatus)
+		default:
+			fmt.Println("Custom Status:", status)
 			presenceEvent.Data = map[string]string{
 				"status":        "custom",
-				"custom_status": customStatus,
+				"custom_status": status,
 			}
 		}
 
