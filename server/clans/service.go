@@ -58,7 +58,7 @@ func (s *LocalClansService) GetById(ctx context.Context, id uuid.UUID) (Clan, er
 	key := s.config.KeyPrefix + id.String()
 
 	// Get from cache or load into it
-	bytes, err := s.cache.GetOrLoad(ctx, key, func(ctx context.Context) ([]byte, error) {
+	bytes, err := s.cache.GetOrLoadWithTTL(ctx, key, s.config.CacheDuration, func(ctx context.Context) ([]byte, error) {
 		clan, err := s.repo.GetById(ctx, id)
 		if err != nil {
 			return nil, err
@@ -86,7 +86,7 @@ func (s *LocalClansService) GetByName(ctx context.Context, name string) (Clan, e
 	key := s.config.KeyPrefix + name
 
 	// Get from cache or load into it
-	bytes, err := s.cache.GetOrLoad(ctx, key, func(ctx context.Context) ([]byte, error) {
+	bytes, err := s.cache.GetOrLoadWithTTL(ctx, key, s.config.CacheDuration, func(ctx context.Context) ([]byte, error) {
 		clan, err := s.repo.GetByName(ctx, name)
 		if err != nil {
 			return nil, err

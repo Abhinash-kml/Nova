@@ -17,22 +17,18 @@ import (
 )
 
 type PostgresRepository struct {
-	config              *config.Config
-	logger              *zap.Logger
-	pgx                 *pgxpool.Pool
-	statementBuilder    squirrel.StatementBuilderType
-	clanSeedFile        string
-	clanMembersSeedFile string
+	config           *config.ClansConfig
+	logger           *zap.Logger
+	pgx              *pgxpool.Pool
+	statementBuilder squirrel.StatementBuilderType
 }
 
-func NewPostgresRepositoryFromPgxPool(connection *pgxpool.Pool, c *config.Config, l *zap.Logger, csf, cmsf string) *PostgresRepository {
+func NewPostgresRepositoryFromPgxPool(connection *pgxpool.Pool, c *config.ClansConfig, l *zap.Logger) *PostgresRepository {
 	return &PostgresRepository{
-		config:              c,
-		logger:              l,
-		pgx:                 connection,
-		statementBuilder:    squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar),
-		clanSeedFile:        csf,
-		clanMembersSeedFile: cmsf,
+		config:           c,
+		logger:           l,
+		pgx:              connection,
+		statementBuilder: squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar),
 	}
 }
 
@@ -66,14 +62,14 @@ func (r *PostgresRepository) seedClans(ctx context.Context) {
 
 	// Seed clans
 	// Check if seeds file is provided and is of json format by suffix
-	if len(r.clanSeedFile) == 0 || !strings.HasSuffix(r.clanSeedFile, ".json") {
+	if len(r.config.ClanSeedFile) == 0 || !strings.HasSuffix(r.config.ClanSeedFile, ".json") {
 		r.logger.Error("Clan seed file not provided or is not of json format. Skipping seeding...")
 	}
 
 	// Open file
-	file, err := os.OpenFile(r.clanSeedFile, os.O_RDONLY, 0755)
+	file, err := os.OpenFile(r.config.ClanSeedFile, os.O_RDONLY, 0755)
 	if err != nil {
-		r.logger.Error("Failed to open clans seeds file", zap.String("file", r.clanSeedFile), zap.Error(err))
+		r.logger.Error("Failed to open clans seeds file", zap.String("file", r.config.ClanSeedFile), zap.Error(err))
 		return
 	}
 	defer file.Close()
@@ -157,14 +153,14 @@ func (r *PostgresRepository) seedClanMembers(ctx context.Context) {
 
 	// Seed clans
 	// Check if seeds file is provided and is of json format by suffix
-	if len(r.clanMembersSeedFile) == 0 || !strings.HasSuffix(r.clanMembersSeedFile, ".json") {
+	if len(r.config.ClanMembersSeedFile) == 0 || !strings.HasSuffix(r.config.ClanMembersSeedFile, ".json") {
 		r.logger.Error("Clan seed file not provided or is not of json format. Skipping seeding...")
 	}
 
 	// Open file
-	file, err := os.OpenFile(r.clanMembersSeedFile, os.O_RDONLY, 0755)
+	file, err := os.OpenFile(r.config.ClanMembersSeedFile, os.O_RDONLY, 0755)
 	if err != nil {
-		r.logger.Error("Failed to open clans seeds file", zap.String("file", r.clanMembersSeedFile), zap.Error(err))
+		r.logger.Error("Failed to open clans seeds file", zap.String("file", r.config.ClanMembersSeedFile), zap.Error(err))
 		return
 	}
 	defer file.Close()

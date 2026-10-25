@@ -3,9 +3,9 @@ package clans
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
 	"slices"
+	"strings"
 	"sync"
 
 	"github.com/abhinash-kml/nova/server/common"
@@ -15,16 +15,18 @@ import (
 )
 
 type InMemoryClansRepository struct {
-	clans  []Clan
-	config *config.Config
-	logger *zap.Logger
-	mu     sync.RWMutex
+	clans       []Clan
+	clanMembers map[uuid.UUID]ClanMember
+	config      *config.ClansConfig
+	logger      *zap.Logger
+	mu          sync.RWMutex
 }
 
-func NewInMemoryClanRepository(c *config.Config, l *zap.Logger) *InMemoryClansRepository {
+func NewInMemoryClanRepository(c *config.ClansConfig, l *zap.Logger) *InMemoryClansRepository {
 	return &InMemoryClansRepository{
-		config: c,
-		logger: l,
+		config:      c,
+		logger:      l,
+		clanMembers: make(map[uuid.UUID]ClanMember),
 	}
 }
 
@@ -32,26 +34,67 @@ func (r *InMemoryClansRepository) Initialize() error {
 	return nil
 }
 
-func (r *InMemoryClansRepository) Seed() error {
-	file, err := os.OpenFile("./seeds/clans.json", os.O_RDONLY, 0755)
+func (r *InMemoryClansRepository) Seed(ctx context.Context) {
+	r.seedClans(ctx)
+	r.seedClanMembers(ctx)
+}
+
+func (r *InMemoryClansRepository) seedClans(ctx context.Context) {
+	if len(r.config.ClanSeedFile) == 0 || !strings.HasSuffix(r.config.ClanSeedFile, ".json") {
+		r.logger.Error("Clan seed file not provided or is not of json format. Skipping seeding...")
+	}
+
+	// Open file
+	file, err := os.OpenFile(r.config.ClanSeedFile, os.O_RDONLY, 0755)
 	if err != nil {
-		return fmt.Errorf("opening file: %w", err)
+		r.logger.Error("Failed to open clans seeds file", zap.String("file", r.config.ClanSeedFile), zap.Error(err))
+		return
 	}
 	defer file.Close()
 
+	// Create json decoder
 	decoder := json.NewDecoder(file)
 	if decoder == nil {
-		return fmt.Errorf("nil decoder")
+		r.logger.Error("Failed to create json decoder. Returned nil pointer")
+		return
 	}
 
+	// Decode
 	err = decoder.Decode(&r.clans)
 	if err != nil {
-		return fmt.Errorf("decoding: %w", err)
+		r.logger.Error("Failed to decode clans from seed file", zap.Error(err))
+		return
 	}
 
 	r.logger.Info("Added clans from seeds", zap.Int("Count", len(r.clans)))
+}
 
-	return nil
+func (r *InMemoryClansRepository) seedClanMembers(ctx context.Context) {
+	if len(r.config.ClanMembersSeedFile) == 0 || !strings.HasSuffix(r.config.ClanMembersSeedFile, ".json") {
+		r.logger.Error("Clan member seed file not provided or is not of json format. Skipping seeding...")
+	}
+
+	// Open file
+	file, err := os.OpenFile(r.config.ClanSeedFile, os.O_RDONLY, 0755)
+	if err != nil {
+		r.logger.Error("Failed to open clan member seeds file", zap.String("file", r.config.ClanSeedFile), zap.Error(err))
+		return
+	}
+	defer file.Close()
+
+	// Create json decoder
+	decoder := json.NewDecoder(file)
+	if decoder == nil {
+		r.logger.Error("Failed to create json decoder. Returned nil pointer")
+		return
+	}
+
+	// Decode
+	err = decoder.Decode(&r.clanMembers)
+	if err != nil {
+		r.logger.Error("Failed to decode clan members from seed file", zap.Error(err))
+		return
+	}
 }
 
 func (r *InMemoryClansRepository) GetById(ctx context.Context, id uuid.UUID) (Clan, error) {

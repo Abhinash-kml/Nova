@@ -323,7 +323,7 @@ func main() {
 
 	// Setup clans module
 	{
-		clansRepository := clans.NewPostgresRepositoryFromPgxPool(postgresPool, config, logger, config.ClansConfig.ClanSeedFile, config.ClansConfig.ClanMembersSeedFile)
+		clansRepository := clans.NewPostgresRepositoryFromPgxPool(postgresPool, &config.ClansConfig, logger)
 		clansRepository.Seed(context.Background())
 		clansService := clans.NewLocalClansService(clansRepository, &config.ClansConfig, tieredCache, logger)
 		clansController := clans.NewController(clansService, config, logger)
