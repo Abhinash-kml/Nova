@@ -52,11 +52,11 @@ type UpdateRequest struct {
 }
 
 type ActionRequest struct {
-	ClanID      uuid.UUID `json:"clan_id"`
-	InitiatorID uuid.UUID `json:"initiator_id"`
-	TargetID    uuid.UUID `json:"target_id"`
-	ActionType  string    `json:"type"`
-	CreatedAt   time.Time `json:"created_at"`
+	ClanID      *string    `json:"clan_id" binding:"required,uuid"`
+	InitiatorID *string    `json:"initiator_id" binding:"required,uuid"`
+	TargetID    *string    `json:"target_id" binding:"uuid"`
+	ActionType  *string    `json:"type"`
+	CreatedAt   *time.Time `json:"created_at"`
 }
 
 type ActionResponse struct {

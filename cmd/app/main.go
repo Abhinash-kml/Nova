@@ -294,7 +294,7 @@ func main() {
 
 	// Setup users module
 	{
-		usersRepository := users.NewPostgresRepositoryFromPgxPool(postgresPool, config, logger, config.SeedsConfig.Users)
+		usersRepository := users.NewPostgresRepositoryFromPgxPool(postgresPool, config, logger, config.UsersConfig.SeedFile)
 		if err = usersRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed users repository", zap.Error(err))
 		}
@@ -305,7 +305,7 @@ func main() {
 
 	// Setup posts module
 	{
-		postsRepository := posts.NewPostgresRepositoryFromPgxPool(postgresPool, config, logger, config.SeedsConfig.Posts)
+		postsRepository := posts.NewPostgresRepositoryFromPgxPool(postgresPool, config, logger, config.PostsConfig.SeedFile)
 		if err = postsRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed posts repository", zap.Error(err))
 		}
@@ -316,7 +316,7 @@ func main() {
 
 	// Setup comments module
 	{
-		commentsRepository := comments.NewPostgresRepositoryFromPgxPool(postgresPool, config, logger, config.SeedsConfig.Comments)
+		commentsRepository := comments.NewPostgresRepositoryFromPgxPool(postgresPool, config, logger, config.CommentsConfig.SeedFile)
 		if err = commentsRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed comments repository", zap.Error(err))
 		}
@@ -327,16 +327,16 @@ func main() {
 
 	// Setup clans module
 	{
-		clansRepository := clans.NewPostgresRepositoryFromPgxPool(postgresPool, config, logger, config.SeedsConfig.Clans)
+		clansRepository := clans.NewPostgresRepositoryFromPgxPool(postgresPool, config, logger, config.ClansConfig.ClanSeedFile, config.ClansConfig.ClanMembersSeedFile)
 		clansRepository.Seed(context.Background())
-		clansService := clans.NewLocalClansService(clansRepository, config, redisClient, logger)
+		clansService := clans.NewLocalClansService(clansRepository, &config.ClansConfig, tieredCache, logger)
 		clansController := clans.NewController(clansService, config, logger)
 		clans.SetupRoutes(globalRouter, clansController)
 	}
 
 	// Setup channels module
 	{
-		channelsRepository := channels.NewPostgresRepositoryFromPgxPool(postgresPool, config, logger, config.SeedsConfig.Channels)
+		channelsRepository := channels.NewPostgresRepositoryFromPgxPool(postgresPool, config, logger, config.ChannelsConfig.SeedFile)
 		if err = channelsRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed channels repository", zap.Error(err))
 		}
@@ -347,7 +347,7 @@ func main() {
 
 	// Setup stats module
 	{
-		statsRepository := stats.NewPostgresRepositoryFromPgxPool(postgresPool, config, logger, config.SeedsConfig.Stats)
+		statsRepository := stats.NewPostgresRepositoryFromPgxPool(postgresPool, config, logger, config.StatsConfig.SeedFile)
 		if err = statsRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed stats repository", zap.Error(err))
 		}

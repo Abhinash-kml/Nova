@@ -56,10 +56,28 @@ authentication:
     issuer: "neo"
     audience: "api-server"
 
-seeds:
-  users: "./seeds/users.json"
-  posts: "./seeds/posts.json"
-  comments: "./seeds/comments.json"
-  clans: "./seeds/clans.json"
-  channels: "./seeds/channels.json"
-  stats: "./seeds/stats.json"
+users:
+  keyPrefix:
+  seed: "./seeds/users.json"
+
+posts:
+  keyPrefix:
+  seed: "./seeds/posts.json"
+
+comments:
+  keyPrefix:
+  seed: "./seeds/comments.json"
+
+clans:
+  keyPrefix:
+  seed: "./seeds/clans.json"
+  members-seed: "./seeds/clan_members.json"
+
+channels:
+  keyPrefix:
+  seed: "./seeds/channels.json"
+
+stats:
+  keyPrefix:
+  seed: "./seeds/stats.json"
+  progression-seed: "./seeds/stats-progression.json"

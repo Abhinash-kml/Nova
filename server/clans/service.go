@@ -2,11 +2,13 @@ package clans
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 
+	"github.com/abhinash-kml/nova/server/cache"
 	"github.com/abhinash-kml/nova/server/common"
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
-	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
@@ -18,6 +20,8 @@ type Service interface {
 	GetAll(ctx context.Context, cursor uuid.UUID, limit int) ([]Clan, error)
 	Update(ctx context.Context, req UpdateRequest) (Clan, error)
 	Delete(ctx context.Context, req DeleteRequest) (DeleteResponse, error)
+
+	GetAllMembers(ctx context.Context, req GetRequest) ([]ClanMember, error)
 
 	AddMember(ctx context.Context, req ActionRequest) (ActionResponse, error)
 	RemoveMember(ctx context.Context, req ActionRequest) (ActionResponse, error)
@@ -34,15 +38,15 @@ type Service interface {
 type LocalClansService struct {
 	repo   ClansRepository
 	logger *zap.Logger
-	config *config.Config
-	cache  *redis.Client
+	config *config.ClansConfig
+	cache  *cache.TieredCache
 }
 
-func NewLocalClansService(repo ClansRepository, c *config.Config, r *redis.Client, l *zap.Logger) *LocalClansService {
+func NewLocalClansService(repo ClansRepository, c *config.ClansConfig, tc *cache.TieredCache, l *zap.Logger) *LocalClansService {
 	return &LocalClansService{
 		repo:   repo,
 		config: c,
-		cache:  r,
+		cache:  tc,
 		logger: l,
 	}
 }
@@ -51,36 +55,26 @@ func (s *LocalClansService) GetById(ctx context.Context, id uuid.UUID) (Clan, er
 	ctx, span := tracer.Start(ctx, "clans.service.getbyid")
 	defer span.End()
 
-	key := ClanPrefix + id.String()
+	key := s.config.KeyPrefix + id.String()
 
-	// 1. Try cache
-	var clan Clan
-	err := s.cache.Get(ctx, key).Scan(&clan)
-	if err == nil && len(clan.Name) != 0 {
-		return clan, nil
-	}
-
-	// If Redis failed for infra reason, log but continue
-	if err != nil && err != redis.Nil {
-		s.logger.Warn("cache error", zap.Error(err))
-	}
-
-	// 2. Fallback to repo
-	clan, err = s.repo.GetById(ctx, id)
-	if err != nil {
-		return Clan{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to get clan")
-	}
-
-	// 3. Populate cache asynchronously (safe version)
-	go func(c Clan, key string) {
-		bgCtx := context.WithoutCancel(ctx)
-
-		_, err := s.cache.Set(bgCtx, key, &c, 0).Result()
-
+	// Get from cache or load into it
+	bytes, err := s.cache.GetOrLoad(ctx, key, func(ctx context.Context) ([]byte, error) {
+		clan, err := s.repo.GetById(ctx, id)
 		if err != nil {
-			s.logger.Error("failed to populate cache", zap.Error(err))
+			return nil, err
 		}
-	}(clan, key)
+
+		return json.Marshal(clan)
+	})
+	if err != nil {
+		return Clan{}, err
+	}
+
+	var clan Clan
+	err = json.Unmarshal(bytes, &clan)
+	if err != nil {
+		return Clan{}, fmt.Errorf("unmarshalling clan: %w", err)
+	}
 
 	return clan, nil
 }
@@ -89,11 +83,25 @@ func (s *LocalClansService) GetByName(ctx context.Context, name string) (Clan, e
 	ctx, span := tracer.Start(ctx, "clans.service.getbyname")
 	defer span.End()
 
-	// Caching logic
+	key := s.config.KeyPrefix + name
 
-	clan, err := s.repo.GetByName(ctx, name)
+	// Get from cache or load into it
+	bytes, err := s.cache.GetOrLoad(ctx, key, func(ctx context.Context) ([]byte, error) {
+		clan, err := s.repo.GetByName(ctx, name)
+		if err != nil {
+			return nil, err
+		}
+
+		return json.Marshal(clan)
+	})
 	if err != nil {
-		return Clan{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to get clan by name")
+		return Clan{}, err
+	}
+
+	var clan Clan
+	err = json.Unmarshal(bytes, &clan)
+	if err != nil {
+		return Clan{}, fmt.Errorf("unmarshalling clan: %w", err)
 	}
 
 	return clan, nil
@@ -133,15 +141,9 @@ func (s *LocalClansService) Delete(ctx context.Context, dto DeleteRequest) (Dele
 		return DeleteResponse{DeletedClanID: uuid.Nil}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to delete clan")
 	}
 
-	// Delete from cache
-	go func() {
-		bgCtx := context.WithoutCancel(ctx)
-		key := ClanPrefix + dto.Id
-		err := s.cache.Del(bgCtx, key).Err()
-		if err != nil {
-			s.logger.Error("Failed to delete clan from cache", zap.Error(err))
-		}
-	}()
+	// Invalidate old record from cache, next get call with repopulate it
+	key := s.config.KeyPrefix + dto.Id
+	go s.cache.Delete(ctx, key)
 
 	return response, nil
 }
@@ -157,16 +159,22 @@ func (s *LocalClansService) Update(ctx context.Context, dto UpdateRequest) (Clan
 	}
 
 	// Invalidate old record from cache, next get call with repopulate it
-	go func() {
-		bgCtx := context.WithoutCancel(ctx)
-		key := ClanPrefix + dto.Id
-		err := s.cache.Del(bgCtx, key).Err()
-		if err != nil {
-			s.logger.Error("Failed to delete clan from cache", zap.Error(err))
-		}
-	}()
+	key := s.config.KeyPrefix + dto.Id
+	go s.cache.Delete(ctx, key)
 
 	return updatedClan, nil
+}
+
+func (s *LocalClansService) GetAllMembers(ctx context.Context, req GetRequest) ([]ClanMember, error) {
+	ctx, span := tracer.Start(ctx, "clans.service.getallmembers")
+	defer span.End()
+
+	members, err := s.repo.GetAllMembers(ctx, req)
+	if err != nil {
+		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to get all clan members")
+	}
+
+	return members, nil
 }
 
 func (s *LocalClansService) AddMember(ctx context.Context, req ActionRequest) (ActionResponse, error) {

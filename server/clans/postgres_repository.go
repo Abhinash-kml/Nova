@@ -17,20 +17,22 @@ import (
 )
 
 type PostgresRepository struct {
-	config           *config.Config
-	logger           *zap.Logger
-	pgx              *pgxpool.Pool
-	statementBuilder squirrel.StatementBuilderType
-	seedfile         string
+	config              *config.Config
+	logger              *zap.Logger
+	pgx                 *pgxpool.Pool
+	statementBuilder    squirrel.StatementBuilderType
+	clanSeedFile        string
+	clanMembersSeedFile string
 }
 
-func NewPostgresRepositoryFromPgxPool(connection *pgxpool.Pool, c *config.Config, l *zap.Logger, sfp string) *PostgresRepository {
+func NewPostgresRepositoryFromPgxPool(connection *pgxpool.Pool, c *config.Config, l *zap.Logger, csf, cmsf string) *PostgresRepository {
 	return &PostgresRepository{
-		config:           c,
-		logger:           l,
-		pgx:              connection,
-		statementBuilder: squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar),
-		seedfile:         sfp,
+		config:              c,
+		logger:              l,
+		pgx:                 connection,
+		statementBuilder:    squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar),
+		clanSeedFile:        csf,
+		clanMembersSeedFile: cmsf,
 	}
 }
 
@@ -39,23 +41,59 @@ func (r *PostgresRepository) Initialize(ctx context.Context) error {
 }
 
 func (r *PostgresRepository) Seed(ctx context.Context) {
-	// Check if rows already exists, if so then dont seed
-	existQuery := `SELECT count(*) FROM clans;`
-	row := r.pgx.QueryRow(ctx, existQuery)
+	// 1. Seed clans
+	r.seedClans(ctx)
+
+	// 2. Seed clan members
+	r.seedClanMembers(ctx)
+}
+
+func (r *PostgresRepository) seedClans(ctx context.Context) {
+	countQuery := `SELECT count(*) FROM clans;`
 
 	var count int
-
-	// Scan returned row
-	if err := row.Scan(&count); err != nil {
-		r.logger.Error("scanning row", zap.Error(err))
+	err := r.pgx.QueryRow(ctx, countQuery).Scan(&count)
+	if err != nil {
+		r.logger.Error("Failed to scan count of clans. Skipping seeding...")
+		return
 	}
 
-	// Rows already exists, dont seed
-	if count != 0 {
-		r.logger.Sugar().Infof("Clans table contains %d rows, skipping seeding from file...", count)
+	// Skip seeding if we already have enough clans
+	if count >= 10 {
+		r.logger.Info("Clan table already contains enough clans. Skipping seeding...")
+		return
 	}
 
-	// Table is empty, so seed from file to table
+	// Seed clans
+	// Check if seeds file is provided and is of json format by suffix
+	if len(r.clanSeedFile) == 0 || !strings.HasSuffix(r.clanSeedFile, ".json") {
+		r.logger.Error("Clan seed file not provided or is not of json format. Skipping seeding...")
+	}
+
+	// Open file
+	file, err := os.OpenFile(r.clanSeedFile, os.O_RDONLY, 0755)
+	if err != nil {
+		r.logger.Error("Failed to open clans seeds file", zap.String("file", r.clanSeedFile), zap.Error(err))
+		return
+	}
+	defer file.Close()
+
+	// Create json decoder
+	decoder := json.NewDecoder(file)
+	if decoder == nil {
+		r.logger.Error("Failed to create json decoder. Returned nil pointer")
+		return
+	}
+
+	// Decode
+	var clans []Clan
+	err = decoder.Decode(&clans)
+	if err != nil {
+		r.logger.Error("Failed to decode clans from seed file", zap.Error(err))
+		return
+	}
+
+	// Insert
 	queryBuilder := r.statementBuilder.Insert("clans").Columns(
 		"id",
 		"name",
@@ -69,33 +107,9 @@ func (r *PostgresRepository) Seed(ctx context.Context) {
 		"updated_at",
 	)
 
-	// Check if seeds file is provided and is of json format by suffix
-	if len(r.seedfile) == 0 || !strings.HasSuffix(r.seedfile, ".json") {
-		r.logger.Error("Seeds file not provided or is not of json format. Skipping seeding")
-	}
-
-	// open file
-	file, err := os.OpenFile(r.seedfile, os.O_RDONLY, 0755)
-	if err != nil {
-		r.logger.Error("Failed to open clans seeds file", zap.String("file", r.seedfile), zap.Error(err))
-	}
-	defer file.Close()
-
-	// Create json decoder
-	decoder := json.NewDecoder(file)
-	if decoder == nil {
-		r.logger.Error("Failed to create json decoder. Returned nil pointer")
-	}
-
-	// Decode
-	var clans []Clan
-	err = decoder.Decode(&clans)
-	if err != nil {
-		r.logger.Error("Failed to decode seeded clans from file", zap.Error(err))
-	}
-
 	for i := range clans {
-		queryBuilder = queryBuilder.Values(clans[i].Id,
+		queryBuilder = queryBuilder.Values(
+			clans[i].Id,
 			clans[i].Name,
 			clans[i].Tag,
 			clans[i].Description,
@@ -104,22 +118,104 @@ func (r *PostgresRepository) Seed(ctx context.Context) {
 			clans[i].MaxMembers,
 			clans[i].IsLocked,
 			clans[i].CreatedAt,
-			clans[i].UpdatedAt)
+			clans[i].UpdatedAt,
+		)
 	}
 
 	// Generate query
 	query, args, err := queryBuilder.ToSql()
 	if err != nil {
 		r.logger.Error("Failed to generate sql query with squirrel for seeding clans table", zap.Error(err))
+		return
 	}
 
 	// Execute query
 	_, err = r.pgx.Exec(ctx, query, args...)
 	if err != nil {
 		r.logger.Error("Failed to execute query to seed clans table", zap.Error(err))
+		return
 	}
 
 	r.logger.Info("Successfully seeded clans from file", zap.Int("count", len(clans)))
+}
+
+func (r *PostgresRepository) seedClanMembers(ctx context.Context) {
+	countQuery := `SELECT count(*) FROM clan_members;`
+
+	var count int
+	err := r.pgx.QueryRow(ctx, countQuery).Scan(&count)
+	if err != nil {
+		r.logger.Error("Failed to scan count of clan members. Skipping seeding...")
+		return
+	}
+
+	// Skip seeding if we already have enough clans
+	if count >= 15 {
+		r.logger.Info("Clan members table already contains enough members. Skipping seeding...")
+		return
+	}
+
+	// Seed clans
+	// Check if seeds file is provided and is of json format by suffix
+	if len(r.clanMembersSeedFile) == 0 || !strings.HasSuffix(r.clanMembersSeedFile, ".json") {
+		r.logger.Error("Clan seed file not provided or is not of json format. Skipping seeding...")
+	}
+
+	// Open file
+	file, err := os.OpenFile(r.clanMembersSeedFile, os.O_RDONLY, 0755)
+	if err != nil {
+		r.logger.Error("Failed to open clans seeds file", zap.String("file", r.clanMembersSeedFile), zap.Error(err))
+		return
+	}
+	defer file.Close()
+
+	// Create json decoder
+	decoder := json.NewDecoder(file)
+	if decoder == nil {
+		r.logger.Error("Failed to create json decoder. Returned nil pointer")
+		return
+	}
+
+	// Decode
+	var clanMembers []ClanMember
+	err = decoder.Decode(&clanMembers)
+	if err != nil {
+		r.logger.Error("Failed to decode clan members from seed file", zap.Error(err))
+		return
+	}
+
+	// Insert
+	queryBuilder := r.statementBuilder.Insert("clan_members").Columns(
+		"clan_id",
+		"user_id",
+		"role",
+		"joined_at",
+	)
+
+	for i := range clanMembers {
+		queryBuilder = queryBuilder.Values(
+			clanMembers[i].ClanID,
+			clanMembers[i].UserID,
+			clanMembers[i].Role,
+			clanMembers[i].JoinedAt,
+		)
+	}
+
+	// Generate query
+	query, args, err := queryBuilder.ToSql()
+	if err != nil {
+		r.logger.Error("Failed to generate sql query with squirrel for seeding clan members table", zap.Error(err))
+		return
+	}
+
+	// Execute query
+	_, err = r.pgx.Exec(ctx, query, args...)
+	if err != nil {
+		r.logger.Error("Failed to execute query to seed clan members table", zap.Error(err))
+		return
+	}
+
+	r.logger.Info("Successfully seeded clan members from file", zap.Int("count", len(clanMembers)))
 }
 
 // General operations
@@ -443,6 +539,48 @@ func (r *PostgresRepository) Delete(ctx context.Context, req DeleteRequest) (Del
 	return DeleteResponse{DeletedClanID: deletedID}, nil
 }
 
+func (r *PostgresRepository) GetAllMembers(ctx context.Context, req GetRequest) ([]ClanMember, error) {
+	rawQuery := `
+		SELECT
+			clan_id,
+			user_id,
+			role,
+			joined_at
+		FROM
+			clan_members
+		WHERE
+			clan_id = $1;
+	`
+
+	rows, err := r.pgx.Query(ctx, rawQuery, req.Id)
+	if err != nil {
+		return nil, fmt.Errorf("getting clan members: %w", err)
+	}
+	defer rows.Close()
+
+	var members []ClanMember
+	for rows.Next() {
+		var member ClanMember
+
+		if err = rows.Scan(
+			&member.ClanID,
+			&member.UserID,
+			&member.Role,
+			&member.JoinedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scanning row: %w", err)
+		}
+
+		members = append(members, member)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating rows: %w", err)
+	}
+
+	return members, nil
+}
+
 func (r *PostgresRepository) AddMember(ctx context.Context, req ActionRequest) (ActionResponse, error) {
 	rawQuery := `
 		INSERT INTO
@@ -459,10 +597,10 @@ func (r *PostgresRepository) AddMember(ctx context.Context, req ActionRequest) (
 
 	_, err := r.pgx.Exec(ctx, rawQuery, req.ClanID, req.TargetID)
 	if err != nil {
-		return ActionResponse{}, fmt.Errorf("adding member: %w", err)
+		return ActionResponse{Status: 0, Message: "DB_CAUSE"}, fmt.Errorf("adding member: %w", err)
 	}
 
-	return ActionResponse{Status: 1, Message: "added"}, nil
+	return ActionResponse{Status: 1, Message: "ADDED"}, nil
 }
 
 func (r *PostgresRepository) RemoveMember(ctx context.Context, req ActionRequest) (ActionResponse, error) {
@@ -476,10 +614,10 @@ func (r *PostgresRepository) RemoveMember(ctx context.Context, req ActionRequest
 	`
 	_, err := r.pgx.Exec(ctx, rawQuery, req.ClanID, req.TargetID)
 	if err != nil {
-		return ActionResponse{}, fmt.Errorf("removing member: %w", err)
+		return ActionResponse{Status: 0, Message: "DB_CAUSE"}, fmt.Errorf("removing member: %w", err)
 	}
 
-	return ActionResponse{Status: 1, Message: "removed"}, nil
+	return ActionResponse{Status: 1, Message: "REMOVED"}, nil
 }
 
 func (r *PostgresRepository) ListAllOutogingInvites(ctx context.Context, req ActionRequest) ([]OutgoingInvite, error) {
@@ -534,10 +672,10 @@ func (r *PostgresRepository) InviteMember(ctx context.Context, req ActionRequest
 
 	_, err := r.pgx.Exec(ctx, rawQuery, req.ClanID, req.InitiatorID, req.TargetID)
 	if err != nil {
-		return ActionResponse{Status: 0, Message: "failed"}, fmt.Errorf("inviting member: %w", err)
+		return ActionResponse{Status: 0, Message: "DB_CAUSE"}, fmt.Errorf("inviting member: %w", err)
 	}
 
-	return ActionResponse{Status: 1, Message: "invited"}, nil
+	return ActionResponse{Status: 1, Message: "INVITED"}, nil
 }
 
 func (r *PostgresRepository) AcceptInvite(ctx context.Context, req ActionRequest) (ActionResponse, error) {
@@ -567,26 +705,26 @@ func (r *PostgresRepository) AcceptInvite(ctx context.Context, req ActionRequest
 
 	tx, err := r.pgx.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
-		return ActionResponse{}, fmt.Errorf("begin transaction: %w", err)
+		return ActionResponse{Status: 0, Message: "DB_CAUSE"}, fmt.Errorf("begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
 	_, err = r.pgx.Exec(ctx, removeOperationQuery, req.ClanID, req.TargetID)
 	if err != nil {
-		return ActionResponse{}, fmt.Errorf("removing operation: %w", err)
+		return ActionResponse{Status: 0, Message: "DB_CAUSE"}, fmt.Errorf("removing operation: %w", err)
 	}
 
 	_, err = r.pgx.Exec(ctx, addMemberQuery, req.ClanID, req.TargetID)
 	if err != nil {
-		return ActionResponse{}, fmt.Errorf("adding member: %w", err)
+		return ActionResponse{Status: 0, Message: "DB_CAUSE"}, fmt.Errorf("adding member: %w", err)
 	}
 
 	err = tx.Commit(ctx)
 	if err != nil {
-		return ActionResponse{}, fmt.Errorf("comming transaction: %w", err)
+		return ActionResponse{Status: 0, Message: "DB_CAUSE"}, fmt.Errorf("comming transaction: %w", err)
 	}
 
-	return ActionResponse{Status: 1, Message: "acceped"}, nil
+	return ActionResponse{Status: 1, Message: "ACCEPTED"}, nil
 }
 
 func (r *PostgresRepository) RejectInvite(ctx context.Context, req ActionRequest) (ActionResponse, error) {
@@ -601,10 +739,10 @@ func (r *PostgresRepository) RejectInvite(ctx context.Context, req ActionRequest
 
 	_, err := r.pgx.Exec(ctx, rawQuery, req.ClanID, req.TargetID)
 	if err != nil {
-		return ActionResponse{}, fmt.Errorf("rejecting invite: %w", err)
+		return ActionResponse{Status: 0, Message: "DB_CAUSE"}, fmt.Errorf("rejecting invite: %w", err)
 	}
 
-	return ActionResponse{Status: 1, Message: "rejected"}, nil
+	return ActionResponse{Status: 1, Message: "REJECTED"}, nil
 }
 
 func (r *PostgresRepository) ListAllJoinRequests(ctx context.Context, req ActionRequest) ([]uuid.UUID, error) {
@@ -657,10 +795,10 @@ func (r *PostgresRepository) SendJoinRequest(ctx context.Context, req ActionRequ
 
 	_, err := r.pgx.Exec(ctx, rawQuery, req.ClanID, req.InitiatorID)
 	if err != nil {
-		return ActionResponse{}, fmt.Errorf("sending request: %w", err)
+		return ActionResponse{Status: 0, Message: "DB_CAUSE"}, fmt.Errorf("sending request: %w", err)
 	}
 
-	return ActionResponse{Status: 1, Message: "sent-request"}, nil
+	return ActionResponse{Status: 1, Message: "SENT-JOIN-REQUEST"}, nil
 }
 
 func (r *PostgresRepository) AcceptJoinRequest(ctx context.Context, req ActionRequest) (ActionResponse, error) {
@@ -690,26 +828,26 @@ func (r *PostgresRepository) AcceptJoinRequest(ctx context.Context, req ActionRe
 
 	tx, err := r.pgx.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
-		return ActionResponse{}, fmt.Errorf("begin transaction: %w", err)
+		return ActionResponse{Status: 0, Message: "DB_CAUSE"}, fmt.Errorf("begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
 	_, err = r.pgx.Exec(ctx, removeOperationQuery, req.ClanID, req.InitiatorID)
 	if err != nil {
-		return ActionResponse{}, fmt.Errorf("deleting operation: %w", err)
+		return ActionResponse{Status: 0, Message: "DB_CAUSE"}, fmt.Errorf("deleting operation: %w", err)
 	}
 
 	_, err = r.pgx.Exec(ctx, addMemberQuery, req.ClanID, req.InitiatorID)
 	if err != nil {
-		return ActionResponse{}, fmt.Errorf("adding member: %w", err)
+		return ActionResponse{Status: 0, Message: "DB_CAUSE"}, fmt.Errorf("adding member: %w", err)
 	}
 
 	err = tx.Commit(ctx)
 	if err != nil {
-		return ActionResponse{}, fmt.Errorf("commiting transaction: %w", err)
+		return ActionResponse{Status: 0, Message: "DB_CAUSE"}, fmt.Errorf("commiting transaction: %w", err)
 	}
 
-	return ActionResponse{Status: 1, Message: "request-accepted"}, nil
+	return ActionResponse{Status: 1, Message: "REQUEST-ACCEPTED"}, nil
 }
 
 func (r *PostgresRepository) RejectJoinRequest(ctx context.Context, req ActionRequest) (ActionResponse, error) {
@@ -724,8 +862,8 @@ func (r *PostgresRepository) RejectJoinRequest(ctx context.Context, req ActionRe
 
 	_, err := r.pgx.Exec(ctx, rawQuery, req.ClanID, req.InitiatorID)
 	if err != nil {
-		return ActionResponse{}, fmt.Errorf("rejecting request: %w", err)
+		return ActionResponse{Status: 0, Message: "DB_CAUSE"}, fmt.Errorf("rejecting request: %w", err)
 	}
 
-	return ActionResponse{Status: 1, Message: "rejected"}, nil
+	return ActionResponse{Status: 1, Message: "REQUEST-REJECTED"}, nil
 }

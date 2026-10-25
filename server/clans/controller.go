@@ -211,6 +211,35 @@ func (c *Controller) Delete(ctx *gin.Context) {
 	ctx.JSON(http.StatusNoContent, response)
 }
 
+func (c *Controller) GetAllMembers(ctx *gin.Context) {
+	sctx, span := tracer.Start(ctx.Request.Context(), "clans.controller.getallmembers")
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
+
+	var req GetRequest
+	err = ctx.ShouldBindUri(&req)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	members, err := c.service.GetAllMembers(sctx, req)
+	if err != nil {
+		c.logger.Error("Failed to get all members", zap.Error(err))
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, utils.Paginate(members))
+}
+
 func (c *Controller) AddMember(ctx *gin.Context) {
 	sctx, span := tracer.Start(ctx.Request.Context(), "clans.controller.addmember")
 	var err error
@@ -233,7 +262,7 @@ func (c *Controller) AddMember(ctx *gin.Context) {
 
 	response, err := c.service.AddMember(sctx, req)
 	if err != nil {
-		ctx.JSON(http.StatusOK, response)
+		ctx.JSON(http.StatusUnprocessableEntity, response)
 		return
 	}
 
@@ -262,7 +291,7 @@ func (c *Controller) RemoveMember(ctx *gin.Context) {
 
 	response, err := c.service.RemoveMember(sctx, req)
 	if err != nil {
-		ctx.JSON(http.StatusOK, response)
+		ctx.JSON(http.StatusUnprocessableEntity, response)
 		return
 	}
 
@@ -320,7 +349,7 @@ func (c *Controller) InviteMember(ctx *gin.Context) {
 
 	response, err := c.service.InviteMember(sctx, req)
 	if err != nil {
-		ctx.JSON(http.StatusOK, response)
+		ctx.JSON(http.StatusUnprocessableEntity, response)
 		return
 	}
 
@@ -349,7 +378,7 @@ func (c *Controller) AcceptInvite(ctx *gin.Context) {
 
 	response, err := c.service.AcceptInvite(sctx, req)
 	if err != nil {
-		ctx.JSON(http.StatusOK, response)
+		ctx.JSON(http.StatusUnprocessableEntity, response)
 		return
 	}
 
@@ -378,7 +407,7 @@ func (c *Controller) RejectInvite(ctx *gin.Context) {
 
 	response, err := c.service.RejectInvite(sctx, req)
 	if err != nil {
-		ctx.JSON(http.StatusOK, response)
+		ctx.JSON(http.StatusUnprocessableEntity, response)
 		return
 	}
 
@@ -436,7 +465,7 @@ func (c *Controller) SendJoinRequest(ctx *gin.Context) {
 
 	response, err := c.service.SendJoinRequest(sctx, req)
 	if err != nil {
-		ctx.JSON(http.StatusOK, response)
+		ctx.JSON(http.StatusUnprocessableEntity, response)
 		return
 	}
 
@@ -465,7 +494,7 @@ func (c *Controller) AcceptJoinRequest(ctx *gin.Context) {
 
 	response, err := c.service.AcceptJoinRequest(sctx, req)
 	if err != nil {
-		ctx.JSON(http.StatusOK, response)
+		ctx.JSON(http.StatusUnprocessableEntity, response)
 		return
 	}
 
@@ -494,7 +523,7 @@ func (c *Controller) RejectJoinRequest(ctx *gin.Context) {
 
 	response, err := c.service.RejectJoinRequest(sctx, req)
 	if err != nil {
-		ctx.JSON(http.StatusOK, response)
+		ctx.JSON(http.StatusUnprocessableEntity, response)
 		return
 	}
 

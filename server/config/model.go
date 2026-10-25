@@ -3,16 +3,21 @@ package config
 import "time"
 
 type Config struct {
-	AppName       string              `mapstructure:"appname"`
-	Logging       LoggingConfig       `mapstructure:"logging"`
-	HttpServer    HttpServerConfig    `mapstructure:"http"`
-	Observability ObservabilityConfig `mapstructure:"observability"`
-	Realtime      RealtimeHubConfig   `mapstructure:"realtime-hub"`
-	Websocket     WebsocketConfig     `mapstructure:"websocket"`
-	Redis         RedisConfig         `mapstructure:"redis"`
-	Postgres      PostgresConfig      `mapstructure:"postgres"`
-	AuthToken     AuthTokenConfig     `mapstructure:"authentication"`
-	SeedsConfig   SeedsConfig         `mapstructure:"seeds"`
+	AppName        string              `mapstructure:"appname"`
+	Logging        LoggingConfig       `mapstructure:"logging"`
+	HttpServer     HttpServerConfig    `mapstructure:"http"`
+	Observability  ObservabilityConfig `mapstructure:"observability"`
+	Realtime       RealtimeHubConfig   `mapstructure:"realtime-hub"`
+	Websocket      WebsocketConfig     `mapstructure:"websocket"`
+	Redis          RedisConfig         `mapstructure:"redis"`
+	Postgres       PostgresConfig      `mapstructure:"postgres"`
+	AuthToken      AuthTokenConfig     `mapstructure:"authentication"`
+	UsersConfig    UsersConfig         `mapstructure:"users"`
+	PostsConfig    UsersConfig         `mapstructure:"posts"`
+	CommentsConfig CommentsConfig      `mapstructure:"comments"`
+	ClansConfig    ClansConfig         `mapstructure:"clans"`
+	ChannelsConfig ChannelsConfig      `mapstructure:"channels"`
+	StatsConfig    StatsConfig         `mapstructure:"stats"`
 }
 
 type LoggingConfig struct {
@@ -91,11 +96,34 @@ type TokenConfig struct {
 	Audience  string `mapstructure:"audience"`
 }
 
-type SeedsConfig struct {
-	Users    string `mapstructure:"users"`
-	Posts    string `mapstructure:"posts"`
-	Comments string `mapstructure:"comments"`
-	Clans    string `mapstructure:"clans"`
-	Channels string `mapstructure:"channels"`
-	Stats    string `mapstructure:"stats"`
+type UsersConfig struct {
+	KeyPrefix string `mapstructure:"keyPrefix"`
+	SeedFile  string `mapstructure:"seed"`
+}
+
+type PostsConfig struct {
+	KeyPrefix string `mapstructure:"keyPrefix"`
+	SeedFile  string `mapstructure:"seed"`
+}
+
+type CommentsConfig struct {
+	KeyPrefix string `mapstructure:"keyPrefix"`
+	SeedFile  string `mapstructure:"seed"`
+}
+
+type ClansConfig struct {
+	KeyPrefix           string `mapstructure:"keyPrefix"`
+	ClanSeedFile        string `mapstructure:"seed"`
+	ClanMembersSeedFile string `mapstructure:"members-seed"`
+}
+
+type ChannelsConfig struct {
+	KeyPrefix string `mapstructure:"keyPrefix"`
+	SeedFile  string `mapstructure:"seed"`
+}
+
+type StatsConfig struct {
+	KeyPrefix           string `mapstructure:"keyPrefix"`
+	SeedFile            string `mapstructure:"seed"`
+	ProgressionSeedFile string `mapstructure:"progression-seed"`
 }

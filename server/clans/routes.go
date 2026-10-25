@@ -12,6 +12,11 @@ func SetupRoutes(router *gin.Engine, c *Controller) {
 		group.DELETE("/:id", c.Delete)
 	}
 
+	memGroup := router.Group("/clans/members")
+	{
+		memGroup.GET("/:id", c.GetAllMembers)
+	}
+
 	actGroup := router.Group("/clans/action")
 	{
 		actGroup.POST("/send-invite", c.InviteMember)

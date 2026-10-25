@@ -18,6 +18,8 @@ type ClansRepository interface {
 	Update(ctx context.Context, req UpdateRequest) (Clan, error)
 	Delete(ctx context.Context, req DeleteRequest) (DeleteResponse, error)
 
+	GetAllMembers(ctx context.Context, req GetRequest) ([]ClanMember, error)
+
 	AddMember(ctx context.Context, req ActionRequest) (ActionResponse, error)
 	RemoveMember(ctx context.Context, req ActionRequest) (ActionResponse, error)
 	ListAllOutogingInvites(ctx context.Context, req ActionRequest) ([]OutgoingInvite, error)

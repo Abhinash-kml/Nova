@@ -10,8 +10,6 @@ import (
 
 var tracer = otel.Tracer("clans-tracer")
 
-const ClanPrefix = "clan:"
-
 type Clan struct {
 	Id          uuid.UUID `json:"id" redis:"id"`
 	Name        string    `json:"name" redis:"name"`
@@ -29,7 +27,21 @@ func (c *Clan) MarshalBinary() ([]byte, error) {
 	return json.Marshal(c)
 }
 
-// UnmarshalBinary deserializes the Redis blob back into your struct
 func (c *Clan) UnmarshalBinary(data []byte) error {
+	return json.Unmarshal(data, c)
+}
+
+type ClanMember struct {
+	ClanID   *uuid.UUID `json:"clan_id,omitempty" redis:"clan_id"`
+	UserID   uuid.UUID  `json:"user_id" redis:"user_id"`
+	Role     string     `json:"role" redis:"role"`
+	JoinedAt time.Time  `json:"joined_at" redis:"joined_at"`
+}
+
+func (c *ClanMember) MarshalBinary() ([]byte, error) {
+	return json.Marshal(c)
+}
+
+func (c *ClanMember) UnmarshalBinary(data []byte) error {
 	return json.Unmarshal(data, c)
 }
