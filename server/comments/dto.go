@@ -2,23 +2,23 @@ package comments
 
 import "github.com/google/uuid"
 
-type GetDTO struct {
+type CommentId struct {
 	Id string `uri:"id" binding:"required,uuid"`
 }
 
-type GetAllDTO struct {
+type GetRequest struct {
+	CommentId
+}
+
+type GetAllRequest struct {
 	Cursor string `form:"cursor" binding:"required"`
 	Limit  int    `form:"limit" binding:"required,gte=10,lte=20"`
 }
 
-type CreateDTO struct {
+type CreateRequest struct {
 	PostId   uuid.UUID `json:"post_id" binding:"required"`
 	AuthorId uuid.UUID `json:"author_id" binding:"required"`
 	Body     string    `json:"body" binding:"required"`
-}
-
-type CommentId struct {
-	Id string `uri:"id" binding:"required,uuid"`
 }
 
 type CommentBody struct {
@@ -29,12 +29,12 @@ type Body struct {
 	Body string `json:"body" binding:"required"`
 }
 
-type UpdateDTO struct {
+type UpdateRequest struct {
 	CommentId
 	Body
 }
 
-type ReplaceDTO struct {
+type ReplaceRequest struct {
 	CommentId
 	Body
 }
@@ -43,19 +43,19 @@ type DeleteOptions struct {
 	Type string `form:"type" binding:"required,oneof=soft hard"` // Soft (disable) - Hard (delete)
 }
 
-type DeleteDTO struct {
+type DeleteRequest struct {
 	CommentId
 	DeleteOptions
 }
 
-type BulkCreateDTO struct {
-	Comments []CreateDTO `json:"comments" binding:"required"`
+type BulkCreateRequest struct {
+	Comments []CreateRequest `json:"comments" binding:"required"`
 }
 
-type BulkModifyDTO struct {
-	Updates []UpdateDTO `json:"updates" binding:"required"`
+type BulkModifyRequest struct {
+	Updates []UpdateRequest `json:"updates" binding:"required"`
 }
 
-type BulkDeleteDTO struct {
+type BulkDeleteRequest struct {
 	Comments []uuid.UUID `json:"comments" binding:"required"`
 }

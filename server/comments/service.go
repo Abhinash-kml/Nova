@@ -13,28 +13,28 @@ import (
 
 type Service interface {
 	// General operations
-	Add(ctx context.Context, dto CreateDTO) (Comment, error)
+	Add(ctx context.Context, req CreateRequest) (Comment, error)
 	GetAll(ctx context.Context, cursor int, limit int) ([]Comment, error)
 	GetAllByAttribute(ctx context.Context, attribute string) ([]Comment, error)
 	GetById(ctx context.Context, id uuid.UUID) (Comment, error)
-	Update(ctx context.Context, dto UpdateDTO) (Comment, error)
-	Replace(ctx context.Context, dto ReplaceDTO) (Comment, error)
-	Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error)
+	Update(ctx context.Context, req UpdateRequest) (Comment, error)
+	Replace(ctx context.Context, req ReplaceRequest) (Comment, error)
+	Delete(ctx context.Context, req DeleteRequest) (uuid.UUID, error)
 
 	// Bulk operations
-	BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error)
-	BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error)
-	BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error)
+	BulkAdd(ctx context.Context, req BulkCreateRequest) ([]common.BulkOpResult, error)
+	BulkModify(ctx context.Context, req BulkModifyRequest) ([]common.BulkOpResult, error)
+	BulkDelete(ctx context.Context, req BulkDeleteRequest) ([]common.BulkOpResult, error)
 }
 
 type LocalCommentsService struct {
 	repo   CommentsRepository
-	config *config.Config
+	config *config.CommentsConfig
 	logger *zap.Logger
 	cache  *cache.TieredCache
 }
 
-func NewLocalCommentsService(repository CommentsRepository, cache *cache.TieredCache, c *config.Config, l *zap.Logger) *LocalCommentsService {
+func NewLocalCommentsService(repository CommentsRepository, cache *cache.TieredCache, c *config.CommentsConfig, l *zap.Logger) *LocalCommentsService {
 	return &LocalCommentsService{
 		repo:   repository,
 		config: c,
@@ -43,11 +43,11 @@ func NewLocalCommentsService(repository CommentsRepository, cache *cache.TieredC
 	}
 }
 
-func (s *LocalCommentsService) Add(ctx context.Context, dto CreateDTO) (Comment, error) {
+func (s *LocalCommentsService) Add(ctx context.Context, req CreateRequest) (Comment, error) {
 	ctx, span := tracer.Start(ctx, "comments.service.add")
 	defer span.End()
 
-	comment, err := s.repo.Add(ctx, dto)
+	comment, err := s.repo.Add(ctx, req)
 	if err != nil {
 		return Comment{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to create comment")
 	}
@@ -83,9 +83,9 @@ func (s *LocalCommentsService) GetById(ctx context.Context, id uuid.UUID) (Comme
 	ctx, span := tracer.Start(ctx, "comments.service.getbyid")
 	defer span.End()
 
-	key := CommentPrefix + id.String()
+	key := s.config.KeyPrefix + id.String()
 
-	raw, err := s.cache.GetOrLoad(ctx, key, func(ctx context.Context) ([]byte, error) {
+	raw, err := s.cache.GetOrLoadWithTTL(ctx, key, s.config.CacheDuration, func(ctx context.Context) ([]byte, error) {
 		comment, err := s.repo.GetById(ctx, id)
 		if err != nil {
 			return nil, err
@@ -112,62 +112,62 @@ func (s *LocalCommentsService) GetById(ctx context.Context, id uuid.UUID) (Comme
 	return comment, nil
 }
 
-func (s *LocalCommentsService) Update(ctx context.Context, dto UpdateDTO) (Comment, error) {
+func (s *LocalCommentsService) Update(ctx context.Context, req UpdateRequest) (Comment, error) {
 	ctx, span := tracer.Start(ctx, "comments.service.update")
 	defer span.End()
 
 	// Update repository first
-	comment, err := s.repo.Update(ctx, dto)
+	comment, err := s.repo.Update(ctx, req)
 	if err != nil {
 		return Comment{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to update comment")
 	}
 
 	// Invalidate old record from cache, next get call with repopulate it
-	key := CommentPrefix + dto.Id
+	key := s.config.KeyPrefix + req.Id
 	go s.cache.Delete(ctx, key)
 
 	return comment, nil
 }
 
-func (s *LocalCommentsService) Replace(ctx context.Context, dto ReplaceDTO) (Comment, error) {
+func (s *LocalCommentsService) Replace(ctx context.Context, req ReplaceRequest) (Comment, error) {
 	ctx, span := tracer.Start(ctx, "comments.service.replace")
 	defer span.End()
 
 	// Update repository first
-	comment, err := s.repo.Replace(ctx, dto)
+	comment, err := s.repo.Replace(ctx, req)
 	if err != nil {
 		return Comment{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to replace comment")
 	}
 
 	// Invalidate old record from cache, next get call with repopulate it
-	key := CommentPrefix + dto.Id
+	key := s.config.KeyPrefix + req.Id
 	go s.cache.Delete(ctx, key)
 
 	return comment, nil
 }
 
-func (s *LocalCommentsService) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
+func (s *LocalCommentsService) Delete(ctx context.Context, req DeleteRequest) (uuid.UUID, error) {
 	ctx, span := tracer.Start(ctx, "comments.service.delete")
 	defer span.End()
 
 	// Delete in repo
-	deletedId, err := s.repo.Delete(ctx, dto)
+	deletedId, err := s.repo.Delete(ctx, req)
 	if err != nil {
 		return uuid.Nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to delete comment")
 	}
 
 	// Delete from cache
-	key := CommentPrefix + dto.Id
+	key := s.config.KeyPrefix + req.Id
 	go s.cache.Delete(ctx, key)
 
 	return deletedId, nil
 }
 
-func (s *LocalCommentsService) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {
+func (s *LocalCommentsService) BulkAdd(ctx context.Context, req BulkCreateRequest) ([]common.BulkOpResult, error) {
 	ctx, span := tracer.Start(ctx, "comments.service.bulkadd")
 	defer span.End()
 
-	results, err := s.repo.BulkAdd(ctx, dto)
+	results, err := s.repo.BulkAdd(ctx, req)
 	if err != nil {
 		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to bulk add comments")
 	}
@@ -175,11 +175,11 @@ func (s *LocalCommentsService) BulkAdd(ctx context.Context, dto BulkCreateDTO) (
 	return results, nil
 }
 
-func (s *LocalCommentsService) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
+func (s *LocalCommentsService) BulkModify(ctx context.Context, req BulkModifyRequest) ([]common.BulkOpResult, error) {
 	ctx, span := tracer.Start(ctx, "comments.service.bulkmodify")
 	defer span.End()
 
-	results, err := s.repo.BulkModify(ctx, dto)
+	results, err := s.repo.BulkModify(ctx, req)
 	if err != nil {
 		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to bulk update comments")
 	}
@@ -187,11 +187,11 @@ func (s *LocalCommentsService) BulkModify(ctx context.Context, dto BulkModifyDTO
 	return results, nil
 }
 
-func (s *LocalCommentsService) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
+func (s *LocalCommentsService) BulkDelete(ctx context.Context, req BulkDeleteRequest) ([]common.BulkOpResult, error) {
 	ctx, span := tracer.Start(ctx, "comments.service.bulkdelete")
 	defer span.End()
 
-	results, err := s.repo.BulkDelete(ctx, dto)
+	results, err := s.repo.BulkDelete(ctx, req)
 	if err != nil {
 		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to bulk delete comments")
 	}

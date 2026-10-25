@@ -18,20 +18,18 @@ import (
 )
 
 type PostgresRepository struct {
-	config           *config.Config
+	config           *config.PostsConfig
 	logger           *zap.Logger
 	pgx              *pgxpool.Pool
 	statementBuilder squirrel.StatementBuilderType
-	seedfile         string
 }
 
-func NewPostgresRepositoryFromPgxPool(connection *pgxpool.Pool, c *config.Config, l *zap.Logger, sfp string) *PostgresRepository {
+func NewPostgresRepositoryFromPgxPool(connection *pgxpool.Pool, c *config.PostsConfig, l *zap.Logger) *PostgresRepository {
 	return &PostgresRepository{
 		config:           c,
 		logger:           l,
 		pgx:              connection,
 		statementBuilder: squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar),
-		seedfile:         sfp,
 	}
 }
 
@@ -39,7 +37,7 @@ func (r *PostgresRepository) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (r *PostgresRepository) Seed(ctx context.Context) error {
+func (r *PostgresRepository) Seed(ctx context.Context) {
 	// Check if rows already exists, if so then dont seed
 	existQuery := `SELECT count(*) FROM posts;`
 	row := r.pgx.QueryRow(ctx, existQuery)
@@ -49,13 +47,13 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 	// Scan returned row
 	if err := row.Scan(&count); err != nil {
 		r.logger.Error("Failed to scan count of rows from posts table", zap.Error(err))
-		return common.ErrDbSeedingFailed
+		return
 	}
 
 	// Rows already exists, dont seed
 	if count != 0 {
 		r.logger.Sugar().Infof("Posts table contains %d rows, skipping seeding from file...", count)
-		return nil
+		return
 	}
 
 	// Table is empty, so seed from file to table
@@ -71,16 +69,16 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 	)
 
 	// Check if seeds file is provided and is of json format by suffix
-	if len(r.seedfile) == 0 || !strings.HasSuffix(r.seedfile, ".json") {
+	if len(r.config.SeedFile) == 0 || !strings.HasSuffix(r.config.SeedFile, ".json") {
 		r.logger.Error("Seeds file not provided or is not of json format. Skipping seeding")
-		return common.ErrDbSeedingFailed
+		return
 	}
 
 	// Open file
-	file, err := os.OpenFile(r.seedfile, os.O_RDONLY, 0755)
+	file, err := os.OpenFile(r.config.SeedFile, os.O_RDONLY, 0755)
 	if err != nil {
-		r.logger.Error("Failed to open posts seeds file", zap.String("file", r.seedfile), zap.Error(err))
-		return common.ErrDbSeedingFailed
+		r.logger.Error("Failed to open posts seeds file", zap.String("file", r.config.SeedFile), zap.Error(err))
+		return
 	}
 	defer file.Close()
 
@@ -88,7 +86,7 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 	decoder := json.NewDecoder(file)
 	if decoder == nil {
 		r.logger.Error("Failed to create json decoder. Returned nil pointer")
-		return common.ErrDbSeedingFailed
+		return
 	}
 
 	// Decode
@@ -96,31 +94,35 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 	err = decoder.Decode(&posts)
 	if err != nil {
 		r.logger.Error("Failed to decode seeded posts from file", zap.Error(err))
-		return common.ErrDbSeedingFailed
+		return
 	}
 
 	for i := range posts {
-		queryBuilder = queryBuilder.Values(posts[i].Id, posts[i].Title, posts[i].Body, posts[i].AuthorId, posts[i].Likes,
-			posts[i].Comments, posts[i].CreatedAt, posts[i].UpdatedAt)
+		queryBuilder = queryBuilder.Values(
+			posts[i].Id,
+			posts[i].Title,
+			posts[i].Body,
+			posts[i].AuthorId,
+			posts[i].Likes,
+			posts[i].Comments,
+			posts[i].CreatedAt,
+			posts[i].UpdatedAt,
+		)
 	}
 
 	// Generate query
 	query, args, err := queryBuilder.ToSql()
 	if err != nil {
 		r.logger.Error("Failed to generate sql query with squirrel for seeding posts table", zap.Error(err))
-		return common.ErrDbSeedingFailed
 	}
 
 	// Execute query
 	_, err = r.pgx.Exec(ctx, query, args...)
 	if err != nil {
 		r.logger.Error("Failed to execute query to seed posts table", zap.Error(err))
-		return common.ErrDbSeedingFailed
 	}
 
 	r.logger.Info("Successfully seeded posts from file", zap.Int("count", len(posts)))
-
-	return nil
 }
 
 // General operations

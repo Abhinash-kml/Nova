@@ -3,7 +3,6 @@ package comments
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"os"
 	"slices"
@@ -18,12 +17,12 @@ import (
 
 type InMemoryCommentsRepository struct {
 	comments []Comment
-	config   *config.Config
+	config   *config.CommentsConfig
 	logger   *zap.Logger
 	mu       sync.RWMutex
 }
 
-func NewInMemoryCommentsRepository(c *config.Config, l *zap.Logger) *InMemoryCommentsRepository {
+func NewInMemoryCommentsRepository(c *config.CommentsConfig, l *zap.Logger) *InMemoryCommentsRepository {
 	return &InMemoryCommentsRepository{
 		config: c,
 		logger: l,
@@ -36,32 +35,28 @@ func (r *InMemoryCommentsRepository) Initialize() error {
 }
 
 // TODO: Implement this
-func (r *InMemoryCommentsRepository) Seed() error {
-	file, err := os.OpenFile("./seeds/comments.json", os.O_RDONLY, 0755)
+func (r *InMemoryCommentsRepository) Seed() {
+	file, err := os.OpenFile(r.config.SeedFile, os.O_RDONLY, 0755)
 	if err != nil {
 		r.logger.Error("Failed to open comments seeds file", zap.Error(err))
-		return fmt.Errorf("Failed to open comments seeds file. Error: %w", err)
+		return
 	}
 	defer file.Close()
 
 	decoder := json.NewDecoder(file)
 	if decoder == nil {
 		r.logger.Error("Failed to create json decoder. Returned nil pointer")
-		return fmt.Errorf("Failed to create json decoder. Returned nil pointer")
 	}
 
 	err = decoder.Decode(&r.comments)
 	if err != nil {
 		r.logger.Error("Failed to decode comment's seeds data to repository", zap.Error(err))
-		return fmt.Errorf("Failed to decode comment's seeds data to repository. Error: %w", err)
 	}
 
 	r.logger.Info("Added comments from seeds", zap.Int("Count", len(r.comments)))
-
-	return nil
 }
 
-func (r *InMemoryCommentsRepository) Add(ctx context.Context, dto CreateDTO) (Comment, error) {
+func (r *InMemoryCommentsRepository) Add(ctx context.Context, req CreateRequest) (Comment, error) {
 	_, span := tracer.Start(ctx, "comments.repository.add")
 	defer span.End()
 
@@ -71,9 +66,9 @@ func (r *InMemoryCommentsRepository) Add(ctx context.Context, dto CreateDTO) (Co
 	now := time.Now()
 	comment := Comment{
 		Id:        uuid.New(),
-		PostId:    dto.PostId,
-		AuthorId:  dto.AuthorId,
-		Body:      dto.Body,
+		PostId:    req.PostId,
+		AuthorId:  req.AuthorId,
+		Body:      req.Body,
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
@@ -126,11 +121,11 @@ func (r *InMemoryCommentsRepository) GetById(ctx context.Context, id uuid.UUID) 
 	return Comment{}, common.ErrResourceNotFound
 }
 
-func (r *InMemoryCommentsRepository) Update(ctx context.Context, dto UpdateDTO) (Comment, error) {
+func (r *InMemoryCommentsRepository) Update(ctx context.Context, req UpdateRequest) (Comment, error) {
 	_, span := tracer.Start(ctx, "comments.repository.update")
 	defer span.End()
 
-	parsedId, _ := uuid.Parse(dto.Id)
+	parsedId, _ := uuid.Parse(req.Id)
 	var updatedCommentindex int = -1
 
 	for targetIndex := range r.comments {
@@ -138,7 +133,7 @@ func (r *InMemoryCommentsRepository) Update(ctx context.Context, dto UpdateDTO) 
 			updatedCommentindex = targetIndex
 
 			r.mu.Lock()
-			r.comments[targetIndex].Body = dto.Body.Body
+			r.comments[targetIndex].Body = req.Body.Body
 			r.mu.Unlock()
 			break
 		}
@@ -151,11 +146,11 @@ func (r *InMemoryCommentsRepository) Update(ctx context.Context, dto UpdateDTO) 
 	}
 }
 
-func (r *InMemoryCommentsRepository) Replace(ctx context.Context, dto ReplaceDTO) (Comment, error) {
+func (r *InMemoryCommentsRepository) Replace(ctx context.Context, req ReplaceRequest) (Comment, error) {
 	_, span := tracer.Start(ctx, "comments.repository.replace")
 	defer span.End()
 
-	parsedId, _ := uuid.Parse(dto.Id)
+	parsedId, _ := uuid.Parse(req.Id)
 	var replacedCommentIndex int = -1
 
 	for targetIndex := range r.comments {
@@ -163,7 +158,7 @@ func (r *InMemoryCommentsRepository) Replace(ctx context.Context, dto ReplaceDTO
 			replacedCommentIndex = targetIndex
 
 			r.mu.Lock()
-			r.comments[targetIndex].Body = dto.Body.Body
+			r.comments[targetIndex].Body = req.Body.Body
 			r.mu.Unlock()
 			break
 		}
@@ -176,14 +171,14 @@ func (r *InMemoryCommentsRepository) Replace(ctx context.Context, dto ReplaceDTO
 	}
 }
 
-func (r *InMemoryCommentsRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
+func (r *InMemoryCommentsRepository) Delete(ctx context.Context, req DeleteRequest) (uuid.UUID, error) {
 	_, span := tracer.Start(ctx, "comments.repository.delete")
 	defer span.End()
 
 	oldLen := len(r.comments)
 
 	r.mu.Lock()
-	parsedId, _ := uuid.Parse(dto.Id)
+	parsedId, _ := uuid.Parse(req.Id)
 	r.comments = slices.DeleteFunc(r.comments, func(c Comment) bool {
 		if c.Id == parsedId {
 			return true
@@ -201,15 +196,15 @@ func (r *InMemoryCommentsRepository) Delete(ctx context.Context, dto DeleteDTO) 
 	return uuid.Nil, common.ErrResourceCannotBeDeleted
 }
 
-func (r *InMemoryCommentsRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {
+func (r *InMemoryCommentsRepository) BulkAdd(ctx context.Context, req BulkCreateRequest) ([]common.BulkOpResult, error) {
 	_, span := tracer.Start(ctx, "comments.repository.bulkadd")
 	defer span.End()
 
-	results := make([]common.BulkOpResult, 0, len(dto.Comments))
+	results := make([]common.BulkOpResult, 0, len(req.Comments))
 
-	for index := range dto.Comments {
+	for index := range req.Comments {
 		var result common.BulkOpResult
-		comment, err := r.Add(ctx, dto.Comments[index])
+		comment, err := r.Add(ctx, req.Comments[index])
 		if err != nil {
 			result.Id = uuid.Nil
 			result.Success = false
@@ -226,15 +221,15 @@ func (r *InMemoryCommentsRepository) BulkAdd(ctx context.Context, dto BulkCreate
 	return results, nil
 }
 
-func (r *InMemoryCommentsRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
+func (r *InMemoryCommentsRepository) BulkModify(ctx context.Context, req BulkModifyRequest) ([]common.BulkOpResult, error) {
 	_, span := tracer.Start(ctx, "comments.repository.bulkmodify")
 	defer span.End()
 
-	results := make([]common.BulkOpResult, 0, len(dto.Updates))
+	results := make([]common.BulkOpResult, 0, len(req.Updates))
 
-	for index := range dto.Updates {
+	for index := range req.Updates {
 		var result common.BulkOpResult
-		updated, err := r.Update(ctx, dto.Updates[index])
+		updated, err := r.Update(ctx, req.Updates[index])
 		if err != nil {
 			result.Id = uuid.Nil
 			result.Success = false
@@ -251,16 +246,16 @@ func (r *InMemoryCommentsRepository) BulkModify(ctx context.Context, dto BulkMod
 	return results, nil
 }
 
-func (r *InMemoryCommentsRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
+func (r *InMemoryCommentsRepository) BulkDelete(ctx context.Context, req BulkDeleteRequest) ([]common.BulkOpResult, error) {
 	_, span := tracer.Start(ctx, "comments.repository.bulkdelete")
 	defer span.End()
 
-	results := make([]common.BulkOpResult, 0, len(dto.Comments))
+	results := make([]common.BulkOpResult, 0, len(req.Comments))
 
-	for index := range dto.Comments {
+	for index := range req.Comments {
 		var result common.BulkOpResult
-		id := dto.Comments[index].String()
-		deletedId, err := r.Delete(ctx, DeleteDTO{
+		id := req.Comments[index].String()
+		deletedId, err := r.Delete(ctx, DeleteRequest{
 			CommentId: CommentId{id},
 			DeleteOptions: DeleteOptions{
 				Type: "soft",

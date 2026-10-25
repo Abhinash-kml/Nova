@@ -305,10 +305,8 @@ func main() {
 
 	// Setup posts module
 	{
-		postsRepository := posts.NewPostgresRepositoryFromPgxPool(postgresPool, config, logger, config.PostsConfig.SeedFile)
-		if err = postsRepository.Seed(context.Background()); err != nil {
-			logger.Error("Failed to seed posts repository", zap.Error(err))
-		}
+		postsRepository := posts.NewPostgresRepositoryFromPgxPool(postgresPool, &config.PostsConfig, logger)
+		postsRepository.Seed(context.Background())
 		postsService := posts.NewLocalPostsService(postsRepository, tieredCache, &config.PostsConfig, logger)
 		postsController := posts.NewController(postsService, config, logger)
 		posts.SetupRoutes(globalRouter, postsController)
@@ -316,11 +314,9 @@ func main() {
 
 	// Setup comments module
 	{
-		commentsRepository := comments.NewPostgresRepositoryFromPgxPool(postgresPool, config, logger, config.CommentsConfig.SeedFile)
-		if err = commentsRepository.Seed(context.Background()); err != nil {
-			logger.Error("Failed to seed comments repository", zap.Error(err))
-		}
-		commentsService := comments.NewLocalCommentsService(commentsRepository, tieredCache, config, logger)
+		commentsRepository := comments.NewPostgresRepositoryFromPgxPool(postgresPool, &config.CommentsConfig, logger)
+		commentsRepository.Seed(context.Background())
+		commentsService := comments.NewLocalCommentsService(commentsRepository, tieredCache, &config.CommentsConfig, logger)
 		commentsController := comments.NewController(commentsService, config, logger)
 		comments.SetupRoutes(globalRouter, commentsController)
 	}

@@ -40,25 +40,25 @@ func (c *Controller) GetAll(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto GetAllDTO
+	var req GetAllRequest
 
-	err = ctx.ShouldBindQuery(&dto)
+	err = ctx.ShouldBindQuery(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	decodedCursor, err := utils.DecodeCursor(dto.Cursor)
+	decodedCursor, err := utils.DecodeCursor(req.Cursor)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	comments, err := c.service.GetAll(sctx, decodedCursor, dto.Limit)
+	comments, err := c.service.GetAll(sctx, decodedCursor, req.Limit)
 	if err != nil {
 		c.logger.Error("Failed to get all comments",
-			zap.String("cursor", dto.Cursor),
-			zap.Int("limit", dto.Limit),
+			zap.String("cursor", req.Cursor),
+			zap.Int("limit", req.Limit),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -79,22 +79,22 @@ func (c *Controller) Get(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto GetDTO
+	var req GetRequest
 
-	err = ctx.ShouldBindUri(&dto)
+	err = ctx.ShouldBindUri(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("comment_id", dto.Id))
+	span.SetAttributes(attribute.String("comment_id", req.Id))
 
-	parsedUuid, _ := uuid.Parse(dto.Id)
+	parsedUuid, _ := uuid.Parse(req.Id)
 
 	comment, err := c.service.GetById(sctx, parsedUuid)
 	if err != nil {
 		c.logger.Error("Failed to get comment by id",
-			zap.String("comment_id", dto.Id),
+			zap.String("comment_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -115,15 +115,15 @@ func (c *Controller) Create(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto CreateDTO
+	var req CreateRequest
 
-	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	err = ctx.ShouldBindWith(&req, binding.JSON)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	comment, err := c.service.Add(sctx, dto)
+	comment, err := c.service.Add(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to create comment", zap.Error(err))
 		ctx.Error(err)
@@ -145,26 +145,26 @@ func (c *Controller) Modify(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto UpdateDTO
+	var req UpdateRequest
 
-	err = ctx.ShouldBindUri(&dto.CommentId)
+	err = ctx.ShouldBindUri(&req.CommentId)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("comment_id", dto.Id))
+	span.SetAttributes(attribute.String("comment_id", req.Id))
 
-	err = ctx.ShouldBindWith(&dto.Body, binding.JSON)
+	err = ctx.ShouldBindWith(&req.Body, binding.JSON)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	modifiedComment, err := c.service.Update(sctx, dto)
+	modifiedComment, err := c.service.Update(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to update comment",
-			zap.String("comment_id", dto.Id),
+			zap.String("comment_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -185,28 +185,28 @@ func (c *Controller) Delete(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto DeleteDTO
+	var req DeleteRequest
 
-	err = ctx.ShouldBindUri(&dto.CommentId)
+	err = ctx.ShouldBindUri(&req.CommentId)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("comment_id", dto.Id))
+	span.SetAttributes(attribute.String("comment_id", req.Id))
 
-	err = ctx.ShouldBindQuery(&dto.DeleteOptions)
+	err = ctx.ShouldBindQuery(&req.DeleteOptions)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("type", dto.Type))
+	span.SetAttributes(attribute.String("type", req.Type))
 
-	_, err = c.service.Delete(sctx, dto)
+	_, err = c.service.Delete(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to delete comment",
-			zap.String("comment_id", dto.Id),
+			zap.String("comment_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -227,26 +227,26 @@ func (c *Controller) Replace(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto ReplaceDTO
+	var req ReplaceRequest
 
-	err = ctx.ShouldBindUri(&dto.CommentId)
+	err = ctx.ShouldBindUri(&req.CommentId)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("comment_id", dto.Id))
+	span.SetAttributes(attribute.String("comment_id", req.Id))
 
-	err = ctx.ShouldBindWith(&dto.Body, binding.JSON)
+	err = ctx.ShouldBindWith(&req.Body, binding.JSON)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	replacedComment, err := c.service.Replace(sctx, dto)
+	replacedComment, err := c.service.Replace(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to replace comment",
-			zap.String("comment_id", dto.Id),
+			zap.String("comment_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -267,17 +267,17 @@ func (c *Controller) BulkAdd(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto BulkCreateDTO
+	var req BulkCreateRequest
 
-	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	err = ctx.ShouldBindWith(&req, binding.JSON)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.Int("count", len(dto.Comments)))
+	span.SetAttributes(attribute.Int("count", len(req.Comments)))
 
-	results, err := c.service.BulkAdd(sctx, dto)
+	results, err := c.service.BulkAdd(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to perform bulk add comments", zap.Error(err))
 		ctx.Error(err)
@@ -323,17 +323,17 @@ func (c *Controller) BulkModify(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto BulkModifyDTO
+	var req BulkModifyRequest
 
-	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	err = ctx.ShouldBindWith(&req, binding.JSON)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.Int("count", len(dto.Updates)))
+	span.SetAttributes(attribute.Int("count", len(req.Updates)))
 
-	results, err := c.service.BulkModify(sctx, dto)
+	results, err := c.service.BulkModify(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to perform bulk update comments", zap.Error(err))
 		ctx.Error(err)
@@ -379,17 +379,17 @@ func (c *Controller) BulkDelete(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto BulkDeleteDTO
+	var req BulkDeleteRequest
 
-	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	err = ctx.ShouldBindWith(&req, binding.JSON)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.Int("count", len(dto.Comments)))
+	span.SetAttributes(attribute.Int("count", len(req.Comments)))
 
-	results, err := c.service.BulkDelete(sctx, dto)
+	results, err := c.service.BulkDelete(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to perform bulk delete comments", zap.Error(err))
 		ctx.Error(err)

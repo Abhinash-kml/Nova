@@ -3,7 +3,6 @@ package posts
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
 	"slices"
 	"sync"
@@ -17,12 +16,12 @@ import (
 
 type InMemoryPostsRepository struct {
 	posts  []Post
-	config *config.Config
+	config *config.PostsConfig
 	logger *zap.Logger
 	mu     sync.RWMutex
 }
 
-func NewInMemoryPostsRepository(c *config.Config, l *zap.Logger) *InMemoryPostsRepository {
+func NewInMemoryPostsRepository(c *config.PostsConfig, l *zap.Logger) *InMemoryPostsRepository {
 	return &InMemoryPostsRepository{
 		config: c,
 		logger: l,
@@ -34,29 +33,27 @@ func (r *InMemoryPostsRepository) Initialize() error {
 	return nil
 }
 
-func (r *InMemoryPostsRepository) Seed() error {
-	file, err := os.OpenFile("./seeds/posts.json", os.O_RDONLY, 0755)
+func (r *InMemoryPostsRepository) Seed() {
+	file, err := os.OpenFile(r.config.SeedFile, os.O_RDONLY, 0755)
 	if err != nil {
 		r.logger.Error("Failed to open posts seeds file", zap.Error(err))
-		return fmt.Errorf("Failed to open posts seeds file. Error: %w", err)
+		return
 	}
 	defer file.Close()
 
 	decoder := json.NewDecoder(file)
 	if decoder == nil {
 		r.logger.Error("Failed to create json decoder. Returned nil pointer")
-		return fmt.Errorf("Failed to create json decoded. Returned nil pointer")
+		return
 	}
 
 	err = decoder.Decode(&r.posts)
 	if err != nil {
 		r.logger.Error("Failed to decode post's seeds to repository", zap.Error(err))
-		return fmt.Errorf("Failed to decode post's seeds to repository. Error: %w", err)
+		return
 	}
 
 	r.logger.Info("Added posts from seeds", zap.Int("Count", len(r.posts)))
-
-	return nil
 }
 
 func (r *InMemoryPostsRepository) Add(ctx context.Context, req CreateRequest) (Post, error) {

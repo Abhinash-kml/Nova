@@ -19,19 +19,17 @@ import (
 
 type PostgresRepository struct {
 	pgx              *pgxpool.Pool
-	config           *config.Config
+	config           *config.CommentsConfig
 	logger           *zap.Logger
 	statementBuilder squirrel.StatementBuilderType
-	seedfile         string
 }
 
-func NewPostgresRepositoryFromPgxPool(connection *pgxpool.Pool, c *config.Config, l *zap.Logger, sfp string) *PostgresRepository {
+func NewPostgresRepositoryFromPgxPool(connection *pgxpool.Pool, c *config.CommentsConfig, l *zap.Logger) *PostgresRepository {
 	return &PostgresRepository{
 		config:           c,
 		logger:           l,
 		pgx:              connection,
 		statementBuilder: squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar),
-		seedfile:         sfp,
 	}
 }
 
@@ -39,7 +37,7 @@ func (r *PostgresRepository) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (r *PostgresRepository) Seed(ctx context.Context) error {
+func (r *PostgresRepository) Seed(ctx context.Context) {
 	// Check if rows already exists, if so then dont seed
 	existQuery := `SELECT count(*) FROM comments;`
 	row := r.pgx.QueryRow(ctx, existQuery)
@@ -49,13 +47,11 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 	// Scan returned row
 	if err := row.Scan(&count); err != nil {
 		r.logger.Error("Failed to scan count of rows from comments table", zap.Error(err))
-		return common.ErrDbSeedingFailed
 	}
 
 	// Rows already exists, dont seed
 	if count != 0 {
 		r.logger.Sugar().Infof("Comments table contains %d rows, skipping seeding from file...", count)
-		return nil
 	}
 
 	// Table is empty, so seed from file to table
@@ -69,16 +65,14 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 	)
 
 	// Check if seeds file is provided and is of json format by suffix
-	if len(r.seedfile) == 0 || !strings.HasSuffix(r.seedfile, ".json") {
+	if len(r.config.SeedFile) == 0 || !strings.HasSuffix(r.config.SeedFile, ".json") {
 		r.logger.Error("Seeds file not provided or is not of json format. Skipping seeding")
-		return common.ErrDbSeedingFailed
 	}
 
 	// open file
-	file, err := os.OpenFile(r.seedfile, os.O_RDONLY, 0755)
+	file, err := os.OpenFile(r.config.SeedFile, os.O_RDONLY, 0755)
 	if err != nil {
-		r.logger.Error("Failed to open comments seeds file", zap.String("file", r.seedfile), zap.Error(err))
-		return common.ErrDbSeedingFailed
+		r.logger.Error("Failed to open comments seeds file", zap.String("file", r.config.SeedFile), zap.Error(err))
 	}
 	defer file.Close()
 
@@ -86,7 +80,6 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 	decoder := json.NewDecoder(file)
 	if decoder == nil {
 		r.logger.Error("Failed to create json decoder. Returned nil pointer")
-		return common.ErrDbSeedingFailed
 	}
 
 	// Decode
@@ -94,35 +87,36 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 	err = decoder.Decode(&comments)
 	if err != nil {
 		r.logger.Error("Failed to decode seeded users from file", zap.Error(err))
-		return common.ErrDbSeedingFailed
 	}
 
 	for i := range comments {
-		queryBuilder = queryBuilder.Values(comments[i].Id, comments[i].PostId, comments[i].AuthorId, comments[i].Body,
-			comments[i].CreatedAt, comments[i].UpdatedAt)
+		queryBuilder = queryBuilder.Values(
+			comments[i].Id,
+			comments[i].PostId,
+			comments[i].AuthorId,
+			comments[i].Body,
+			comments[i].CreatedAt,
+			comments[i].UpdatedAt,
+		)
 	}
 
 	// Generate query
 	query, args, err := queryBuilder.ToSql()
 	if err != nil {
 		r.logger.Error("Failed to generate sql query with squirrel for seeding users table", zap.Error(err))
-		return common.ErrDbSeedingFailed
 	}
 
 	// Execute query
 	_, err = r.pgx.Exec(ctx, query, args...)
 	if err != nil {
 		r.logger.Error("Failed to execute query to seed users table", zap.Error(err))
-		return common.ErrDbSeedingFailed
 	}
 
 	r.logger.Info("Successfully seeded comments from file", zap.Int("count", len(comments)))
-
-	return nil
 }
 
 // General operations
-func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (Comment, error) {
+func (r *PostgresRepository) Add(ctx context.Context, req CreateRequest) (Comment, error) {
 	rawQuery := `INSERT INTO
 					comments(id, post_id, author_id, body, created_at, updated_at)
 				VALUES($1, $2, $3, $4, $5, $6);`
@@ -131,15 +125,15 @@ func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (Comment, e
 	now := time.Now()
 
 	// Execute quury
-	_, err := r.pgx.Exec(ctx, rawQuery, id, dto.PostId, dto.Body, now, now)
+	_, err := r.pgx.Exec(ctx, rawQuery, id, req.PostId, req.Body, now, now)
 	if err != nil {
 		return Comment{}, fmt.Errorf("adding comment: %w", err)
 	}
 
 	return Comment{
 		Id:        id,
-		PostId:    dto.PostId,
-		Body:      dto.Body,
+		PostId:    req.PostId,
+		Body:      req.Body,
 		CreatedAt: now,
 		UpdatedAt: now,
 	}, nil
@@ -178,8 +172,15 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 	var comments []Comment
 	for rows.Next() {
 		var comment Comment
-		err = rows.Scan(&comment.Id, &comment.PostId, &comment.AuthorId, &comment.Body, &comment.CreatedAt,
-			&comment.UpdatedAt)
+
+		err = rows.Scan(
+			&comment.Id,
+			&comment.PostId,
+			&comment.AuthorId,
+			&comment.Body,
+			&comment.CreatedAt,
+			&comment.UpdatedAt,
+		)
 		if err != nil {
 			return nil, fmt.Errorf("scanning row: %w", err)
 		}
@@ -217,8 +218,14 @@ func (r *PostgresRepository) GetById(ctx context.Context, id uuid.UUID) (Comment
 	row := r.pgx.QueryRow(ctx, rawQuery, id)
 
 	// Scan returned row
-	err := row.Scan(&comment.Id, &comment.PostId, &comment.AuthorId, &comment.Body, &comment.CreatedAt,
-		&comment.UpdatedAt)
+	err := row.Scan(
+		&comment.Id,
+		&comment.PostId,
+		&comment.AuthorId,
+		&comment.Body,
+		&comment.CreatedAt,
+		&comment.UpdatedAt,
+	)
 	if err != nil {
 		return Comment{}, fmt.Errorf("scanning row: %w", err)
 	}
@@ -226,7 +233,7 @@ func (r *PostgresRepository) GetById(ctx context.Context, id uuid.UUID) (Comment
 	return comment, nil
 }
 
-func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (Comment, error) {
+func (r *PostgresRepository) Update(ctx context.Context, req UpdateRequest) (Comment, error) {
 	rawQuery := `UPDATE
 					comments
 				SET
@@ -241,11 +248,17 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (Comment
 	now := time.Now()
 
 	// Execute query
-	row := r.pgx.QueryRow(ctx, rawQuery, dto.Id, dto.Body, now)
+	row := r.pgx.QueryRow(ctx, rawQuery, req.Id, req.Body, now)
 
 	// Scan returned row
-	err := row.Scan(&comment.Id, &comment.PostId, &comment.AuthorId, &comment.Body, &comment.CreatedAt,
-		&comment.UpdatedAt)
+	err := row.Scan(
+		&comment.Id,
+		&comment.PostId,
+		&comment.AuthorId,
+		&comment.Body,
+		&comment.CreatedAt,
+		&comment.UpdatedAt,
+	)
 	if err != nil {
 		return Comment{}, fmt.Errorf("scanning row: %w", err)
 	}
@@ -254,7 +267,7 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (Comment
 }
 
 // Subjected to change
-func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (Comment, error) {
+func (r *PostgresRepository) Replace(ctx context.Context, req ReplaceRequest) (Comment, error) {
 	rawQuery := `UPDATE
 					comments
 				SET
@@ -269,11 +282,17 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (Comme
 	now := time.Now()
 
 	// Execute query
-	row := r.pgx.QueryRow(ctx, rawQuery, dto.Id, dto.Body, now)
+	row := r.pgx.QueryRow(ctx, rawQuery, req.Id, req.Body, now)
 
 	// Scan returned row
-	err := row.Scan(&comment.Id, &comment.PostId, &comment.AuthorId, &comment.Body, &comment.CreatedAt,
-		&comment.UpdatedAt)
+	err := row.Scan(
+		&comment.Id,
+		&comment.PostId,
+		&comment.AuthorId,
+		&comment.Body,
+		&comment.CreatedAt,
+		&comment.UpdatedAt,
+	)
 	if err != nil {
 		return Comment{}, fmt.Errorf("scanning row: %w", err)
 	}
@@ -282,7 +301,7 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (Comme
 }
 
 // Subjected to change
-func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
+func (r *PostgresRepository) Delete(ctx context.Context, req DeleteRequest) (uuid.UUID, error) {
 	rawQuery := `DELETE FROM
 					comments
 				WHERE
@@ -293,7 +312,7 @@ func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UU
 	var deletedId uuid.UUID
 
 	// Execute query
-	row := r.pgx.QueryRow(ctx, rawQuery, dto.Id)
+	row := r.pgx.QueryRow(ctx, rawQuery, req.Id)
 
 	// Scan returned row
 	err := row.Scan(&deletedId)
@@ -305,14 +324,14 @@ func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UU
 }
 
 // Bulk operations
-func (r *PostgresRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {
+func (r *PostgresRepository) BulkAdd(ctx context.Context, req BulkCreateRequest) ([]common.BulkOpResult, error) {
 	return nil, nil
 }
 
-func (r *PostgresRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
+func (r *PostgresRepository) BulkModify(ctx context.Context, req BulkModifyRequest) ([]common.BulkOpResult, error) {
 	return nil, nil
 }
 
-func (r *PostgresRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
+func (r *PostgresRepository) BulkDelete(ctx context.Context, req BulkDeleteRequest) ([]common.BulkOpResult, error) {
 	return nil, nil
 }
