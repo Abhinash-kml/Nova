@@ -124,7 +124,7 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 }
 
 // General operations
-func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (Post, error) {
+func (r *PostgresRepository) Add(ctx context.Context, req CreateRequest) (Post, error) {
 	rawQuery := `INSERT INTO
 					posts(id, title, body, author_id, likes, comments, created_at, updated_at)
 				VALUES ($1, $2, $3, $4, $5, $6, $7, $8);`
@@ -134,15 +134,15 @@ func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (Post, erro
 	now := time.Now()
 
 	// Execute query
-	_, err := r.pgx.Exec(ctx, rawQuery, id, dto.Title, dto.Body, dto.AuthorId, likes, comments, now, now)
+	_, err := r.pgx.Exec(ctx, rawQuery, id, req.Title, req.Body, req.AuthorId, likes, comments, now, now)
 	if err != nil {
 		return Post{}, fmt.Errorf("creating post: %w", err)
 	}
 
 	return Post{
 		Id:        id,
-		Title:     dto.Title,
-		AuthorId:  dto.AuthorId,
+		Title:     req.Title,
+		AuthorId:  req.AuthorId,
 		Likes:     likes,
 		Comments:  comments,
 		CreatedAt: now,
@@ -266,14 +266,14 @@ func (r *PostgresRepository) GetByName(ctx context.Context, name string) (Post, 
 	return post, nil
 }
 
-func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (Post, error) {
+func (r *PostgresRepository) Update(ctx context.Context, req UpdateRequest) (Post, error) {
 	// Generate dynamic update query using squirrel
-	queryBuilder := r.statementBuilder.Update("posts").Where(squirrel.Eq{"id": dto.Id})
-	if dto.Title != nil {
-		queryBuilder = queryBuilder.Set("title", dto.Title)
+	queryBuilder := r.statementBuilder.Update("posts").Where(squirrel.Eq{"id": req.Id})
+	if req.Title != nil {
+		queryBuilder = queryBuilder.Set("title", req.Title)
 	}
-	if dto.Body != nil {
-		queryBuilder = queryBuilder.Set("body", dto.Body)
+	if req.Body != nil {
+		queryBuilder = queryBuilder.Set("body", req.Body)
 	}
 	queryBuilder = queryBuilder.Suffix("RETURNING *")
 	query, args, err := queryBuilder.ToSql()
@@ -294,7 +294,7 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (Post, e
 	return post, nil
 }
 
-func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (Post, error) {
+func (r *PostgresRepository) Replace(ctx context.Context, req ReplaceRequest) (Post, error) {
 	rawQuery := `UPDATE
 					posts
 				SET
@@ -320,13 +320,13 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (Post,
 	defer tx.Rollback(ctx)
 
 	// Lock row inside transaction
-	_, err = tx.Exec(ctx, "SELECT id FROM posts WHERE id = $1 FOR UPDATE;", dto.Id)
+	_, err = tx.Exec(ctx, "SELECT id FROM posts WHERE id = $1 FOR UPDATE;", req.Id)
 	if err != nil {
 		return Post{}, fmt.Errorf("locking row: %w", err)
 	}
 
 	// Execute query
-	row := tx.QueryRow(ctx, rawQuery, dto.Id, dto.Title, dto.Body, likes, comments, now)
+	row := tx.QueryRow(ctx, rawQuery, req.Id, req.Title, req.Body, likes, comments, now)
 	err = row.Scan(&post.Id, &post.Title, &post.Body, &post.AuthorId, &post.Likes, &post.Comments,
 		&post.CreatedAt, &post.UpdatedAt)
 	if err != nil {
@@ -342,7 +342,7 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (Post,
 	return post, nil
 }
 
-func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
+func (r *PostgresRepository) Delete(ctx context.Context, req DeleteRequest) (uuid.UUID, error) {
 	rawQuery := `DELETE FROM
 					posts
 				WHERE
@@ -351,7 +351,7 @@ func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UU
 					id;`
 
 	// Execute query
-	row := r.pgx.QueryRow(ctx, rawQuery, dto.Id)
+	row := r.pgx.QueryRow(ctx, rawQuery, req.Id)
 
 	var deletedId uuid.UUID
 
@@ -366,14 +366,14 @@ func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UU
 }
 
 // Bulk operations
-func (r *PostgresRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {
+func (r *PostgresRepository) BulkAdd(ctx context.Context, dto BulkCreateRequest) ([]common.BulkOpResult, error) {
 	return nil, nil
 }
 
-func (r *PostgresRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
+func (r *PostgresRepository) BulkModify(ctx context.Context, dto BulkModifyRequest) ([]common.BulkOpResult, error) {
 	return nil, nil
 }
 
-func (r *PostgresRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
+func (r *PostgresRepository) BulkDelete(ctx context.Context, dto BulkDeleteRequest) ([]common.BulkOpResult, error) {
 	return nil, nil
 }

@@ -57,27 +57,33 @@ authentication:
     audience: "api-server"
 
 users:
-  keyPrefix:
+  keyPrefix: "users:"
   seed: "./seeds/users.json"
+  cacheduration: 30s
 
-posts:
-  keyPrefix:
+posts: 
+  keyPrefix: "posts:"
   seed: "./seeds/posts.json"
+  cacheduration: 30s
 
 comments:
-  keyPrefix:
+  keyPrefix: "comments:"
   seed: "./seeds/comments.json"
+  cacheduration: 30s
 
 clans:
-  keyPrefix:
+  keyPrefix: "clans:"
   seed: "./seeds/clans.json"
   members-seed: "./seeds/clan_members.json"
+  cacheduration: 30s
 
 channels:
-  keyPrefix:
+  keyPrefix: "channels:"
   seed: "./seeds/channels.json"
+  cacheduration: 30s
 
 stats:
-  keyPrefix:
+  keyPrefix: "stats:"
   seed: "./seeds/stats.json"
   progression-seed: "./seeds/stats-progression.json"
+  cacheduration: 30s

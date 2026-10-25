@@ -13,7 +13,7 @@ type Config struct {
 	Postgres       PostgresConfig      `mapstructure:"postgres"`
 	AuthToken      AuthTokenConfig     `mapstructure:"authentication"`
 	UsersConfig    UsersConfig         `mapstructure:"users"`
-	PostsConfig    UsersConfig         `mapstructure:"posts"`
+	PostsConfig    PostsConfig         `mapstructure:"posts"`
 	CommentsConfig CommentsConfig      `mapstructure:"comments"`
 	ClansConfig    ClansConfig         `mapstructure:"clans"`
 	ChannelsConfig ChannelsConfig      `mapstructure:"channels"`
@@ -97,33 +97,39 @@ type TokenConfig struct {
 }
 
 type UsersConfig struct {
-	KeyPrefix string `mapstructure:"keyPrefix"`
-	SeedFile  string `mapstructure:"seed"`
+	KeyPrefix     string        `mapstructure:"keyPrefix"`
+	SeedFile      string        `mapstructure:"seed"`
+	CacheDuration time.Duration `mapstructure:"cacheduration"`
 }
 
 type PostsConfig struct {
-	KeyPrefix string `mapstructure:"keyPrefix"`
-	SeedFile  string `mapstructure:"seed"`
+	KeyPrefix     string        `mapstructure:"keyPrefix"`
+	SeedFile      string        `mapstructure:"seed"`
+	CacheDuration time.Duration `mapstructure:"cacheduration"`
 }
 
 type CommentsConfig struct {
-	KeyPrefix string `mapstructure:"keyPrefix"`
-	SeedFile  string `mapstructure:"seed"`
+	KeyPrefix     string        `mapstructure:"keyPrefix"`
+	SeedFile      string        `mapstructure:"seed"`
+	CacheDuration time.Duration `mapstructure:"cacheduration"`
 }
 
 type ClansConfig struct {
-	KeyPrefix           string `mapstructure:"keyPrefix"`
-	ClanSeedFile        string `mapstructure:"seed"`
-	ClanMembersSeedFile string `mapstructure:"members-seed"`
+	KeyPrefix           string        `mapstructure:"keyPrefix"`
+	ClanSeedFile        string        `mapstructure:"seed"`
+	ClanMembersSeedFile string        `mapstructure:"members-seed"`
+	CacheDuration       time.Duration `mapstructure:"cacheduration"`
 }
 
 type ChannelsConfig struct {
-	KeyPrefix string `mapstructure:"keyPrefix"`
-	SeedFile  string `mapstructure:"seed"`
+	KeyPrefix     string        `mapstructure:"keyPrefix"`
+	SeedFile      string        `mapstructure:"seed"`
+	CacheDuration time.Duration `mapstructure:"cacheduration"`
 }
 
 type StatsConfig struct {
-	KeyPrefix           string `mapstructure:"keyPrefix"`
-	SeedFile            string `mapstructure:"seed"`
-	ProgressionSeedFile string `mapstructure:"progression-seed"`
+	KeyPrefix           string        `mapstructure:"keyPrefix"`
+	SeedFile            string        `mapstructure:"seed"`
+	ProgressionSeedFile string        `mapstructure:"progression-seed"`
+	CacheDuration       time.Duration `mapstructure:"cacheduration"`
 }

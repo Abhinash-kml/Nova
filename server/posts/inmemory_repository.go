@@ -59,7 +59,7 @@ func (r *InMemoryPostsRepository) Seed() error {
 	return nil
 }
 
-func (r *InMemoryPostsRepository) Add(ctx context.Context, dto CreateDTO) (Post, error) {
+func (r *InMemoryPostsRepository) Add(ctx context.Context, req CreateRequest) (Post, error) {
 	_, span := tracer.Start(ctx, "posts.repository.add")
 	defer span.End()
 
@@ -69,9 +69,9 @@ func (r *InMemoryPostsRepository) Add(ctx context.Context, dto CreateDTO) (Post,
 	now := time.Now()
 	post := Post{
 		Id:        uuid.New(),
-		Title:     dto.Title,
-		Body:      dto.Body,
-		AuthorId:  dto.AuthorId,
+		Title:     req.Title,
+		Body:      req.Body,
+		AuthorId:  req.AuthorId,
 		Likes:     0,
 		Comments:  0,
 		CreatedAt: now,
@@ -142,22 +142,22 @@ func (r *InMemoryPostsRepository) GetByName(ctx context.Context, name string) (P
 	return Post{}, common.ErrResourceNotFound
 }
 
-func (r *InMemoryPostsRepository) Update(ctx context.Context, dto UpdateDTO) (Post, error) {
+func (r *InMemoryPostsRepository) Update(ctx context.Context, req UpdateRequest) (Post, error) {
 	_, span := tracer.Start(ctx, "posts.repository.update")
 	defer span.End()
 
-	parsedId, _ := uuid.Parse(dto.Id)
+	parsedId, _ := uuid.Parse(req.Id)
 	var updatedPostIndex int = -1
 
 	for index := range r.posts {
 		if r.posts[index].Id == parsedId {
 			r.mu.Lock()
 
-			if dto.Title != nil {
-				r.posts[index].Title = *dto.Title
+			if req.Title != nil {
+				r.posts[index].Title = *req.Title
 			}
-			if dto.Body != nil {
-				r.posts[index].Body = *dto.Body
+			if req.Body != nil {
+				r.posts[index].Body = *req.Body
 			}
 			updatedPostIndex = index
 			r.mu.Unlock()
@@ -172,11 +172,11 @@ func (r *InMemoryPostsRepository) Update(ctx context.Context, dto UpdateDTO) (Po
 	}
 }
 
-func (r *InMemoryPostsRepository) Replace(ctx context.Context, dto ReplaceDTO) (Post, error) {
+func (r *InMemoryPostsRepository) Replace(ctx context.Context, req ReplaceRequest) (Post, error) {
 	_, span := tracer.Start(ctx, "posts.repository.replace")
 	defer span.End()
 
-	parsedId, _ := uuid.Parse(dto.Id)
+	parsedId, _ := uuid.Parse(req.Id)
 	var replacedPostIndex int
 
 	for index := range r.posts {
@@ -185,8 +185,8 @@ func (r *InMemoryPostsRepository) Replace(ctx context.Context, dto ReplaceDTO) (
 
 			r.mu.Lock()
 
-			r.posts[index].Title = dto.Title
-			r.posts[index].Body = dto.Body
+			r.posts[index].Title = req.Title
+			r.posts[index].Body = req.Body
 			r.posts[index].UpdatedAt = time.Now()
 
 			r.mu.Unlock()
@@ -201,14 +201,14 @@ func (r *InMemoryPostsRepository) Replace(ctx context.Context, dto ReplaceDTO) (
 	}
 }
 
-func (r *InMemoryPostsRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
+func (r *InMemoryPostsRepository) Delete(ctx context.Context, req DeleteRequest) (uuid.UUID, error) {
 	_, span := tracer.Start(ctx, "posts.repository.delete")
 	defer span.End()
 
 	oldLen := len(r.posts)
 
 	r.mu.Lock()
-	parsedId, _ := uuid.Parse(dto.Id)
+	parsedId, _ := uuid.Parse(req.Id)
 	r.posts = slices.DeleteFunc(r.posts, func(p Post) bool {
 		if p.Id == parsedId {
 			return true
@@ -226,15 +226,15 @@ func (r *InMemoryPostsRepository) Delete(ctx context.Context, dto DeleteDTO) (uu
 	return uuid.Nil, common.ErrResourceCannotBeDeleted
 }
 
-func (r *InMemoryPostsRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {
+func (r *InMemoryPostsRepository) BulkAdd(ctx context.Context, req BulkCreateRequest) ([]common.BulkOpResult, error) {
 	_, span := tracer.Start(ctx, "posts.repository.bulkcreate")
 	defer span.End()
 
-	results := make([]common.BulkOpResult, 0, len(dto.Posts))
+	results := make([]common.BulkOpResult, 0, len(req.Posts))
 
-	for index := range dto.Posts {
+	for index := range req.Posts {
 		var result common.BulkOpResult
-		post, err := r.Add(ctx, dto.Posts[index])
+		post, err := r.Add(ctx, req.Posts[index])
 		if err != nil {
 			result.Id = uuid.Nil
 			result.Success = false
@@ -251,15 +251,15 @@ func (r *InMemoryPostsRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO
 	return results, nil
 }
 
-func (r *InMemoryPostsRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
+func (r *InMemoryPostsRepository) BulkModify(ctx context.Context, req BulkModifyRequest) ([]common.BulkOpResult, error) {
 	_, span := tracer.Start(ctx, "posts.repository.bulkmodify")
 	defer span.End()
 
-	results := make([]common.BulkOpResult, 0, len(dto.Updates))
+	results := make([]common.BulkOpResult, 0, len(req.Updates))
 
-	for index := range dto.Updates {
+	for index := range req.Updates {
 		var result common.BulkOpResult
-		post, err := r.Update(ctx, dto.Updates[index])
+		post, err := r.Update(ctx, req.Updates[index])
 		if err != nil {
 			result.Id = uuid.Nil
 			result.Success = false
@@ -276,16 +276,16 @@ func (r *InMemoryPostsRepository) BulkModify(ctx context.Context, dto BulkModify
 	return results, nil
 }
 
-func (r *InMemoryPostsRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
+func (r *InMemoryPostsRepository) BulkDelete(ctx context.Context, req BulkDeleteRequest) ([]common.BulkOpResult, error) {
 	_, span := tracer.Start(ctx, "posts.repository.bulkdelete")
 	defer span.End()
 
-	results := make([]common.BulkOpResult, 0, len(dto.Posts))
+	results := make([]common.BulkOpResult, 0, len(req.Posts))
 
-	for index := range dto.Posts {
+	for index := range req.Posts {
 		var result common.BulkOpResult
-		id := dto.Posts[index].String()
-		deletedId, err := r.Delete(ctx, DeleteDTO{PostId: PostId{Id: id}})
+		id := req.Posts[index].String()
+		deletedId, err := r.Delete(ctx, DeleteRequest{PostId: PostId{Id: id}})
 		if err != nil {
 			result.Id = uuid.Nil
 			result.Success = false

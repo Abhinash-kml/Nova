@@ -309,7 +309,7 @@ func main() {
 		if err = postsRepository.Seed(context.Background()); err != nil {
 			logger.Error("Failed to seed posts repository", zap.Error(err))
 		}
-		postsService := posts.NewLocalPostsService(postsRepository, tieredCache, config, logger)
+		postsService := posts.NewLocalPostsService(postsRepository, tieredCache, &config.PostsConfig, logger)
 		postsController := posts.NewController(postsService, config, logger)
 		posts.SetupRoutes(globalRouter, postsController)
 	}

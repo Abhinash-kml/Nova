@@ -40,27 +40,27 @@ func (c *Controller) GetAll(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto GetAllDTO
+	var req GetAllRequest
 
-	err = ctx.ShouldBindQuery(&dto)
+	err = ctx.ShouldBindQuery(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	decodedCursor, err := utils.DecodeCursorUUID(dto.Cursor)
+	decodedCursor, err := utils.DecodeCursorUUID(req.Cursor)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	posts, err := c.service.GetAll(sctx, decodedCursor, dto.Limit, dto.SortBy, dto.SortDirection)
+	posts, err := c.service.GetAll(sctx, decodedCursor, req.Limit, req.SortBy, req.SortDirection)
 	if err != nil {
 		c.logger.Error("Failed to get all posts",
 			zap.String("cursor", decodedCursor.String()),
-			zap.Int("limit", dto.Limit),
-			zap.String("sort_by", dto.SortBy),
-			zap.String("sort_direction", dto.SortDirection),
+			zap.Int("limit", req.Limit),
+			zap.String("sort_by", req.SortBy),
+			zap.String("sort_direction", req.SortDirection),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -81,22 +81,22 @@ func (c *Controller) Get(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto GetDTO
+	var req GetRequest
 
-	err = ctx.ShouldBindUri(&dto)
+	err = ctx.ShouldBindUri(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("post_id", dto.Id))
+	span.SetAttributes(attribute.String("post_id", req.Id))
 
-	parsedUuid, _ := uuid.Parse(dto.Id)
+	parsedUuid, _ := uuid.Parse(req.Id)
 
 	post, err := c.service.GetById(sctx, parsedUuid)
 	if err != nil {
 		c.logger.Error("Failed to get post with id",
-			zap.String("post_id", dto.Id),
+			zap.String("post_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -117,15 +117,15 @@ func (c *Controller) Create(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto CreateDTO
+	var req CreateRequest
 
-	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	err = ctx.ShouldBindWith(&req, binding.JSON)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	post, err := c.service.Add(sctx, dto)
+	post, err := c.service.Add(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to create post", zap.Error(err))
 		ctx.Error(err)
@@ -147,26 +147,26 @@ func (c *Controller) Modify(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto UpdateDTO
+	var req UpdateRequest
 
-	err = ctx.ShouldBindUri(&dto.PostId)
+	err = ctx.ShouldBindUri(&req.PostId)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("post_id", dto.Id))
+	span.SetAttributes(attribute.String("post_id", req.Id))
 
-	err = ctx.ShouldBindBodyWithJSON(&dto)
+	err = ctx.ShouldBindBodyWithJSON(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	modifiedPost, err := c.service.Update(sctx, dto)
+	modifiedPost, err := c.service.Update(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to update post",
-			zap.String("post_id", dto.Id),
+			zap.String("post_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -187,28 +187,28 @@ func (c *Controller) Delete(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto DeleteDTO
+	var req DeleteRequest
 
-	err = ctx.ShouldBindUri(&dto.PostId)
+	err = ctx.ShouldBindUri(&req.PostId)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("post_id", dto.Id))
+	span.SetAttributes(attribute.String("post_id", req.Id))
 
-	err = ctx.ShouldBindQuery(&dto.DeleteOptions)
+	err = ctx.ShouldBindQuery(&req.DeleteOptions)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("type", dto.Type))
+	span.SetAttributes(attribute.String("type", req.Type))
 
-	_, err = c.service.Delete(sctx, dto)
+	_, err = c.service.Delete(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to delete post",
-			zap.String("post_id", dto.Id),
+			zap.String("post_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -229,26 +229,26 @@ func (c *Controller) Replace(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto ReplaceDTO
+	var req ReplaceRequest
 
-	err = ctx.ShouldBindUri(&dto.PostId)
+	err = ctx.ShouldBindUri(&req.PostId)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("post_id", dto.Id))
+	span.SetAttributes(attribute.String("post_id", req.Id))
 
-	err = ctx.ShouldBindWith(&dto.ReplacementData, binding.JSON)
+	err = ctx.ShouldBindWith(&req.ReplacementData, binding.JSON)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	replacedPost, err := c.service.Replace(sctx, dto)
+	replacedPost, err := c.service.Replace(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to replace post",
-			zap.String("post_id", dto.Id),
+			zap.String("post_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -269,17 +269,17 @@ func (c *Controller) BulkAdd(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto BulkCreateDTO
+	var req BulkCreateRequest
 
-	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	err = ctx.ShouldBindWith(&req, binding.JSON)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.Int("count", len(dto.Posts)))
+	span.SetAttributes(attribute.Int("count", len(req.Posts)))
 
-	results, err := c.service.BulkAdd(sctx, dto)
+	results, err := c.service.BulkAdd(sctx, req)
 	if err != nil {
 		c.logger.Error("Bulk add operation failed", zap.Error(err))
 		ctx.Error(err)
@@ -325,17 +325,17 @@ func (c *Controller) BulkModify(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto BulkModifyDTO
+	var req BulkModifyRequest
 
-	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	err = ctx.ShouldBindWith(&req, binding.JSON)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.Int("count", len(dto.Updates)))
+	span.SetAttributes(attribute.Int("count", len(req.Updates)))
 
-	results, err := c.service.BulkModify(sctx, dto)
+	results, err := c.service.BulkModify(sctx, req)
 	if err != nil {
 		c.logger.Error("Bulk modify operation failed", zap.Error(err))
 		ctx.Error(err)
@@ -381,17 +381,17 @@ func (c *Controller) BulkDelete(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto BulkDeleteDTO
+	var req BulkDeleteRequest
 
-	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	err = ctx.ShouldBindWith(&req, binding.JSON)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.Int("count", len(dto.Posts)))
+	span.SetAttributes(attribute.Int("count", len(req.Posts)))
 
-	results, err := c.service.BulkDelete(sctx, dto)
+	results, err := c.service.BulkDelete(sctx, req)
 	if err != nil {
 		c.logger.Error("Bulk delete operation failed", zap.Error(err))
 		ctx.Error(err)

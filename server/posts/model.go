@@ -10,8 +10,6 @@ import (
 
 var tracer = otel.Tracer("posts-tracer")
 
-const PostPrefix = "post:"
-
 type Post struct {
 	Id        uuid.UUID `json:"id" redis:"id"`
 	Title     string    `json:"title" redis:"title"`
