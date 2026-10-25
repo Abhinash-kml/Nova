@@ -13,20 +13,24 @@ import (
 
 var tracer = otel.Tracer("tiered-cache")
 
+type LoaderFunc func(ctx context.Context) ([]byte, error)
+
 type TieredCache struct {
-	local    *LocalCache
-	redis    *redis.Client
-	localTTL time.Duration
-	redisTTL time.Duration
-	sf       singleflight.Group
+	local        *LocalCache
+	redis        *redis.Client
+	localTTL     time.Duration
+	redisTTL     time.Duration
+	jitterFactor time.Duration
+	sf           singleflight.Group
 }
 
 func NewTieredCache(rc *redis.Client, localTTL, redisTTL time.Duration, jitterFactor time.Duration) *TieredCache {
 	return &TieredCache{
-		local:    NewLocalCache(100000, 30*time.Second),
-		redis:    rc,
-		localTTL: localTTL + rand.N(jitterFactor),
-		redisTTL: redisTTL + rand.N(jitterFactor),
+		local:        NewLocalCache(100000, 30*time.Second),
+		redis:        rc,
+		localTTL:     localTTL,
+		redisTTL:     redisTTL,
+		jitterFactor: jitterFactor,
 	}
 }
 
@@ -48,15 +52,27 @@ func (c *TieredCache) Get(ctx context.Context, key string) ([]byte, bool) {
 	return nil, false
 }
 
-func (c *TieredCache) Set(ctx context.Context, key string, value []byte) error {
+func (c *TieredCache) Set(ctx context.Context, key string, value []byte, ttl time.Duration) error {
 	ctx, span := tracer.Start(ctx, "tieredcache.set")
 	defer span.End()
 
-	c.local.Set(key, value, c.localTTL)
-	return c.redis.Set(ctx, key, value, c.redisTTL).Err()
+	randomJitter := rand.N(c.jitterFactor)
+
+	if ttl != 0 {
+		computedTTL := time.Duration(float64(ttl)*0.7) + randomJitter
+		c.local.Set(key, value, computedTTL+randomJitter)
+		return c.redis.Set(ctx, key, value, ttl+randomJitter).Err()
+	}
+
+	c.local.Set(key, value, c.localTTL+randomJitter)
+	return c.redis.Set(ctx, key, value, c.redisTTL+randomJitter).Err()
 }
 
-func (c *TieredCache) GetOrLoad(ctx context.Context, key string, loader func(ctx context.Context) ([]byte, error)) ([]byte, error) {
+func (c *TieredCache) GetOrLoad(ctx context.Context, key string, loader LoaderFunc) ([]byte, error) {
+	return c.GetOrLoadWithTTL(ctx, key, 0, loader)
+}
+
+func (c *TieredCache) GetOrLoadWithTTL(ctx context.Context, key string, ttl time.Duration, loader LoaderFunc) ([]byte, error) {
 	ctx, span := tracer.Start(ctx, "tieredcache.getorload")
 	defer span.End()
 
@@ -75,7 +91,7 @@ func (c *TieredCache) GetOrLoad(ctx context.Context, key string, loader func(ctx
 		if err != nil {
 			return nil, fmt.Errorf("loader for key %s: %w", key, err)
 		}
-		_ = c.Set(ctx, key, value)
+		_ = c.Set(ctx, key, value, ttl)
 		return value, nil
 	})
 	if err != nil {
