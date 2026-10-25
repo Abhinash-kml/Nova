@@ -328,9 +328,7 @@ func main() {
 	// Setup clans module
 	{
 		clansRepository := clans.NewPostgresRepositoryFromPgxPool(postgresPool, config, logger, config.SeedsConfig.Clans)
-		if err = clansRepository.Seed(context.Background()); err != nil {
-			logger.Error("Failed to seed clans repository", zap.Error(err))
-		}
+		clansRepository.Seed(context.Background())
 		clansService := clans.NewLocalClansService(clansRepository, config, redisClient, logger)
 		clansController := clans.NewController(clansService, config, logger)
 		clans.SetupRoutes(globalRouter, clansController)

@@ -3,24 +3,29 @@ package clans
 import (
 	"context"
 
-	"github.com/abhinash-kml/nova/server/common"
 	"github.com/google/uuid"
 )
 
 type ClansRepository interface {
 	Initialize(ctx context.Context) error
-	Seed(ctx context.Context) error
+	Seed(ctx context.Context)
 
 	// General operations
-	Add(ctx context.Context, dto CreateDTO) (Clan, error)
+	Add(ctx context.Context, req CreateRequest) (Clan, error)
 	GetById(ctx context.Context, id uuid.UUID) (Clan, error)
 	GetByName(ctx context.Context, name string) (Clan, error)
-	GetAll(ctx context.Context, cursor int, limit int) ([]Clan, error)
-	Update(ctx context.Context, dto UpdateDTO) (Clan, error)
-	Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error)
+	GetAll(ctx context.Context, cursor uuid.UUID, limit int) ([]Clan, error)
+	Update(ctx context.Context, req UpdateRequest) (Clan, error)
+	Delete(ctx context.Context, req DeleteRequest) (DeleteResponse, error)
 
-	// Bulk operations
-	BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error)
-	BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error)
-	BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error)
+	AddMember(ctx context.Context, req ActionRequest) (ActionResponse, error)
+	RemoveMember(ctx context.Context, req ActionRequest) (ActionResponse, error)
+	ListAllOutogingInvites(ctx context.Context, req ActionRequest) ([]OutgoingInvite, error)
+	InviteMember(ctx context.Context, req ActionRequest) (ActionResponse, error)
+	AcceptInvite(ctx context.Context, req ActionRequest) (ActionResponse, error)
+	RejectInvite(ctx context.Context, req ActionRequest) (ActionResponse, error)
+	ListAllJoinRequests(ctx context.Context, req ActionRequest) ([]uuid.UUID, error)
+	SendJoinRequest(ctx context.Context, req ActionRequest) (ActionResponse, error)
+	AcceptJoinRequest(ctx context.Context, req ActionRequest) (ActionResponse, error)
+	RejectJoinRequest(ctx context.Context, req ActionRequest) (ActionResponse, error)
 }

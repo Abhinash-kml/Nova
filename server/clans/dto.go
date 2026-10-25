@@ -1,17 +1,25 @@
 package clans
 
-import "github.com/google/uuid"
+import (
+	"time"
 
-type GetDTO struct {
-	Id string `uri:"id" binding:"required"`
+	"github.com/google/uuid"
+)
+
+type ClanId struct {
+	Id string `uri:"id" binding:"required,uuid"`
 }
 
-type GetAllDTO struct {
-	Cursor string `form:"cursor" binding:"required"`
-	Limit  int    `form:"limit" binding:"required,gte=10,lte=20"`
+type GetRequest struct {
+	ClanId
 }
 
-type CreateDTO struct {
+type GetAllRequest struct {
+	Cursor string `form:"cursor,default=AAAAAAAAAAAAAAAAAAAAAA" binding:"required"`
+	Limit  int    `form:"limit,default=10" binding:"required,gte=10,lte=20"`
+}
+
+type CreateRequest struct {
 	Name        string      `json:"name" binding:"required,min=10,max=10"`
 	Description string      `json:"description" binding:"required,min=5,max=40"`
 	Tag         string      `json:"tag" binding:"required"`
@@ -22,57 +30,41 @@ type CreateDTO struct {
 	IsLocked    bool        `json:"is_locked" binding:"required"`
 }
 
-type FieldUpdate struct {
-	Field    string `json:"field" binding:"required"`
-	DataType string `json:"datatype" binding:"required"`
-	Value    string `json:"value" binding:"required"`
-}
-
-type FieldUpdates struct {
-	Updates []FieldUpdate `json:"updates" binding:"required"`
-}
-
-type ClanId struct {
-	Id string `uri:"id" binding:"required,uuid"`
-}
-
-type UpdateDTO struct {
-	ClanId
-	FieldUpdates
-}
-
 type DeleteOptions struct {
 	Type string `form:"type" binding:"required,oneof=soft hard"` // 1 - Soft, 2 - Hard
 }
 
-type DeleteDTO struct {
+type DeleteRequest struct {
 	ClanId
 	DeleteOptions
 }
 
-type JoinRequestDTO struct {
-	ClanId      uuid.UUID `json:"clan_id"`
-	RequesterId uuid.UUID `json:"requester_id"`
+type DeleteResponse struct {
+	DeletedClanID uuid.UUID `json:"deleted_clan"`
 }
 
-type JoinResponseDTO struct {
-	ClanID   uuid.UUID `json:"clan_id"`
-	Response string    `json:"response"`
+type UpdateRequest struct {
+	ClanId
+	Name        *string `json:"name"`
+	Description *string `json:"description"`
+	Tag         *string `json:"tag"`
+	IsLocked    *bool   `json:"is_locked"`
 }
 
-type InviteDTO struct {
-	ClanID    uuid.UUID `json:"clan_id"`
-	InviterId uuid.UUID `json:"inviter_id"`
+type ActionRequest struct {
+	ClanID      uuid.UUID `json:"clan_id"`
+	InitiatorID uuid.UUID `json:"initiator_id"`
+	TargetID    uuid.UUID `json:"target_id"`
+	ActionType  string    `json:"type"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
-type BulkCreateDTO struct {
-	Clans []CreateDTO `json:"clans" binding:"required"`
+type ActionResponse struct {
+	Status  int    `json:"status"`
+	Message string `json:"message"`
 }
 
-type BulkModifyDTO struct {
-	Updates []UpdateDTO `json:"updates" binding:"required"`
-}
-
-type BulkDeleteDTO struct {
-	Clans []uuid.UUID `json:"clans" binding:"required"`
+type OutgoingInvite struct {
+	UserID   uuid.UUID `json:"user_id"`
+	TargetID uuid.UUID `json:"target_id"`
 }

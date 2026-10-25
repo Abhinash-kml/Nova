@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/squirrel"
-	"github.com/abhinash-kml/nova/server/common"
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -39,7 +38,7 @@ func (r *PostgresRepository) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (r *PostgresRepository) Seed(ctx context.Context) error {
+func (r *PostgresRepository) Seed(ctx context.Context) {
 	// Check if rows already exists, if so then dont seed
 	existQuery := `SELECT count(*) FROM clans;`
 	row := r.pgx.QueryRow(ctx, existQuery)
@@ -48,14 +47,12 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 
 	// Scan returned row
 	if err := row.Scan(&count); err != nil {
-		r.logger.Error("Failed to scan count of rows from clans table", zap.Error(err))
-		return common.ErrDbSeedingFailed
+		r.logger.Error("scanning row", zap.Error(err))
 	}
 
 	// Rows already exists, dont seed
 	if count != 0 {
 		r.logger.Sugar().Infof("Clans table contains %d rows, skipping seeding from file...", count)
-		return nil
 	}
 
 	// Table is empty, so seed from file to table
@@ -65,11 +62,9 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 		"tag",
 		"description",
 		"leader_id",
-		"coleader_ids",
 		"level",
-		"member_ids",
 		"max_members",
-		"islocked",
+		"is_locked",
 		"created_at",
 		"updated_at",
 	)
@@ -77,14 +72,12 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 	// Check if seeds file is provided and is of json format by suffix
 	if len(r.seedfile) == 0 || !strings.HasSuffix(r.seedfile, ".json") {
 		r.logger.Error("Seeds file not provided or is not of json format. Skipping seeding")
-		return common.ErrDbSeedingFailed
 	}
 
 	// open file
 	file, err := os.OpenFile(r.seedfile, os.O_RDONLY, 0755)
 	if err != nil {
 		r.logger.Error("Failed to open clans seeds file", zap.String("file", r.seedfile), zap.Error(err))
-		return common.ErrDbSeedingFailed
 	}
 	defer file.Close()
 
@@ -92,7 +85,6 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 	decoder := json.NewDecoder(file)
 	if decoder == nil {
 		r.logger.Error("Failed to create json decoder. Returned nil pointer")
-		return common.ErrDbSeedingFailed
 	}
 
 	// Decode
@@ -100,7 +92,6 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 	err = decoder.Decode(&clans)
 	if err != nil {
 		r.logger.Error("Failed to decode seeded clans from file", zap.Error(err))
-		return common.ErrDbSeedingFailed
 	}
 
 	for i := range clans {
@@ -108,10 +99,8 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 			clans[i].Name,
 			clans[i].Tag,
 			clans[i].Description,
-			clans[i].LeaderId,
-			clans[i].ColeaderId,
+			clans[i].LeaderID,
 			clans[i].Level,
-			clans[i].Members,
 			clans[i].MaxMembers,
 			clans[i].IsLocked,
 			clans[i].CreatedAt,
@@ -122,46 +111,44 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 	query, args, err := queryBuilder.ToSql()
 	if err != nil {
 		r.logger.Error("Failed to generate sql query with squirrel for seeding clans table", zap.Error(err))
-		return common.ErrDbSeedingFailed
 	}
 
 	// Execute query
 	_, err = r.pgx.Exec(ctx, query, args...)
 	if err != nil {
 		r.logger.Error("Failed to execute query to seed clans table", zap.Error(err))
-		return common.ErrDbSeedingFailed
 	}
 
 	r.logger.Info("Successfully seeded clans from file", zap.Int("count", len(clans)))
-
-	return nil
 }
 
 // General operations
-func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (Clan, error) {
+func (r *PostgresRepository) Add(ctx context.Context, req CreateRequest) (Clan, error) {
 	createClanQuery := `INSERT INTO
-					clans (
-						id, 
-						name, 
-						tag, 
-						description, 
-						level, 
-						max_members, 
-						is_locked, 
-						created_at, 
-						updated_at
-					)
-					VALUES (
-						$1, 
-						$2, 
-						$3, 
-						$4, 
-						$5, 
-						$6, 
-						$7, 
-						$8, 
-						$9
-					);`
+							clans (
+								id, 
+								name, 
+								tag, 
+								description,
+								leader_id, 
+								level, 
+								max_members, 
+								is_locked, 
+								created_at, 
+								updated_at
+							)
+							VALUES (
+								$1, 
+								$2, 
+								$3, 
+								$4, 
+								$5, 
+								$6, 
+								$7, 
+								$8, 
+								$9,
+								$10
+							);`
 
 	makeLeaderQuery := `
 		INSERT INTO
@@ -194,12 +181,13 @@ func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (Clan, erro
 		ctx,
 		createClanQuery,
 		clanID,
-		dto.Name,
-		dto.Tag,
-		dto.Description,
-		dto.Level,
-		dto.MaxMembers,
-		dto.IsLocked,
+		req.Name,
+		req.Tag,
+		req.Description,
+		req.LeaderID,
+		req.Level,
+		req.MaxMembers,
+		req.IsLocked,
 		now,
 		now,
 	)
@@ -211,7 +199,7 @@ func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (Clan, erro
 		ctx,
 		makeLeaderQuery,
 		clanID,
-		dto.LeaderID,
+		req.LeaderID,
 		now,
 	)
 	if err != nil {
@@ -224,13 +212,13 @@ func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (Clan, erro
 
 	return Clan{
 		Id:          clanID,
-		Name:        dto.Name,
-		Tag:         dto.Tag,
-		Description: dto.Description,
-		LeaderID:    dto.LeaderID,
-		Level:       dto.Level,
-		MaxMembers:  dto.MaxMembers,
-		IsLocked:    dto.IsLocked,
+		Name:        req.Name,
+		Tag:         req.Tag,
+		Description: req.Description,
+		LeaderID:    req.LeaderID,
+		Level:       req.Level,
+		MaxMembers:  req.MaxMembers,
+		IsLocked:    req.IsLocked,
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}, nil
@@ -266,7 +254,7 @@ func (r *PostgresRepository) GetById(ctx context.Context, id uuid.UUID) (Clan, e
 		&clan.Description,
 		&clan.LeaderID,
 		&clan.Level,
-		&clan.Members,
+		&clan.MaxMembers,
 		&clan.IsLocked,
 		&clan.CreatedAt,
 		&clan.UpdatedAt,
@@ -320,12 +308,9 @@ func (r *PostgresRepository) GetByName(ctx context.Context, name string) (Clan, 
 	return clan, nil
 }
 
-func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) ([]Clan, error) {
-	var rows pgx.Rows
-	var err error
-
+func (r *PostgresRepository) GetAll(ctx context.Context, cursor uuid.UUID, limit int) ([]Clan, error) {
 	// Create and execute query
-	rawQuery := `SELECT 
+	baseQuery := `SELECT 
 					id,
 					name,
 					tag,
@@ -337,20 +322,14 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 					created_at,
 					updated_at
 				FROM 
-					clans`
-	if cursor == 0 {
-		rawQuery += ` ORDER BY id
-					LIMIT $1;`
+					clans
+				WHERE
+					id > $1`
 
-		rows, err = r.pgx.Query(ctx, rawQuery, limit)
-	} else {
-		rawQuery += ` WHERE 
-						id > $1
-					ORDER BY 
-						id
-					LIMIT $2;`
-		rows, err = r.pgx.Query(ctx, rawQuery, cursor, limit)
-	}
+	addition := fmt.Sprintf(" ORDER BY name ASC LIMIT %d", limit)
+	finalQuery := baseQuery + addition
+
+	rows, err := r.pgx.Query(ctx, finalQuery, cursor)
 	if err != nil {
 		return nil, fmt.Errorf("getting clans: %w", err)
 	}
@@ -367,7 +346,7 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 			&clan.Description,
 			&clan.LeaderID,
 			&clan.Level,
-			&clan.Members,
+			&clan.MaxMembers,
 			&clan.IsLocked,
 			&clan.CreatedAt,
 			&clan.UpdatedAt,
@@ -382,41 +361,371 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 	return clans, err
 }
 
-func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (Clan, error) {
-	return Clan{}, nil
-}
-
-func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
-	rawQuery := `DELETE FROM
-					clans
-				WHERE
-					id = $1
-				RETURNING
-					id;`
-
-	var deletedId uuid.UUID
-
-	// Execute query
-	row := r.pgx.QueryRow(ctx, rawQuery, dto.Id)
-
-	// Scan returned row
-	err := row.Scan(&deletedId)
-	if err != nil {
-		return uuid.Nil, fmt.Errorf("scanning row: %w", err)
+func (r *PostgresRepository) Update(ctx context.Context, req UpdateRequest) (Clan, error) {
+	builder := r.statementBuilder.Update("clans").Where("id", req.ClanId).Suffix("RETURNING *")
+	if req.Name != nil {
+		builder = builder.Set("name", *req.Name)
+	}
+	if req.Description != nil {
+		builder = builder.Set("description", *req.Description)
+	}
+	if req.Tag != nil {
+		builder = builder.Set("tag", *req.Tag)
+	}
+	if req.IsLocked != nil {
+		builder = builder.Set("is_locked", *req.IsLocked)
 	}
 
-	return deletedId, nil
+	query, args, err := builder.ToSql()
+	if err != nil {
+		return Clan{}, fmt.Errorf("building query: %w", err)
+	}
+
+	var clan Clan
+
+	row := r.pgx.QueryRow(ctx, query, args...)
+	err = row.Scan(
+		&clan.Id,
+		&clan.Name,
+		&clan.Tag,
+		&clan.Description,
+		&clan.LeaderID,
+		&clan.Level,
+		&clan.IsLocked,
+		&clan.CreatedAt,
+		&clan.UpdatedAt,
+	)
+	if err != nil {
+		return Clan{}, fmt.Errorf("scanning row: %w", err)
+	}
+
+	return clan, nil
 }
 
-// Bulk operations
-func (r *PostgresRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {
-	return nil, nil
+func (r *PostgresRepository) Delete(ctx context.Context, req DeleteRequest) (DeleteResponse, error) {
+	deleteClanQuery := `DELETE FROM
+							clans
+						WHERE
+							id = $1
+						RETURNING
+							id;`
+
+	deleteMembersQuery := `
+		DELETE FROM
+			clan_members
+		WHERE
+			clan_id = $1
+	`
+
+	tx, err := r.pgx.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
+	if err != nil {
+		return DeleteResponse{DeletedClanID: uuid.Nil}, fmt.Errorf("begin transanction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var deletedID uuid.UUID
+	row := tx.QueryRow(ctx, deleteClanQuery, req.ClanId)
+	err = row.Scan(&deletedID)
+	if err != nil {
+		return DeleteResponse{DeletedClanID: uuid.Nil}, fmt.Errorf("scanning row: %w", err)
+	}
+
+	_, err = tx.Exec(ctx, deleteMembersQuery)
+	if err != nil {
+		return DeleteResponse{DeletedClanID: uuid.Nil}, fmt.Errorf("deleting clan members: %w", err)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return DeleteResponse{DeletedClanID: uuid.Nil}, fmt.Errorf("commit transaction: %w", err)
+	}
+
+	return DeleteResponse{DeletedClanID: deletedID}, nil
 }
 
-func (r *PostgresRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
-	return nil, nil
+func (r *PostgresRepository) AddMember(ctx context.Context, req ActionRequest) (ActionResponse, error) {
+	rawQuery := `
+		INSERT INTO
+			clan_members(
+				clan_id,
+				user_id,
+				role
+			) VALUES (
+				$1,
+				$2,
+				'MEMBER' 
+			);
+	`
+
+	_, err := r.pgx.Exec(ctx, rawQuery, req.ClanID, req.TargetID)
+	if err != nil {
+		return ActionResponse{}, fmt.Errorf("adding member: %w", err)
+	}
+
+	return ActionResponse{Status: 1, Message: "added"}, nil
 }
 
-func (r *PostgresRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
-	return nil, nil
+func (r *PostgresRepository) RemoveMember(ctx context.Context, req ActionRequest) (ActionResponse, error) {
+	rawQuery := `
+		DELETE FROM 
+			clan_members 
+		WHERE
+			clan_id = $1
+			AND
+			user_id = $2; 
+	`
+	_, err := r.pgx.Exec(ctx, rawQuery, req.ClanID, req.TargetID)
+	if err != nil {
+		return ActionResponse{}, fmt.Errorf("removing member: %w", err)
+	}
+
+	return ActionResponse{Status: 1, Message: "removed"}, nil
+}
+
+func (r *PostgresRepository) ListAllOutogingInvites(ctx context.Context, req ActionRequest) ([]OutgoingInvite, error) {
+	rawQuery := `
+		SELECT
+			initiator_id,
+			target_id
+		FROM
+			clan_operations
+		WHERE
+			clan_id = $1;
+	`
+
+	var invites []OutgoingInvite
+
+	rows, err := r.pgx.Query(ctx, rawQuery, req.ClanID)
+	if err != nil {
+		return nil, fmt.Errorf("getting invites: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var invite OutgoingInvite
+		err = rows.Scan(&invite.UserID, &invite.TargetID)
+		if err != nil {
+			return nil, fmt.Errorf("scanning row: %w", err)
+		}
+
+		invites = append(invites, invite)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating rows: %w", err)
+	}
+
+	return invites, nil
+}
+
+func (r *PostgresRepository) InviteMember(ctx context.Context, req ActionRequest) (ActionResponse, error) {
+	rawQuery := `
+		INSERT INTO 
+			clan_operations(
+				clan_id,
+				initiator_id,
+				target_id
+			) VALUES (
+			 	$1,
+				$2,
+				$3
+			);
+	`
+
+	_, err := r.pgx.Exec(ctx, rawQuery, req.ClanID, req.InitiatorID, req.TargetID)
+	if err != nil {
+		return ActionResponse{Status: 0, Message: "failed"}, fmt.Errorf("inviting member: %w", err)
+	}
+
+	return ActionResponse{Status: 1, Message: "invited"}, nil
+}
+
+func (r *PostgresRepository) AcceptInvite(ctx context.Context, req ActionRequest) (ActionResponse, error) {
+	removeOperationQuery := `
+		DELETE FROM
+			clan_operations
+		WHERE
+			clan_id = $1
+			AND
+			target_id = $2;
+	`
+
+	addMemberQuery := `
+		INSERT INTO
+			clan_members(
+				clan_id,
+				user_id,
+				role,
+				joined_at
+			) VALUES (
+				$1,
+				$2,
+				'MEMBER',
+				CURRENT_TIMESTAMP 
+			);
+	`
+
+	tx, err := r.pgx.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
+	if err != nil {
+		return ActionResponse{}, fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	_, err = r.pgx.Exec(ctx, removeOperationQuery, req.ClanID, req.TargetID)
+	if err != nil {
+		return ActionResponse{}, fmt.Errorf("removing operation: %w", err)
+	}
+
+	_, err = r.pgx.Exec(ctx, addMemberQuery, req.ClanID, req.TargetID)
+	if err != nil {
+		return ActionResponse{}, fmt.Errorf("adding member: %w", err)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return ActionResponse{}, fmt.Errorf("comming transaction: %w", err)
+	}
+
+	return ActionResponse{Status: 1, Message: "acceped"}, nil
+}
+
+func (r *PostgresRepository) RejectInvite(ctx context.Context, req ActionRequest) (ActionResponse, error) {
+	rawQuery := `
+		DELETE FROM
+			clan_operations
+		WHERE
+			clan_id = $1
+			AND
+			target_id = $2;
+	`
+
+	_, err := r.pgx.Exec(ctx, rawQuery, req.ClanID, req.TargetID)
+	if err != nil {
+		return ActionResponse{}, fmt.Errorf("rejecting invite: %w", err)
+	}
+
+	return ActionResponse{Status: 1, Message: "rejected"}, nil
+}
+
+func (r *PostgresRepository) ListAllJoinRequests(ctx context.Context, req ActionRequest) ([]uuid.UUID, error) {
+	rawQuery := `
+		SELECT
+			initiator_id
+		FROM
+			clan_operations
+		WHERE
+			clan_id = $1;
+	`
+
+	rows, err := r.pgx.Query(ctx, rawQuery, req.ClanID)
+	if err != nil {
+		return nil, fmt.Errorf("getting join requests: %w", err)
+	}
+	defer rows.Close()
+
+	var requests []uuid.UUID
+
+	for rows.Next() {
+		var request uuid.UUID
+		if err = rows.Scan(&request); err != nil {
+			return nil, fmt.Errorf("scanning row: %w", err)
+		}
+
+		requests = append(requests, request)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating rows: %w", err)
+	}
+
+	return requests, nil
+}
+
+func (r *PostgresRepository) SendJoinRequest(ctx context.Context, req ActionRequest) (ActionResponse, error) {
+	rawQuery := `
+		INSERT INTO 
+			clan_operations(
+				clan_id,
+				initiator_id,
+				target_id
+			) VALUES (
+				$1,
+				$2,
+				'01a1498d-fb97-721b-90f4-b134122fcd23' 
+			);
+	`
+
+	_, err := r.pgx.Exec(ctx, rawQuery, req.ClanID, req.InitiatorID)
+	if err != nil {
+		return ActionResponse{}, fmt.Errorf("sending request: %w", err)
+	}
+
+	return ActionResponse{Status: 1, Message: "sent-request"}, nil
+}
+
+func (r *PostgresRepository) AcceptJoinRequest(ctx context.Context, req ActionRequest) (ActionResponse, error) {
+	removeOperationQuery := `
+		DELETE FROM
+			clan_operations
+		WHERE
+			clan_id = $1
+			AND
+			initiator_id = $2;
+	`
+
+	addMemberQuery := `
+		INSERT INTO 
+			clan_members(
+				clan_id,
+				user_id,
+				role,
+				joined_at
+			) VALUES (
+				$1,
+				$2,
+				'MEMBER',
+				CURRENT_TIMESTAMP 
+			);
+	`
+
+	tx, err := r.pgx.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
+	if err != nil {
+		return ActionResponse{}, fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	_, err = r.pgx.Exec(ctx, removeOperationQuery, req.ClanID, req.InitiatorID)
+	if err != nil {
+		return ActionResponse{}, fmt.Errorf("deleting operation: %w", err)
+	}
+
+	_, err = r.pgx.Exec(ctx, addMemberQuery, req.ClanID, req.InitiatorID)
+	if err != nil {
+		return ActionResponse{}, fmt.Errorf("adding member: %w", err)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return ActionResponse{}, fmt.Errorf("commiting transaction: %w", err)
+	}
+
+	return ActionResponse{Status: 1, Message: "request-accepted"}, nil
+}
+
+func (r *PostgresRepository) RejectJoinRequest(ctx context.Context, req ActionRequest) (ActionResponse, error) {
+	rawQuery := `
+		DELETE FROM
+			clan_operations
+		WHERE
+			clan_id = $1
+			AND
+			initiator_id = $2;
+	`
+
+	_, err := r.pgx.Exec(ctx, rawQuery, req.ClanID, req.InitiatorID)
+	if err != nil {
+		return ActionResponse{}, fmt.Errorf("rejecting request: %w", err)
+	}
+
+	return ActionResponse{Status: 1, Message: "rejected"}, nil
 }

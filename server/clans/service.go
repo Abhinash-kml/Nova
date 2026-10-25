@@ -12,17 +12,23 @@ import (
 
 type Service interface {
 	// General operations
-	Add(ctx context.Context, dto CreateDTO) (Clan, error)
+	Add(ctx context.Context, dto CreateRequest) (Clan, error)
 	GetById(ctx context.Context, id uuid.UUID) (Clan, error)
 	GetByName(ctx context.Context, name string) (Clan, error)
-	GetAll(ctx context.Context, cursor int, limit int) ([]Clan, error)
-	Update(ctx context.Context, dto UpdateDTO) (Clan, error)
-	Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error)
+	GetAll(ctx context.Context, cursor uuid.UUID, limit int) ([]Clan, error)
+	Update(ctx context.Context, req UpdateRequest) (Clan, error)
+	Delete(ctx context.Context, req DeleteRequest) (DeleteResponse, error)
 
-	// Bulk operations
-	BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error)
-	BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error)
-	BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error)
+	AddMember(ctx context.Context, req ActionRequest) (ActionResponse, error)
+	RemoveMember(ctx context.Context, req ActionRequest) (ActionResponse, error)
+	ListAllOutogingInvites(ctx context.Context, req ActionRequest) ([]OutgoingInvite, error)
+	InviteMember(ctx context.Context, req ActionRequest) (ActionResponse, error)
+	AcceptInvite(ctx context.Context, req ActionRequest) (ActionResponse, error)
+	RejectInvite(ctx context.Context, req ActionRequest) (ActionResponse, error)
+	ListAllJoinRequests(ctx context.Context, req ActionRequest) ([]uuid.UUID, error)
+	SendJoinRequest(ctx context.Context, req ActionRequest) (ActionResponse, error)
+	AcceptJoinRequest(ctx context.Context, req ActionRequest) (ActionResponse, error)
+	RejectJoinRequest(ctx context.Context, req ActionRequest) (ActionResponse, error)
 }
 
 type LocalClansService struct {
@@ -93,7 +99,7 @@ func (s *LocalClansService) GetByName(ctx context.Context, name string) (Clan, e
 	return clan, nil
 }
 
-func (s *LocalClansService) GetAll(ctx context.Context, cursor, limit int) ([]Clan, error) {
+func (s *LocalClansService) GetAll(ctx context.Context, cursor uuid.UUID, limit int) ([]Clan, error) {
 	ctx, span := tracer.Start(ctx, "clans.service.getall")
 	defer span.End()
 
@@ -105,7 +111,7 @@ func (s *LocalClansService) GetAll(ctx context.Context, cursor, limit int) ([]Cl
 	return clans, nil
 }
 
-func (s *LocalClansService) Add(ctx context.Context, dto CreateDTO) (Clan, error) {
+func (s *LocalClansService) Add(ctx context.Context, dto CreateRequest) (Clan, error) {
 	ctx, span := tracer.Start(ctx, "clans.service.add")
 	defer span.End()
 
@@ -117,14 +123,14 @@ func (s *LocalClansService) Add(ctx context.Context, dto CreateDTO) (Clan, error
 	return clan, nil
 }
 
-func (s *LocalClansService) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
+func (s *LocalClansService) Delete(ctx context.Context, dto DeleteRequest) (DeleteResponse, error) {
 	ctx, span := tracer.Start(ctx, "clans.service.delete")
 	defer span.End()
 
 	// Delete in repo
-	deletedId, err := s.repo.Delete(ctx, dto)
+	response, err := s.repo.Delete(ctx, dto)
 	if err != nil {
-		return uuid.Nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to delete clan")
+		return DeleteResponse{DeletedClanID: uuid.Nil}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to delete clan")
 	}
 
 	// Delete from cache
@@ -137,10 +143,10 @@ func (s *LocalClansService) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUI
 		}
 	}()
 
-	return deletedId, nil
+	return response, nil
 }
 
-func (s *LocalClansService) Update(ctx context.Context, dto UpdateDTO) (Clan, error) {
+func (s *LocalClansService) Update(ctx context.Context, dto UpdateRequest) (Clan, error) {
 	ctx, span := tracer.Start(ctx, "clans.service.update")
 	defer span.End()
 
@@ -163,38 +169,122 @@ func (s *LocalClansService) Update(ctx context.Context, dto UpdateDTO) (Clan, er
 	return updatedClan, nil
 }
 
-func (s *LocalClansService) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {
-	ctx, span := tracer.Start(ctx, "clans.service.bulkadd")
+func (s *LocalClansService) AddMember(ctx context.Context, req ActionRequest) (ActionResponse, error) {
+	ctx, span := tracer.Start(ctx, "clans.service.addmember")
 	defer span.End()
 
-	results, err := s.repo.BulkAdd(ctx, dto)
+	res, err := s.repo.AddMember(ctx, req)
 	if err != nil {
-		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Bulk add clan operation failed")
+		return ActionResponse{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to add member")
 	}
 
-	return results, nil
+	return res, nil
 }
 
-func (s *LocalClansService) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
-	ctx, span := tracer.Start(ctx, "clans.service.bulkmodify")
+func (s *LocalClansService) RemoveMember(ctx context.Context, req ActionRequest) (ActionResponse, error) {
+	ctx, span := tracer.Start(ctx, "clans.service.removemember")
 	defer span.End()
 
-	results, err := s.repo.BulkModify(ctx, dto)
+	res, err := s.repo.RemoveMember(ctx, req)
 	if err != nil {
-		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Bulk modify clan operation failed")
+		return ActionResponse{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to remove member")
 	}
 
-	return results, nil
+	return res, nil
 }
 
-func (s *LocalClansService) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
-	ctx, span := tracer.Start(ctx, "clans.service.bulkdelete")
+func (s *LocalClansService) ListAllOutogingInvites(ctx context.Context, req ActionRequest) ([]OutgoingInvite, error) {
+	ctx, span := tracer.Start(ctx, "clans.service.listalloutgoinginvites")
 	defer span.End()
 
-	results, err := s.repo.BulkDelete(ctx, dto)
+	invites, err := s.repo.ListAllOutogingInvites(ctx, req)
 	if err != nil {
-		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Bulk delete clan operation failed")
+		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to list all outgoing invites")
 	}
 
-	return results, nil
+	return invites, nil
+}
+
+func (s *LocalClansService) InviteMember(ctx context.Context, req ActionRequest) (ActionResponse, error) {
+	ctx, span := tracer.Start(ctx, "clans.service.invitemember")
+	defer span.End()
+
+	res, err := s.repo.InviteMember(ctx, req)
+	if err != nil {
+		return ActionResponse{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to invite member")
+	}
+
+	return res, nil
+}
+
+func (s *LocalClansService) AcceptInvite(ctx context.Context, req ActionRequest) (ActionResponse, error) {
+	ctx, span := tracer.Start(ctx, "clans.service.acceptinvite")
+	defer span.End()
+
+	res, err := s.repo.AcceptInvite(ctx, req)
+	if err != nil {
+		return ActionResponse{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to accept invite")
+	}
+
+	return res, nil
+}
+
+func (s *LocalClansService) RejectInvite(ctx context.Context, req ActionRequest) (ActionResponse, error) {
+	ctx, span := tracer.Start(ctx, "clans.service.rejectinvite")
+	defer span.End()
+
+	res, err := s.repo.RejectInvite(ctx, req)
+	if err != nil {
+		return ActionResponse{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to reject invite")
+	}
+
+	return res, nil
+}
+
+func (s *LocalClansService) ListAllJoinRequests(ctx context.Context, req ActionRequest) ([]uuid.UUID, error) {
+	ctx, span := tracer.Start(ctx, "clans.service.listalljoinrequests")
+	defer span.End()
+
+	response, err := s.repo.ListAllJoinRequests(ctx, req)
+	if err != nil {
+		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to list all join requests")
+	}
+
+	return response, nil
+}
+
+func (s *LocalClansService) SendJoinRequest(ctx context.Context, req ActionRequest) (ActionResponse, error) {
+	ctx, span := tracer.Start(ctx, "clans.service.sendjoinrequest")
+	defer span.End()
+
+	res, err := s.repo.SendJoinRequest(ctx, req)
+	if err != nil {
+		return ActionResponse{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to send join request")
+	}
+
+	return res, nil
+}
+
+func (s *LocalClansService) AcceptJoinRequest(ctx context.Context, req ActionRequest) (ActionResponse, error) {
+	ctx, span := tracer.Start(ctx, "clans.service.acceptjoinrequest")
+	defer span.End()
+
+	res, err := s.repo.AcceptJoinRequest(ctx, req)
+	if err != nil {
+		return ActionResponse{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to accept join request")
+	}
+
+	return res, nil
+}
+
+func (s *LocalClansService) RejectJoinRequest(ctx context.Context, req ActionRequest) (ActionResponse, error) {
+	ctx, span := tracer.Start(ctx, "clans.service.rejectjoinrequest")
+	defer span.End()
+
+	res, err := s.repo.RejectJoinRequest(ctx, req)
+	if err != nil {
+		return ActionResponse{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to reject join request")
+	}
+
+	return res, nil
 }

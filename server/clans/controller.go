@@ -3,11 +3,9 @@ package clans
 import (
 	"net/http"
 
-	"github.com/abhinash-kml/nova/server/common"
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/abhinash-kml/nova/server/utils"
 	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -40,25 +38,25 @@ func (c *Controller) GetAll(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto GetAllDTO
+	var req GetAllRequest
 
-	err = ctx.ShouldBindQuery(&dto)
+	err = ctx.ShouldBindQuery(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	decodedCursor, err := utils.DecodeCursor(dto.Cursor)
+	decodedCursor, err := utils.DecodeCursorUUID(req.Cursor)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	clans, err := c.service.GetAll(sctx, decodedCursor, dto.Limit)
+	clans, err := c.service.GetAll(sctx, decodedCursor, req.Limit)
 	if err != nil {
 		c.logger.Error("Failed to get all clans",
-			zap.String("cursor", dto.Cursor),
-			zap.Int("limit", dto.Limit),
+			zap.String("cursor", req.Cursor),
+			zap.Int("limit", req.Limit),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -79,22 +77,22 @@ func (c *Controller) Get(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto GetDTO
+	var req GetRequest
 
-	err = ctx.ShouldBindUri(&dto)
+	err = ctx.ShouldBindUri(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("clan_id", dto.Id))
+	span.SetAttributes(attribute.String("clan_id", req.Id))
 
-	parsedId, _ := uuid.Parse(dto.Id)
+	parsedID, _ := uuid.Parse(req.Id)
 
-	clan, err := c.service.GetById(sctx, parsedId)
+	clan, err := c.service.GetById(sctx, parsedID)
 	if err != nil {
 		c.logger.Error("Failed to get clan",
-			zap.String("clan_id", dto.Id),
+			zap.String("clan_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -115,15 +113,15 @@ func (c *Controller) Create(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto CreateDTO
+	var req CreateRequest
 
-	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	err = ctx.ShouldBindBodyWithJSON(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	clan, err := c.service.Add(sctx, dto)
+	clan, err := c.service.Add(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to create clan", zap.Error(err))
 		ctx.Error(err)
@@ -145,26 +143,26 @@ func (c *Controller) Modify(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto UpdateDTO
+	var req UpdateRequest
 
-	err = ctx.ShouldBindUri(&dto.ClanId)
+	err = ctx.ShouldBindUri(&req.ClanId)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("clan_id", dto.Id))
+	span.SetAttributes(attribute.String("clan_id", req.Id))
 
-	err = ctx.ShouldBindWith(&dto.FieldUpdates, binding.JSON)
+	err = ctx.ShouldBindBodyWithJSON(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	modifiedClan, err := c.service.Update(sctx, dto)
+	modifiedClan, err := c.service.Update(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to update clan",
-			zap.String("clan_id", dto.Id),
+			zap.String("clan_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -185,201 +183,319 @@ func (c *Controller) Delete(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto DeleteDTO
+	var req DeleteRequest
 
-	err = ctx.ShouldBindUri(&dto.ClanId)
+	err = ctx.ShouldBindUri(&req.ClanId)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("clan_id", dto.Id))
+	span.SetAttributes(attribute.String("clan_id", req.Id))
 
-	err = ctx.ShouldBindQuery(&dto.DeleteOptions)
+	err = ctx.ShouldBindQuery(&req.DeleteOptions)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	_, err = c.service.Delete(sctx, dto)
+	response, err := c.service.Delete(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to delete clan",
-			zap.String("clan_id", dto.Id),
+			zap.String("clan_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
 	}
 
-	ctx.Status(http.StatusNoContent)
+	ctx.JSON(http.StatusNoContent, response)
 }
 
-func (c *Controller) Replace(ctx *gin.Context) {
-	ctx.Status(http.StatusNoContent)
-}
-
-func (c *Controller) BulkAdd(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "clans.controller.bulkadd")
+func (c *Controller) AddMember(ctx *gin.Context) {
+	sctx, span := tracer.Start(ctx.Request.Context(), "clans.controller.addmember")
 	var err error
 
 	defer func() {
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
+			c.logger.Error("Failed to add member", zap.Error(err))
 		}
 		span.End()
 	}()
 
-	var dto BulkCreateDTO
-
-	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	var req ActionRequest
+	err = ctx.ShouldBindBodyWithJSON(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.Int("count", len(dto.Clans)))
-
-	results, err := c.service.BulkAdd(sctx, dto)
+	response, err := c.service.AddMember(sctx, req)
 	if err != nil {
-		c.logger.Error("Failed to bulk add clans", zap.Error(err))
-		ctx.Error(err)
+		ctx.JSON(http.StatusOK, response)
 		return
-	}
-
-	var errCount int
-	var addResults []common.AddResult
-	for index := range results {
-		if !results[index].Success {
-			errCount++
-		}
-
-		addResults = append(addResults, common.AddResult{
-			Id:      results[index].Id,
-			Status:  results[index].Status,
-			Message: results[index].Message,
-		})
-	}
-
-	response := common.BulkResponse{
-		Success: errCount == 0,
-		Summary: common.BulkSummary{
-			TotalProcessed: len(results),
-			TotalSuccess:   len(results) - errCount,
-			TotalErrors:    errCount,
-		},
-		Added: addResults,
 	}
 
 	ctx.JSON(http.StatusOK, response)
 }
 
-func (c *Controller) BulkModify(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "clans.controller.bulkmodify")
+func (c *Controller) RemoveMember(ctx *gin.Context) {
+	sctx, span := tracer.Start(ctx.Request.Context(), "clans.controller.removemember")
 	var err error
 
 	defer func() {
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
+			c.logger.Error("Failed to remove member", zap.Error(err))
 		}
 		span.End()
 	}()
 
-	var dto BulkModifyDTO
-
-	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	var req ActionRequest
+	err = ctx.ShouldBindBodyWithJSON(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.Int("count", len(dto.Updates)))
-
-	results, err := c.service.BulkModify(sctx, dto)
+	response, err := c.service.RemoveMember(sctx, req)
 	if err != nil {
-		c.logger.Error("Failed to bulk modify clans", zap.Error(err))
-		ctx.Error(err)
+		ctx.JSON(http.StatusOK, response)
 		return
-	}
-
-	var errCount int
-	var replaceResults []common.ReplaceResult
-	for index := range results {
-		if !results[index].Success {
-			errCount++
-		}
-
-		replaceResults = append(replaceResults, common.ReplaceResult{
-			Id:      results[index].Id,
-			Status:  results[index].Status,
-			Message: results[index].Message,
-		})
-	}
-
-	response := common.BulkResponse{
-		Success: errCount == 0,
-		Summary: common.BulkSummary{
-			TotalProcessed: len(results),
-			TotalSuccess:   len(results) - errCount,
-			TotalErrors:    errCount,
-		},
-		Deleted: replaceResults,
 	}
 
 	ctx.JSON(http.StatusOK, response)
 }
 
-func (c *Controller) BulkDelete(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "users.controller.")
+func (c *Controller) ListAllOutogingInvites(ctx *gin.Context) {
+	sctx, span := tracer.Start(ctx.Request.Context(), "clans.controller.removemember")
 	var err error
 
 	defer func() {
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
+			c.logger.Error("Failed to remove member", zap.Error(err))
 		}
 		span.End()
 	}()
 
-	var dto BulkDeleteDTO
-
-	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	var req ActionRequest
+	err = ctx.ShouldBindBodyWithJSON(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.Int("count", len(dto.Clans)))
-
-	results, err := c.service.BulkDelete(sctx, dto)
+	response, err := c.service.ListAllOutogingInvites(sctx, req)
 	if err != nil {
-		c.logger.Error("Failed to bulk delete clans", zap.Error(err))
 		ctx.Error(err)
 		return
 	}
 
-	var errCount int
-	var deleteResults []common.DeleteResult
-	for index := range results {
-		if !results[index].Success {
-			errCount++
+	ctx.JSON(http.StatusOK, response)
+}
+
+func (c *Controller) InviteMember(ctx *gin.Context) {
+	sctx, span := tracer.Start(ctx.Request.Context(), "clans.controller.invitemember")
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			c.logger.Error("Failed to invite member", zap.Error(err))
 		}
+		span.End()
+	}()
 
-		deleteResults = append(deleteResults, common.DeleteResult{
-			Id:      results[index].Id,
-			Status:  results[index].Status,
-			Message: results[index].Message,
-		})
+	var req ActionRequest
+	err = ctx.ShouldBindBodyWithJSON(&req)
+	if err != nil {
+		ctx.Error(err)
+		return
 	}
 
-	response := common.BulkResponse{
-		Success: errCount == 0,
-		Summary: common.BulkSummary{
-			TotalProcessed: len(results),
-			TotalSuccess:   len(results) - errCount,
-			TotalErrors:    errCount,
-		},
-		Deleted: deleteResults,
+	response, err := c.service.InviteMember(sctx, req)
+	if err != nil {
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+func (c *Controller) AcceptInvite(ctx *gin.Context) {
+	sctx, span := tracer.Start(ctx.Request.Context(), "clans.controller.acceptinvite.")
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			c.logger.Error("Failed to accept invite", zap.Error(err))
+		}
+		span.End()
+	}()
+
+	var req ActionRequest
+	err = ctx.ShouldBindBodyWithJSON(&req)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	response, err := c.service.AcceptInvite(sctx, req)
+	if err != nil {
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+func (c *Controller) RejectInvite(ctx *gin.Context) {
+	sctx, span := tracer.Start(ctx.Request.Context(), "clans.controller.rejectinvite")
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			c.logger.Error("Failed to reject invite", zap.Error(err))
+		}
+		span.End()
+	}()
+
+	var req ActionRequest
+	err = ctx.ShouldBindBodyWithJSON(&req)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	response, err := c.service.RejectInvite(sctx, req)
+	if err != nil {
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+func (c *Controller) ListAllJoinRequests(ctx *gin.Context) {
+	sctx, span := tracer.Start(ctx.Request.Context(), "clans.controller.listalljoinrequests")
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			c.logger.Error("Failed to list all join requests", zap.Error(err))
+		}
+		span.End()
+	}()
+
+	var req ActionRequest
+	err = ctx.ShouldBindBodyWithJSON(&req)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	response, err := c.service.ListAllJoinRequests(sctx, req)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+func (c *Controller) SendJoinRequest(ctx *gin.Context) {
+	sctx, span := tracer.Start(ctx.Request.Context(), "clans.controller.sendjoinrequest")
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			c.logger.Error("Failed to send join request", zap.Error(err))
+		}
+		span.End()
+	}()
+
+	var req ActionRequest
+	err = ctx.ShouldBindBodyWithJSON(&req)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	response, err := c.service.SendJoinRequest(sctx, req)
+	if err != nil {
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+func (c *Controller) AcceptJoinRequest(ctx *gin.Context) {
+	sctx, span := tracer.Start(ctx.Request.Context(), "clans.controller.acceptjoinrequest")
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			c.logger.Error("Failed to accept join request", zap.Error(err))
+		}
+		span.End()
+	}()
+
+	var req ActionRequest
+	err = ctx.ShouldBindBodyWithJSON(&req)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	response, err := c.service.AcceptJoinRequest(sctx, req)
+	if err != nil {
+		ctx.JSON(http.StatusOK, response)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+func (c *Controller) RejectJoinRequest(ctx *gin.Context) {
+	sctx, span := tracer.Start(ctx.Request.Context(), "clans.controller.rejectjoinrequest")
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			c.logger.Error("Failed to reject join request", zap.Error(err))
+		}
+		span.End()
+	}()
+
+	var req ActionRequest
+	err = ctx.ShouldBindBodyWithJSON(&req)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	response, err := c.service.RejectJoinRequest(sctx, req)
+	if err != nil {
+		ctx.JSON(http.StatusOK, response)
+		return
 	}
 
 	ctx.JSON(http.StatusOK, response)
