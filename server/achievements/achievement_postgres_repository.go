@@ -23,9 +23,7 @@ func NewPostgresRepository(pgx *pgxpool.Pool, c *config.Config, logger *zap.Logg
 	}
 }
 
-func (r *PostgresRepository) Create(ctx context.Context, dto CreateAchievementDTO) (AchievementResponseDTO, error) {
-	var response AchievementResponseDTO
-
+func (r *PostgresRepository) Create(ctx context.Context, req CreateAchievementRequest) (AchievementResponse, error) {
 	query := `INSERT INTO
 				achievements (
 					key,
@@ -43,12 +41,14 @@ func (r *PostgresRepository) Create(ctx context.Context, dto CreateAchievementDT
 					name,
 					description`
 
+	var response AchievementResponse
+
 	err := r.pgx.QueryRow(
 		ctx,
 		query,
-		dto.Key,
-		dto.Name,
-		dto.Description,
+		req.Key,
+		req.Name,
+		req.Description,
 	).Scan(
 		&response.Id,
 		&response.Key,
@@ -57,15 +57,13 @@ func (r *PostgresRepository) Create(ctx context.Context, dto CreateAchievementDT
 	)
 
 	if err != nil {
-		return AchievementResponseDTO{}, fmt.Errorf("scanning row: %w", err)
+		return AchievementResponse{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return response, nil
 }
 
-func (r *PostgresRepository) Get(ctx context.Context, dto GetAchievementDTO) (AchievementResponseDTO, error) {
-	var response AchievementResponseDTO
-
+func (r *PostgresRepository) Get(ctx context.Context, req GetAchievementRequest) (AchievementResponse, error) {
 	query := `SELECT
 				id,
 				key,
@@ -76,10 +74,12 @@ func (r *PostgresRepository) Get(ctx context.Context, dto GetAchievementDTO) (Ac
 			WHERE
 				id = $1`
 
+	var response AchievementResponse
+
 	err := r.pgx.QueryRow(
 		ctx,
 		query,
-		dto.Id,
+		req.Id,
 	).Scan(
 		&response.Id,
 		&response.Key,
@@ -88,13 +88,13 @@ func (r *PostgresRepository) Get(ctx context.Context, dto GetAchievementDTO) (Ac
 	)
 
 	if err != nil {
-		return AchievementResponseDTO{}, fmt.Errorf("scanning row: %w", err)
+		return AchievementResponse{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return response, nil
 }
 
-func (r *PostgresRepository) Update(ctx context.Context, dto UpdateAchievementDTO) error {
+func (r *PostgresRepository) Update(ctx context.Context, req UpdateAchievementRequest) error {
 	query := `UPDATE
 				achievements
 			SET
@@ -107,10 +107,10 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateAchievementDT
 	_, err := r.pgx.Exec(
 		ctx,
 		query,
-		dto.Key,
-		dto.Name,
-		dto.Description,
-		dto.Id,
+		req.Key,
+		req.Name,
+		req.Description,
+		req.Id,
 	)
 
 	if err != nil {
@@ -120,7 +120,7 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateAchievementDT
 	return nil
 }
 
-func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteAchievementDTO) error {
+func (r *PostgresRepository) Delete(ctx context.Context, req DeleteAchievementRequest) error {
 	query := `DELETE FROM
 				achievements
 			WHERE
@@ -129,9 +129,8 @@ func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteAchievementDT
 	_, err := r.pgx.Exec(
 		ctx,
 		query,
-		dto.Id,
+		req.Id,
 	)
-
 	if err != nil {
 		return fmt.Errorf("delete row: %w", err)
 	}

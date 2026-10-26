@@ -3,8 +3,8 @@ package achievements
 import "context"
 
 type Repository interface {
-	Create(ctx context.Context, dto CreateAchievementDTO) (AchievementResponseDTO, error)
-	Get(ctx context.Context, dto GetAchievementDTO) (AchievementResponseDTO, error)
-	Update(ctx context.Context, dto UpdateAchievementDTO) error
-	Delete(ctx context.Context, dto DeleteAchievementDTO) error
+	Create(ctx context.Context, dto CreateAchievementRequest) (AchievementResponse, error)
+	Get(ctx context.Context, dto GetAchievementRequest) (AchievementResponse, error)
+	Update(ctx context.Context, dto UpdateAchievementRequest) error
+	Delete(ctx context.Context, dto DeleteAchievementRequest) error
 }

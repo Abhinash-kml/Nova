@@ -9,7 +9,7 @@ import (
 )
 
 type CompletedAchievementService interface {
-	Create(ctx context.Context, dto CompleteAchievementDTO) error
+	Create(ctx context.Context, req CompleteAchievementRequest) error
 }
 
 type LocalCompletedAchievementService struct {
@@ -26,9 +26,9 @@ func NewLocalCompletedAchievementService(repository CompletedAchievementService,
 	}
 }
 
-func (s *LocalCompletedAchievementService) Create(ctx context.Context, dto CompleteAchievementDTO) error {
-	ctx, span := tracer.Start(ctx, "achievements.completed.create")
+func (s *LocalCompletedAchievementService) Create(ctx context.Context, req CompleteAchievementRequest) error {
+	ctx, span := tracer.Start(ctx, "achievements.completed.Create")
 	defer span.End()
 
-	return common.TranslatePostgresError(s.repository.Create(ctx, dto), s.logger).WithMessage("Failed to create compleeted achievement")
+	return common.TranslatePostgresError(s.repository.Create(ctx, req), s.logger).WithMessage("Failed to create compleeted achievement")
 }

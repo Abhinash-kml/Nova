@@ -25,26 +25,27 @@ func NewController(service Service, c *config.Config, l *zap.Logger) *Controller
 }
 
 func (c *Controller) Create(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "achievements.controller.create")
+	sctx, span := tracer.Start(ctx.Request.Context(), "achievements.controller.Create")
 	var err error
 
 	defer func() {
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
+			c.logger.Debug("Failed to create achievement", zap.Error(err))
 		}
 		span.End()
 	}()
 
-	var dto CreateAchievementDTO
+	var req CreateAchievementRequest
 
-	err = ctx.ShouldBindJSON(&dto)
+	err = ctx.ShouldBindJSON(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	response, err := c.service.Create(sctx, dto)
+	response, err := c.service.Create(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to create achievement", zap.Error(err))
 		ctx.Error(err)
@@ -55,31 +56,30 @@ func (c *Controller) Create(ctx *gin.Context) {
 }
 
 func (c *Controller) Get(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "achievements.controller.get")
+	sctx, span := tracer.Start(ctx.Request.Context(), "achievements.controller.Get")
 	var err error
 
 	defer func() {
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
+			c.logger.Debug("Failed to get achievement", zap.Error(err))
 		}
 		span.End()
 	}()
 
-	id, err := strconv.Atoi(ctx.Param("id"))
+	var req GetAchievementRequest
+
+	err = ctx.ShouldBindUri(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	dto := GetAchievementDTO{
-		Id: id,
-	}
-
-	response, err := c.service.Get(sctx, dto)
+	response, err := c.service.Get(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to get achievement",
-			zap.Int("achievement_id", dto.Id),
+			zap.Int("achievement_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -89,13 +89,14 @@ func (c *Controller) Get(ctx *gin.Context) {
 }
 
 func (c *Controller) Update(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "achievements.controller.update")
+	sctx, span := tracer.Start(ctx.Request.Context(), "achievements.controller.Update")
 	var err error
 
 	defer func() {
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
+			c.logger.Debug("Failed to update achievement", zap.Error(err))
 		}
 		span.End()
 	}()
@@ -106,20 +107,20 @@ func (c *Controller) Update(ctx *gin.Context) {
 		return
 	}
 
-	var dto UpdateAchievementDTO
+	var req UpdateAchievementRequest
 
-	err = ctx.ShouldBindJSON(&dto)
+	err = ctx.ShouldBindJSON(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	dto.Id = id
+	req.Id = id
 
-	err = c.service.Update(sctx, dto)
+	err = c.service.Update(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to update achievement",
-			zap.Int("achievement_id", dto.Id),
+			zap.Int("achievement_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -129,13 +130,14 @@ func (c *Controller) Update(ctx *gin.Context) {
 }
 
 func (c *Controller) Delete(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "achievements.controller.delete")
+	sctx, span := tracer.Start(ctx.Request.Context(), "achievements.controller.Delete")
 	var err error
 
 	defer func() {
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
+			c.logger.Debug("Failed to delete achievement", zap.Error(err))
 		}
 		span.End()
 	}()
@@ -146,14 +148,14 @@ func (c *Controller) Delete(ctx *gin.Context) {
 		return
 	}
 
-	dto := DeleteAchievementDTO{
+	req := DeleteAchievementRequest{
 		Id: id,
 	}
 
-	err = c.service.Delete(sctx, dto)
+	err = c.service.Delete(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to delete achievement",
-			zap.Int("achievement_id", dto.Id),
+			zap.Int("achievement_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return

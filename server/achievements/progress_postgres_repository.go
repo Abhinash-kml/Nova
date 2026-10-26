@@ -25,9 +25,7 @@ func NewProgressPostgresRepository(pgx *pgxpool.Pool, c *config.Config, logger *
 	}
 }
 
-func (r *ProgressPostgresRepository) Create(ctx context.Context, dto CreateProgressDTO) (AchievementProgress, error) {
-	var result AchievementProgress
-
+func (r *ProgressPostgresRepository) Create(ctx context.Context, dto CreateProgressRequest) (AchievementProgress, error) {
 	query := `INSERT INTO 
 			achievement_progress 
 			(
@@ -44,9 +42,10 @@ func (r *ProgressPostgresRepository) Create(ctx context.Context, dto CreateProgr
 				current_value, 
 				updated_at;`
 
-	now := time.Now()
-	row := r.pgx.QueryRow(ctx, query, dto.UserId, dto.CriterionId, dto.CurrentValue, now)
+	currentTime := time.Now()
+	var result AchievementProgress
 
+	row := r.pgx.QueryRow(ctx, query, dto.UserId, dto.CriterionId, dto.CurrentValue, currentTime)
 	err := row.Scan(
 		&result.Id,
 		&result.UserId,
@@ -61,9 +60,7 @@ func (r *ProgressPostgresRepository) Create(ctx context.Context, dto CreateProgr
 	return result, nil
 }
 
-func (r *ProgressPostgresRepository) Get(ctx context.Context, dto GetProgressDTO) (AchievementProgress, error) {
-	var result AchievementProgress
-
+func (r *ProgressPostgresRepository) Get(ctx context.Context, dto GetProgressRequest) (AchievementProgress, error) {
 	query := `SELECT 
 				id, 
 				user_id, 
@@ -72,7 +69,10 @@ func (r *ProgressPostgresRepository) Get(ctx context.Context, dto GetProgressDTO
 				updated_at
 		FROM 
 			achievement_progress
-		WHERE id = $1`
+		WHERE 
+			id = $1;`
+
+	var result AchievementProgress
 
 	row := r.pgx.QueryRow(ctx, query, dto.Id)
 	err := row.Scan(
@@ -89,7 +89,7 @@ func (r *ProgressPostgresRepository) Get(ctx context.Context, dto GetProgressDTO
 	return result, nil
 }
 
-func (r *ProgressPostgresRepository) GetOfUser(ctx context.Context, dto GetProgressOfUserDTO) ([]AchievementProgress, error) {
+func (r *ProgressPostgresRepository) GetOfUser(ctx context.Context, dto GetProgressOfUserRequest) ([]AchievementProgress, error) {
 	userId, err := uuid.Parse(dto.UserId)
 	if err != nil {
 		return nil, fmt.Errorf("parsing userid: %w", err)
@@ -103,8 +103,10 @@ func (r *ProgressPostgresRepository) GetOfUser(ctx context.Context, dto GetProgr
 				updated_at
 		FROM 
 			achievement_progress
-		WHERE user_id = $1
-		ORDER BY id;`
+		WHERE 
+			user_id = $1
+		ORDER BY 
+			id;`
 
 	rows, err := r.pgx.Query(ctx, query, userId)
 	if err != nil {
@@ -112,11 +114,10 @@ func (r *ProgressPostgresRepository) GetOfUser(ctx context.Context, dto GetProgr
 	}
 	defer rows.Close()
 
-	result := make([]AchievementProgress, 0)
+	var result []AchievementProgress
+	var progress AchievementProgress
 
 	for rows.Next() {
-		var progress AchievementProgress
-
 		err := rows.Scan(
 			&progress.Id,
 			&progress.UserId,
@@ -138,16 +139,18 @@ func (r *ProgressPostgresRepository) GetOfUser(ctx context.Context, dto GetProgr
 	return result, nil
 }
 
-func (r *ProgressPostgresRepository) Update(ctx context.Context, dto UpdateProgressDTO) error {
+func (r *ProgressPostgresRepository) Update(ctx context.Context, dto UpdateProgressRequest) error {
 	query := `UPDATE 
 				achievement_progress
 			SET 
 				current_value = $1, 
 				updated_at = $2
-			WHERE id = $3`
+			WHERE 
+				id = $3`
 
-	now := time.Now()
-	_, err := r.pgx.Exec(ctx, query, dto.CurrentValue, now, dto.Id)
+	currentTime := time.Now()
+
+	_, err := r.pgx.Exec(ctx, query, dto.CurrentValue, currentTime, dto.Id)
 	if err != nil {
 		return fmt.Errorf("updating progress: %w", err)
 	}
@@ -155,13 +158,16 @@ func (r *ProgressPostgresRepository) Update(ctx context.Context, dto UpdateProgr
 	return nil
 }
 
-func (r *ProgressPostgresRepository) Delete(ctx context.Context, dto DeleteProgressDTO) (ProgressId, error) {
+func (r *ProgressPostgresRepository) Delete(ctx context.Context, dto DeleteProgressRequest) (ProgressId, error) {
 	query := `DELETE FROM 
 				achievement_progress
-			WHERE id = $1
-			RETURNING id;`
+			WHERE 
+				id = $1
+			RETURNING 
+				id;`
 
 	var deletedID int
+
 	err := r.pgx.QueryRow(ctx, query, dto.Id).Scan(&deletedID)
 	if err != nil {
 		return dto.ProgressId, fmt.Errorf("scanning row: %w", err)

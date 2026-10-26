@@ -3,5 +3,5 @@ package achievements
 import "context"
 
 type CompletedAchievementRepository interface {
-	Create(ctx context.Context, dto CompleteAchievementDTO) error
+	Create(ctx context.Context, req CompleteAchievementRequest) error
 }

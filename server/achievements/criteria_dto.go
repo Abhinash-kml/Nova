@@ -8,20 +8,20 @@ type AchievementCriteriaId struct {
 	CriteriaID int `uri:"id" binding:"required"`
 }
 
-type GetAllCriteriaDTO struct {
-	Cursor int `form:"cursor"`
-	Limit  int `form:"limit"`
+type GetAllCriteriaRequest struct {
+	Cursor int `form:"cursor,default=0" binding:"required"`
+	Limit  int `form:"limit,default=10" binding:"required"`
 }
 
-type GetCriteriaDTO struct {
+type GetCriteriaRequest struct {
 	AchievementCriteriaId
 }
 
-type GetCriteriaByAchievementDTO struct {
+type GetCriteriaByAchievementRequest struct {
 	AchievementId
 }
 
-type CreateCriteriaDTO struct {
+type CreateCriteriaRequest struct {
 	AchievementId int    `json:"achievement_id" binding:"required"`
 	StatId        int    `json:"stat_id" binding:"required"`
 	TargetValue   int    `json:"target_value" binding:"required"`
@@ -35,11 +35,11 @@ type UpdateCriteriaData struct {
 	CriteriaText  string `json:"criteria_text" binding:"required"`
 }
 
-type UpdateCriteriaDTO struct {
+type UpdateCriteriaRequest struct {
 	AchievementCriteriaId
 	UpdateCriteriaData
 }
 
-type DeleteCriteriaDTO struct {
+type DeleteCriteriaRequest struct {
 	AchievementCriteriaId
 }

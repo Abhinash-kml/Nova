@@ -6,7 +6,6 @@ import (
 
 	"github.com/Masterminds/squirrel"
 	"github.com/abhinash-kml/nova/server/config"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
@@ -27,7 +26,7 @@ func NewCriteriaPostgresRepository(connection *pgxpool.Pool, c *config.Config, l
 	}
 }
 
-func (r *CriteriaPostgresRepository) Add(ctx context.Context, dto CreateCriteriaDTO) (AchievementCriteria, error) {
+func (r *CriteriaPostgresRepository) Add(ctx context.Context, req CreateCriteriaRequest) (AchievementCriteria, error) {
 	rawQuery := `INSERT INTO
 					achievement_criteria(
 						achievement_id,
@@ -47,17 +46,16 @@ func (r *CriteriaPostgresRepository) Add(ctx context.Context, dto CreateCriteria
 	err := r.pgx.QueryRow(
 		ctx,
 		rawQuery,
-		dto.AchievementId,
-		dto.StatId,
-		dto.TargetValue,
-		dto.CriteriaText,
+		req.AchievementId,
+		req.StatId,
+		req.TargetValue,
+		req.CriteriaText,
 	).Scan(
 		&criteria.AchievementId,
 		&criteria.StatId,
 		&criteria.TargetValue,
 		&criteria.CriteriaText,
 	)
-
 	if err != nil {
 		return AchievementCriteria{}, fmt.Errorf("scanning row: %w", err)
 	}
@@ -65,37 +63,30 @@ func (r *CriteriaPostgresRepository) Add(ctx context.Context, dto CreateCriteria
 	return criteria, nil
 }
 
-func (r *CriteriaPostgresRepository) GetAll(ctx context.Context, dto GetAllCriteriaDTO) ([]AchievementCriteria, error) {
-	var rows pgx.Rows
-	var err error
-
+func (r *CriteriaPostgresRepository) GetAll(ctx context.Context, req GetAllCriteriaRequest) ([]AchievementCriteria, error) {
 	rawQuery := `SELECT 
 					achievement_id,
 					stat_id,
 					target_value,
 					criteria_text
 				FROM
-					achievement_criteria`
-	if dto.Cursor == 0 {
-		rawQuery += ` LIMIT $1;`
+					achievement_criteria
+				WHERE
+					id >= $1
+				ORDER BY
+					id
+				LIMIT $2;`
 
-		rows, err = r.pgx.Query(ctx, rawQuery, dto.Limit)
-	} else {
-		rawQuery += ` WHERE id > $1
-					AND LIMIT $2;`
-
-		rows, err = r.pgx.Query(ctx, rawQuery, dto.Cursor, dto.Limit)
-	}
+	rows, err := r.pgx.Query(ctx, rawQuery, req.Cursor, req.Limit)
 	if err != nil {
 		return []AchievementCriteria{}, fmt.Errorf("get all criteria: %w", err)
 	}
-
 	defer rows.Close()
 
 	var criterias []AchievementCriteria
+	var criteria AchievementCriteria
 
 	for rows.Next() {
-		var criteria AchievementCriteria
 		err = rows.Scan(
 			&criteria.AchievementId,
 			&criteria.StatId,
@@ -116,7 +107,7 @@ func (r *CriteriaPostgresRepository) GetAll(ctx context.Context, dto GetAllCrite
 	return criterias, nil
 }
 
-func (r *CriteriaPostgresRepository) Get(ctx context.Context, dto GetCriteriaDTO) (AchievementCriteria, error) {
+func (r *CriteriaPostgresRepository) Get(ctx context.Context, req GetCriteriaRequest) (AchievementCriteria, error) {
 	rawQuery := `SELECT
 					achievement_id,
 					stat_id,
@@ -132,14 +123,13 @@ func (r *CriteriaPostgresRepository) Get(ctx context.Context, dto GetCriteriaDTO
 	err := r.pgx.QueryRow(
 		ctx,
 		rawQuery,
-		dto.CriteriaID,
+		req.CriteriaID,
 	).Scan(
 		&criteria.AchievementId,
 		&criteria.StatId,
 		&criteria.TargetValue,
 		&criteria.CriteriaText,
 	)
-
 	if err != nil {
 		return AchievementCriteria{}, fmt.Errorf("scanning row: %w", err)
 	}
@@ -147,7 +137,7 @@ func (r *CriteriaPostgresRepository) Get(ctx context.Context, dto GetCriteriaDTO
 	return criteria, nil
 }
 
-func (r *CriteriaPostgresRepository) GetByAchievement(ctx context.Context, dto GetCriteriaByAchievementDTO) ([]AchievementCriteria, error) {
+func (r *CriteriaPostgresRepository) GetByAchievement(ctx context.Context, req GetCriteriaByAchievementRequest) ([]AchievementCriteria, error) {
 	rawQuery := `SELECT
 					achievement_id,
 					stat_id,
@@ -163,7 +153,7 @@ func (r *CriteriaPostgresRepository) GetByAchievement(ctx context.Context, dto G
 	rows, err := r.pgx.Query(
 		ctx,
 		rawQuery,
-		dto.Id,
+		req.Id,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get criterias: %w", err)
@@ -171,10 +161,9 @@ func (r *CriteriaPostgresRepository) GetByAchievement(ctx context.Context, dto G
 	defer rows.Close()
 
 	var criteria []AchievementCriteria
+	var criterion AchievementCriteria
 
 	for rows.Next() {
-		var criterion AchievementCriteria
-
 		err = rows.Scan(
 			&criterion.AchievementId,
 			&criterion.StatId,
@@ -195,7 +184,7 @@ func (r *CriteriaPostgresRepository) GetByAchievement(ctx context.Context, dto G
 	return criteria, nil
 }
 
-func (r *CriteriaPostgresRepository) Update(ctx context.Context, dto UpdateCriteriaDTO) (AchievementCriteria, error) {
+func (r *CriteriaPostgresRepository) Update(ctx context.Context, req UpdateCriteriaRequest) (AchievementCriteria, error) {
 	query := `UPDATE 
 				achievement_criteria
 			SET
@@ -215,10 +204,10 @@ func (r *CriteriaPostgresRepository) Update(ctx context.Context, dto UpdateCrite
 	err := r.pgx.QueryRow(
 		ctx,
 		query,
-		dto.CriteriaID,
-		dto.StatId,
-		dto.TargetValue,
-		dto.CriteriaText,
+		req.CriteriaID,
+		req.StatId,
+		req.TargetValue,
+		req.CriteriaText,
 	).Scan(
 		&criteria.AchievementId,
 		&criteria.StatId,
@@ -233,7 +222,7 @@ func (r *CriteriaPostgresRepository) Update(ctx context.Context, dto UpdateCrite
 	return criteria, nil
 }
 
-func (r *CriteriaPostgresRepository) Delete(ctx context.Context, dto DeleteCriteriaDTO) error {
+func (r *CriteriaPostgresRepository) Delete(ctx context.Context, req DeleteCriteriaRequest) error {
 	rawQuery := `DELETE FROM
 					achievement_criteria
 				WHERE
@@ -242,7 +231,7 @@ func (r *CriteriaPostgresRepository) Delete(ctx context.Context, dto DeleteCrite
 	_, err := r.pgx.Exec(
 		ctx,
 		rawQuery,
-		dto.CriteriaID,
+		req.CriteriaID,
 	)
 
 	if err != nil {

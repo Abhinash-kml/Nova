@@ -1,27 +1,27 @@
 package achievements
 
-type CreateAchievementDTO struct {
+type CreateAchievementRequest struct {
 	Key         string `json:"key" binding:"required"`
 	Name        string `json:"name" binding:"required"`
 	Description string `json:"description" binding:"required"`
 }
 
-type GetAchievementDTO struct {
+type GetAchievementRequest struct {
 	Id int `uri:"id" binding:"required"`
 }
 
-type UpdateAchievementDTO struct {
+type UpdateAchievementRequest struct {
 	Id          int    `uri:"id" binding:"required"`
 	Key         string `json:"key" binding:"required"`
 	Name        string `json:"name" binding:"required"`
 	Description string `json:"description" binding:"required"`
 }
 
-type DeleteAchievementDTO struct {
+type DeleteAchievementRequest struct {
 	Id int `uri:"id" binding:"required"`
 }
 
-type AchievementResponseDTO struct {
+type AchievementResponse struct {
 	Id          int    `json:"id"`
 	Key         string `json:"key"`
 	Name        string `json:"name"`

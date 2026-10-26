@@ -25,26 +25,27 @@ func NewCompletedAchievementController(service CompletedAchievementService, c *c
 }
 
 func (c *CompletedAchievementsController) Create(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "achievements.completed.controller.create")
+	sctx, span := tracer.Start(ctx.Request.Context(), "achievements.completed.controller.Create")
 	var err error
 
 	defer func() {
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
+			c.logger.Debug("Failed to complete achievement", zap.Error(err))
 		}
 		span.End()
 	}()
 
-	var dto CompleteAchievementDTO
+	var req CompleteAchievementRequest
 
-	err = ctx.ShouldBindBodyWith(&dto, binding.JSON)
+	err = ctx.ShouldBindBodyWith(&req, binding.JSON)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	err = c.service.Create(sctx, dto)
+	err = c.service.Create(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to create achievement", zap.Error(err))
 		ctx.Error(err)

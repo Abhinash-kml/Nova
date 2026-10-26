@@ -161,3 +161,9 @@ type WalletConfig struct {
 	SeedFile      string        `mapstructure:"seed"`
 	CacheDuration time.Duration `mapstructure:"cacheduration"`
 }
+
+type AchievementsConfig struct {
+	KeyPrefix     string        `mapstructure:"keyPrefix"`
+	SeedFile      string        `mapstructure:"seed"`
+	CacheDuration time.Duration `mapstructure:"cacheduration"`
+}

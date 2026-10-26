@@ -23,7 +23,7 @@ func NewPostgresCompletedAchievementRepository(pool *pgxpool.Pool, c *config.Con
 	}
 }
 
-func (r *PostgresCompletedAchievementRepository) Create(ctx context.Context, dto CompleteAchievementDTO) error {
+func (r *PostgresCompletedAchievementRepository) Create(ctx context.Context, req CompleteAchievementRequest) error {
 	rawQuery := `INSERT INTO 
 				completed_achievements(
 					user_id,
@@ -31,7 +31,7 @@ func (r *PostgresCompletedAchievementRepository) Create(ctx context.Context, dto
 				) 
 				VALUES ($1, $2);`
 
-	_, err := r.pgx.Exec(ctx, rawQuery, dto.UserId, dto.AchievementId)
+	_, err := r.pgx.Exec(ctx, rawQuery, req.UserId, req.AchievementId)
 	if err != nil {
 		return fmt.Errorf("create completed achievement: %w", err)
 	}

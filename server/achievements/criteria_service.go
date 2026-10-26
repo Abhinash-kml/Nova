@@ -9,12 +9,12 @@ import (
 )
 
 type CriteriaService interface {
-	GetAll(ctx context.Context, dto GetAllCriteriaDTO) ([]AchievementCriteria, error)
-	Add(ctx context.Context, dto CreateCriteriaDTO) (AchievementCriteria, error)
-	Get(ctx context.Context, dto GetCriteriaDTO) (AchievementCriteria, error)
-	Update(ctx context.Context, dto UpdateCriteriaDTO) (AchievementCriteria, error)
-	Delete(ctx context.Context, dto DeleteCriteriaDTO) error
-	GetByAchievement(ctx context.Context, dto GetCriteriaByAchievementDTO) ([]AchievementCriteria, error)
+	GetAll(ctx context.Context, req GetAllCriteriaRequest) ([]AchievementCriteria, error)
+	Add(ctx context.Context, req CreateCriteriaRequest) (AchievementCriteria, error)
+	Get(ctx context.Context, req GetCriteriaRequest) (AchievementCriteria, error)
+	Update(ctx context.Context, req UpdateCriteriaRequest) (AchievementCriteria, error)
+	Delete(ctx context.Context, req DeleteCriteriaRequest) error
+	GetByAchievement(ctx context.Context, req GetCriteriaByAchievementRequest) ([]AchievementCriteria, error)
 }
 
 type LocalCriteriaService struct {
@@ -31,11 +31,11 @@ func NewCriteriaService(r CriteriaRepository, c *config.Config, l *zap.Logger) *
 	}
 }
 
-func (s *LocalCriteriaService) GetAll(ctx context.Context, dto GetAllCriteriaDTO) ([]AchievementCriteria, error) {
-	ctx, span := tracer.Start(ctx, "achievements.criteria.service.getall")
+func (s *LocalCriteriaService) GetAll(ctx context.Context, req GetAllCriteriaRequest) ([]AchievementCriteria, error) {
+	ctx, span := tracer.Start(ctx, "achievements.criteria.service.GetAll")
 	defer span.End()
 
-	criterias, err := s.repository.GetAll(ctx, dto)
+	criterias, err := s.repository.GetAll(ctx, req)
 	if err != nil {
 		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to get all achievement criterias")
 	}
@@ -43,11 +43,11 @@ func (s *LocalCriteriaService) GetAll(ctx context.Context, dto GetAllCriteriaDTO
 	return criterias, nil
 }
 
-func (s *LocalCriteriaService) Add(ctx context.Context, dto CreateCriteriaDTO) (AchievementCriteria, error) {
-	ctx, span := tracer.Start(ctx, "achievements.criteria.service.add")
+func (s *LocalCriteriaService) Add(ctx context.Context, req CreateCriteriaRequest) (AchievementCriteria, error) {
+	ctx, span := tracer.Start(ctx, "achievements.criteria.service.Add")
 	defer span.End()
 
-	criteria, err := s.repository.Add(ctx, dto)
+	criteria, err := s.repository.Add(ctx, req)
 	if err != nil {
 		return AchievementCriteria{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to create achievement criteria")
 	}
@@ -55,11 +55,11 @@ func (s *LocalCriteriaService) Add(ctx context.Context, dto CreateCriteriaDTO) (
 	return criteria, nil
 }
 
-func (s *LocalCriteriaService) Get(ctx context.Context, dto GetCriteriaDTO) (AchievementCriteria, error) {
-	ctx, span := tracer.Start(ctx, "achievements.criteria.service.get")
+func (s *LocalCriteriaService) Get(ctx context.Context, req GetCriteriaRequest) (AchievementCriteria, error) {
+	ctx, span := tracer.Start(ctx, "achievements.criteria.service.Get")
 	defer span.End()
 
-	criteria, err := s.repository.Get(ctx, dto)
+	criteria, err := s.repository.Get(ctx, req)
 	if err != nil {
 		return AchievementCriteria{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to get achievement criteria")
 	}
@@ -67,11 +67,11 @@ func (s *LocalCriteriaService) Get(ctx context.Context, dto GetCriteriaDTO) (Ach
 	return criteria, nil
 }
 
-func (s *LocalCriteriaService) GetByAchievement(ctx context.Context, dto GetCriteriaByAchievementDTO) ([]AchievementCriteria, error) {
-	ctx, span := tracer.Start(ctx, "achievements.criteria.service.getbyachivement")
+func (s *LocalCriteriaService) GetByAchievement(ctx context.Context, req GetCriteriaByAchievementRequest) ([]AchievementCriteria, error) {
+	ctx, span := tracer.Start(ctx, "achievements.criteria.service.GetByAchivement")
 	defer span.End()
 
-	criterias, err := s.repository.GetByAchievement(ctx, dto)
+	criterias, err := s.repository.GetByAchievement(ctx, req)
 	if err != nil {
 		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to get all criterias of achievement")
 	}
@@ -79,11 +79,11 @@ func (s *LocalCriteriaService) GetByAchievement(ctx context.Context, dto GetCrit
 	return criterias, nil
 }
 
-func (s *LocalCriteriaService) Update(ctx context.Context, dto UpdateCriteriaDTO) (AchievementCriteria, error) {
-	ctx, span := tracer.Start(ctx, "achievements.criteria.service.update")
+func (s *LocalCriteriaService) Update(ctx context.Context, req UpdateCriteriaRequest) (AchievementCriteria, error) {
+	ctx, span := tracer.Start(ctx, "achievements.criteria.service.Update")
 	defer span.End()
 
-	criteria, err := s.repository.Update(ctx, dto)
+	criteria, err := s.repository.Update(ctx, req)
 	if err != nil {
 		return AchievementCriteria{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to update achievement criteria")
 	}
@@ -91,9 +91,9 @@ func (s *LocalCriteriaService) Update(ctx context.Context, dto UpdateCriteriaDTO
 	return criteria, nil
 }
 
-func (s *LocalCriteriaService) Delete(ctx context.Context, dto DeleteCriteriaDTO) error {
-	ctx, span := tracer.Start(ctx, "achievements.criteria.service.delete")
+func (s *LocalCriteriaService) Delete(ctx context.Context, req DeleteCriteriaRequest) error {
+	ctx, span := tracer.Start(ctx, "achievements.criteria.service.Delete")
 	defer span.End()
 
-	return common.TranslatePostgresError(s.repository.Delete(ctx, dto), s.logger).WithMessage("Failed to delete achievement criteria")
+	return common.TranslatePostgresError(s.repository.Delete(ctx, req), s.logger).WithMessage("Failed to delete achievement criteria")
 }

@@ -26,37 +26,38 @@ func NewCriteriaController(s CriteriaService, c *config.Config, l *zap.Logger) *
 }
 
 func (c *CriteriaController) GetAll(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "achievement.criteria.controller.getall")
+	sctx, span := tracer.Start(ctx.Request.Context(), "achievement.criteria.controller.GetAll")
 	var err error
 
 	defer func() {
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
+			c.logger.Debug("Failed to get all achievement criteria", zap.Error(err))
 		}
 		span.End()
 	}()
 
-	var dto GetAllCriteriaDTO
+	var req GetAllCriteriaRequest
 
-	err = ctx.ShouldBindQuery(&dto)
+	err = ctx.ShouldBindQuery(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	if dto.Cursor < 0 {
-		dto.Cursor = 0
+	if req.Cursor < 0 {
+		req.Cursor = 0
 	}
-	if dto.Limit < 10 || dto.Limit > 20 {
-		dto.Limit = 10
+	if req.Limit < 10 || req.Limit > 20 {
+		req.Limit = 10
 	}
 
-	results, err := c.service.GetAll(sctx, dto)
+	results, err := c.service.GetAll(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to get all achievement criteria",
-			zap.Int("cursor", dto.Cursor),
-			zap.Int("limit", dto.Limit),
+			zap.Int("cursor", req.Cursor),
+			zap.Int("limit", req.Limit),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -66,31 +67,32 @@ func (c *CriteriaController) GetAll(ctx *gin.Context) {
 }
 
 func (c *CriteriaController) Get(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "achievement.criteria.controller.get")
+	sctx, span := tracer.Start(ctx.Request.Context(), "achievement.criteria.controller.Get")
 	var err error
 
 	defer func() {
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
+			c.logger.Debug("Failed to get achievement criteria", zap.Error(err))
 		}
 		span.End()
 	}()
 
-	var dto GetCriteriaDTO
+	var req GetCriteriaRequest
 
-	err = ctx.ShouldBindUri(&dto)
+	err = ctx.ShouldBindUri(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.Int("criteria_id", dto.CriteriaID))
+	span.SetAttributes(attribute.Int("criteria_id", req.CriteriaID))
 
-	criteria, err := c.service.Get(sctx, dto)
+	criteria, err := c.service.Get(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to get achievement criteria",
-			zap.Int("criteria_id", dto.CriteriaID),
+			zap.Int("criteria_id", req.CriteriaID),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -100,31 +102,32 @@ func (c *CriteriaController) Get(ctx *gin.Context) {
 }
 
 func (c *CriteriaController) GetByAchievement(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "achievement.criteria.controller.getbyachievement")
+	sctx, span := tracer.Start(ctx.Request.Context(), "achievement.criteria.controller.GetByAchievement")
 	var err error
 
 	defer func() {
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
+			c.logger.Debug("Failed to get achievement criteria by achievement", zap.Error(err))
 		}
 		span.End()
 	}()
 
-	var dto GetCriteriaByAchievementDTO
+	var req GetCriteriaByAchievementRequest
 
-	err = ctx.ShouldBindUri(&dto)
+	err = ctx.ShouldBindUri(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.Int("achievement_id", dto.Id))
+	span.SetAttributes(attribute.Int("achievement_id", req.Id))
 
-	criteria, err := c.service.GetByAchievement(sctx, dto)
+	criteria, err := c.service.GetByAchievement(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to get all criteria of an acheievement",
-			zap.Int("achievement_id", dto.Id),
+			zap.Int("achievement_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -134,30 +137,31 @@ func (c *CriteriaController) GetByAchievement(ctx *gin.Context) {
 }
 
 func (c *CriteriaController) Create(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "achievementcriteria.controller.create")
+	sctx, span := tracer.Start(ctx.Request.Context(), "achievementcriteria.controller.Create")
 	var err error
 
 	defer func() {
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
+			c.logger.Debug("Failed to create achievement criteria", zap.Error(err))
 		}
 		span.End()
 	}()
 
-	var dto CreateCriteriaDTO
+	var req CreateCriteriaRequest
 
-	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	err = ctx.ShouldBindWith(&req, binding.JSON)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	criteria, err := c.service.Add(sctx, dto)
+	criteria, err := c.service.Add(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to create acheievement criteria",
-			zap.Int("acheievement_id", dto.AchievementId),
-			zap.Int("stat_id", dto.StatId),
+			zap.Int("acheievement_id", req.AchievementId),
+			zap.Int("stat_id", req.StatId),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -167,37 +171,38 @@ func (c *CriteriaController) Create(ctx *gin.Context) {
 }
 
 func (c *CriteriaController) Modify(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "achievementcriteria.controller.modify")
+	sctx, span := tracer.Start(ctx.Request.Context(), "achievementcriteria.controller.Modify")
 	var err error
 
 	defer func() {
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
+			c.logger.Debug("Failed to update achievement criteria", zap.Error(err))
 		}
 		span.End()
 	}()
 
-	var dto UpdateCriteriaDTO
+	var req UpdateCriteriaRequest
 
-	err = ctx.ShouldBindUri(&dto.AchievementCriteriaId)
+	err = ctx.ShouldBindUri(&req.AchievementCriteriaId)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.Int("criteria_id", dto.CriteriaID))
+	span.SetAttributes(attribute.Int("criteria_id", req.CriteriaID))
 
-	err = ctx.ShouldBindWith(&dto.UpdateCriteriaData, binding.JSON)
+	err = ctx.ShouldBindWith(&req.UpdateCriteriaData, binding.JSON)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	criteria, err := c.service.Update(sctx, dto)
+	criteria, err := c.service.Update(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to update achievement criteria",
-			zap.Int("criteria_id", dto.CriteriaID),
+			zap.Int("criteria_id", req.CriteriaID),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -207,31 +212,32 @@ func (c *CriteriaController) Modify(ctx *gin.Context) {
 }
 
 func (c *CriteriaController) Delete(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "achievementcriteria.controller.delete")
+	sctx, span := tracer.Start(ctx.Request.Context(), "achievementcriteria.controller.Delete")
 	var err error
 
 	defer func() {
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
+			c.logger.Debug("Failed to delete achievement criteria", zap.Error(err))
 		}
 		span.End()
 	}()
 
-	var dto DeleteCriteriaDTO
+	var req DeleteCriteriaRequest
 
-	err = ctx.ShouldBindUri(&dto)
+	err = ctx.ShouldBindUri(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.Int("criteria_id", dto.CriteriaID))
+	span.SetAttributes(attribute.Int("criteria_id", req.CriteriaID))
 
-	err = c.service.Delete(sctx, dto)
+	err = c.service.Delete(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to delete achievement criteria",
-			zap.Int("criteria_id", dto.CriteriaID),
+			zap.Int("criteria_id", req.CriteriaID),
 			zap.Error(err))
 		ctx.Error(err)
 		return
