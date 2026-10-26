@@ -6,29 +6,26 @@ import (
 	"time"
 
 	"github.com/Masterminds/squirrel"
-	"github.com/abhinash-kml/nova/server/config"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
 
 type ItemsPostgresRepository struct {
-	config           *config.Config
 	logger           *zap.Logger
 	pgx              *pgxpool.Pool
 	statementBuilder squirrel.StatementBuilderType
 }
 
-func NewItemsPostgresRepositoryFromPgxPool(connection *pgxpool.Pool, c *config.Config, l *zap.Logger) *ItemsPostgresRepository {
+func NewItemsPostgresRepositoryFromPgxPool(connection *pgxpool.Pool, l *zap.Logger) *ItemsPostgresRepository {
 	return &ItemsPostgresRepository{
-		config:           c,
 		logger:           l,
 		pgx:              connection,
 		statementBuilder: squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar),
 	}
 }
 
-func (r *ItemsPostgresRepository) Add(ctx context.Context, dto CreateItemDTO) (PlayerItem, error) {
+func (r *ItemsPostgresRepository) Add(ctx context.Context, req CreateItemRequest) (PlayerItem, error) {
 	rawQuery := `INSERT INTO
 					player_items(
 						name,
@@ -54,11 +51,11 @@ func (r *ItemsPostgresRepository) Add(ctx context.Context, dto CreateItemDTO) (P
 	err := r.pgx.QueryRow(
 		ctx,
 		rawQuery,
-		dto.Name,
-		dto.Description,
-		dto.Rarity,
-		dto.IsStackable,
-		dto.Meta,
+		req.Name,
+		req.Description,
+		req.Rarity,
+		req.IsStackable,
+		req.Meta,
 		time.Now(),
 	).Scan(
 		&item.Id,
@@ -175,30 +172,30 @@ func (r *ItemsPostgresRepository) GetById(ctx context.Context, id uuid.UUID) (Pl
 	return item, nil
 }
 
-func (r *ItemsPostgresRepository) Update(ctx context.Context, dto UpdateItemDTO) (PlayerItem, error) {
+func (r *ItemsPostgresRepository) Update(ctx context.Context, req UpdateItemRequest) (PlayerItem, error) {
 	queryBuilder := r.statementBuilder.
 		Update("player_items").
-		Where(squirrel.Eq{"id": dto.Id}).
+		Where(squirrel.Eq{"id": req.Id}).
 		Set("updated_at", time.Now())
 
-	if dto.Name != nil {
-		queryBuilder = queryBuilder.Set("name", *dto.Name)
+	if req.Name != nil {
+		queryBuilder = queryBuilder.Set("name", *req.Name)
 	}
 
-	if dto.Description != nil {
-		queryBuilder = queryBuilder.Set("description", *dto.Description)
+	if req.Description != nil {
+		queryBuilder = queryBuilder.Set("description", *req.Description)
 	}
 
-	if dto.Rarity != nil {
-		queryBuilder = queryBuilder.Set("rarity", *dto.Rarity)
+	if req.Rarity != nil {
+		queryBuilder = queryBuilder.Set("rarity", *req.Rarity)
 	}
 
-	if dto.IsStackable != nil {
-		queryBuilder = queryBuilder.Set("is_stackable", *dto.IsStackable)
+	if req.IsStackable != nil {
+		queryBuilder = queryBuilder.Set("is_stackable", *req.IsStackable)
 	}
 
-	if dto.Meta != nil {
-		queryBuilder = queryBuilder.Set("meta", dto.Meta)
+	if req.Meta != nil {
+		queryBuilder = queryBuilder.Set("meta", req.Meta)
 	}
 
 	queryBuilder = queryBuilder.Suffix(
@@ -242,7 +239,7 @@ func (r *ItemsPostgresRepository) Update(ctx context.Context, dto UpdateItemDTO)
 	return item, nil
 }
 
-func (r *ItemsPostgresRepository) Replace(ctx context.Context, dto ReplaceItemDTO) (PlayerItem, error) {
+func (r *ItemsPostgresRepository) Replace(ctx context.Context, req ReplaceItemRequest) (PlayerItem, error) {
 	rawQuery := `UPDATE
 					player_items
 				SET
@@ -269,12 +266,12 @@ func (r *ItemsPostgresRepository) Replace(ctx context.Context, dto ReplaceItemDT
 	err := r.pgx.QueryRow(
 		ctx,
 		rawQuery,
-		dto.Id,
-		dto.Name,
-		dto.Description,
-		dto.Rarity,
-		dto.IsStackable,
-		dto.Meta,
+		req.Id,
+		req.Name,
+		req.Description,
+		req.Rarity,
+		req.IsStackable,
+		req.Meta,
 		time.Now(),
 	).Scan(
 		&item.Id,
@@ -294,7 +291,7 @@ func (r *ItemsPostgresRepository) Replace(ctx context.Context, dto ReplaceItemDT
 	return item, nil
 }
 
-func (r *ItemsPostgresRepository) Delete(ctx context.Context, dto DeleteItemDTO) (uuid.UUID, error) {
+func (r *ItemsPostgresRepository) Delete(ctx context.Context, req DeleteItemRequest) (uuid.UUID, error) {
 	rawQuery := `DELETE FROM
 					player_items
 				WHERE
@@ -307,7 +304,7 @@ func (r *ItemsPostgresRepository) Delete(ctx context.Context, dto DeleteItemDTO)
 	err := r.pgx.QueryRow(
 		ctx,
 		rawQuery,
-		dto.Id,
+		req.Id,
 	).Scan(&deletedId)
 
 	if err != nil {

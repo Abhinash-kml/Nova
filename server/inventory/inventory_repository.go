@@ -3,10 +3,10 @@ package inventory
 import "context"
 
 type InventoryRepository interface {
-	GetInventoryOfUser(ctx context.Context, dto GetInventoryOfUserDTO) ([]PlayerInventory, error)
-	DeleteInventoryOfUser(ctx context.Context, dto DeleteInventoryOfUserDTO) (UserID, error)
-	GetInventoryItemOfUser(ctx context.Context, dto GetInventoryItemOfUserDTO) (PlayerInventory, error)
-	AddInventoryItemOfUser(ctx context.Context, dto AddInventoryItemOfUserDTO) (InventoryItem, error)
-	UpdateInventoryItemOfUser(ctx context.Context, dto UpdateInventoryItemOfUserDTO) (PlayerInventory, error)
-	DeleteInventoryItemOfUser(ctx context.Context, dto DeleteInventoryItemOfUserDTO) error
+	GetInventoryOfUser(ctx context.Context, dto GetInventoryOfUserRequest) ([]PlayerInventory, error)
+	DeleteInventoryOfUser(ctx context.Context, dto DeleteInventoryOfUserRequest) (UserID, error)
+	GetInventoryItemOfUser(ctx context.Context, dto GetInventoryItemOfUserRequest) (PlayerInventory, error)
+	AddInventoryItemOfUser(ctx context.Context, dto AddInventoryItemOfUserRequest) (InventoryItem, error)
+	UpdateInventoryItemOfUser(ctx context.Context, dto UpdateInventoryItemOfUserRequest) (PlayerInventory, error)
+	DeleteInventoryItemOfUser(ctx context.Context, dto DeleteInventoryItemOfUserRequest) error
 }

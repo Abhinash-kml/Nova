@@ -10,33 +10,31 @@ import (
 )
 
 type ItemsService interface {
-	Add(ctx context.Context, dto CreateItemDTO) (PlayerItem, error)
+	Add(ctx context.Context, req CreateItemRequest) (PlayerItem, error)
 	GetAll(ctx context.Context, cursor int, limit int) ([]PlayerItem, error)
 	GetById(ctx context.Context, id uuid.UUID) (PlayerItem, error)
-	Update(ctx context.Context, dto UpdateItemDTO) (PlayerItem, error)
-	Replace(ctx context.Context, dto ReplaceItemDTO) (PlayerItem, error)
-	Delete(ctx context.Context, dto DeleteItemDTO) (uuid.UUID, error)
+	Update(ctx context.Context, req UpdateItemRequest) (PlayerItem, error)
+	Replace(ctx context.Context, req ReplaceItemRequest) (PlayerItem, error)
+	Delete(ctx context.Context, req DeleteItemRequest) (uuid.UUID, error)
 }
 
 type LocalItemsService struct {
 	repository ItemsRepository
-	config     *config.Config
 	logger     *zap.Logger
 }
 
 func NewLocalItemsService(r ItemsRepository, c *config.Config, l *zap.Logger) *LocalItemsService {
 	return &LocalItemsService{
 		repository: r,
-		config:     c,
 		logger:     l,
 	}
 }
 
-func (s *LocalItemsService) Add(ctx context.Context, dto CreateItemDTO) (PlayerItem, error) {
+func (s *LocalItemsService) Add(ctx context.Context, req CreateItemRequest) (PlayerItem, error) {
 	ctx, span := tracer.Start(ctx, "inventory.items.add")
 	defer span.End()
 
-	item, err := s.repository.Add(ctx, dto)
+	item, err := s.repository.Add(ctx, req)
 	if err != nil {
 		return PlayerItem{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to create item")
 	}
@@ -68,11 +66,11 @@ func (s *LocalItemsService) GetById(ctx context.Context, id uuid.UUID) (PlayerIt
 	return item, nil
 }
 
-func (s *LocalItemsService) Update(ctx context.Context, dto UpdateItemDTO) (PlayerItem, error) {
+func (s *LocalItemsService) Update(ctx context.Context, req UpdateItemRequest) (PlayerItem, error) {
 	ctx, span := tracer.Start(ctx, "inventory.items.update")
 	defer span.End()
 
-	item, err := s.repository.Update(ctx, dto)
+	item, err := s.repository.Update(ctx, req)
 	if err != nil {
 		return PlayerItem{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to update item")
 	}
@@ -80,11 +78,11 @@ func (s *LocalItemsService) Update(ctx context.Context, dto UpdateItemDTO) (Play
 	return item, nil
 }
 
-func (s *LocalItemsService) Replace(ctx context.Context, dto ReplaceItemDTO) (PlayerItem, error) {
+func (s *LocalItemsService) Replace(ctx context.Context, req ReplaceItemRequest) (PlayerItem, error) {
 	ctx, span := tracer.Start(ctx, "inventory.items.replace")
 	defer span.End()
 
-	item, err := s.repository.Replace(ctx, dto)
+	item, err := s.repository.Replace(ctx, req)
 	if err != nil {
 		return PlayerItem{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to replace item")
 	}
@@ -92,11 +90,11 @@ func (s *LocalItemsService) Replace(ctx context.Context, dto ReplaceItemDTO) (Pl
 	return item, nil
 }
 
-func (s *LocalItemsService) Delete(ctx context.Context, dto DeleteItemDTO) (uuid.UUID, error) {
+func (s *LocalItemsService) Delete(ctx context.Context, req DeleteItemRequest) (uuid.UUID, error) {
 	ctx, span := tracer.Start(ctx, "inventory.items.delete")
 	defer span.End()
 
-	itemID, err := s.repository.Delete(ctx, dto)
+	itemID, err := s.repository.Delete(ctx, req)
 	if err != nil {
 		return uuid.Nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to delete item")
 	}

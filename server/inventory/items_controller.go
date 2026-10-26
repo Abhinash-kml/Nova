@@ -3,7 +3,6 @@ package inventory
 import (
 	"net/http"
 
-	"github.com/abhinash-kml/nova/server/config"
 	"github.com/abhinash-kml/nova/server/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -15,13 +14,11 @@ import (
 
 type ItemsController struct {
 	service ItemsService
-	config  *config.Config
 	logger  *zap.Logger
 }
 
-func NewItemsController(s ItemsService, c *config.Config, l *zap.Logger) *ItemsController {
+func NewItemsController(s ItemsService, l *zap.Logger) *ItemsController {
 	return &ItemsController{
-		config:  c,
 		service: s,
 		logger:  l,
 	}
@@ -39,19 +36,19 @@ func (c *ItemsController) GetAll(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto GetAllDTO
+	var req GetAllItemRequest
 
-	err = ctx.ShouldBindQuery(&dto)
+	err = ctx.ShouldBindQuery(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	items, err := c.service.GetAll(sctx, dto.Cursor, dto.Limit)
+	items, err := c.service.GetAll(sctx, req.Cursor, req.Limit)
 	if err != nil {
 		c.logger.Error("Failed to get all items",
-			zap.Int("cursor", dto.Cursor),
-			zap.Int("limit", dto.Limit),
+			zap.Int("cursor", req.Cursor),
+			zap.Int("limit", req.Limit),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -72,22 +69,22 @@ func (c *ItemsController) Get(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto GetItemDTO
+	var req GetItemRequest
 
-	err = ctx.ShouldBindUri(&dto)
+	err = ctx.ShouldBindUri(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("item_id", dto.Id))
+	span.SetAttributes(attribute.String("item_id", req.Id))
 
-	itemID, _ := uuid.Parse(dto.Id)
+	itemID, _ := uuid.Parse(req.Id)
 
 	item, err := c.service.GetById(sctx, itemID)
 	if err != nil {
 		c.logger.Error("Failed to get item",
-			zap.String("item_id", dto.Id),
+			zap.String("item_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -108,15 +105,15 @@ func (c *ItemsController) Create(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto CreateItemDTO
+	var req CreateItemRequest
 
-	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	err = ctx.ShouldBindWith(&req, binding.JSON)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	item, err := c.service.Add(sctx, dto)
+	item, err := c.service.Add(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to create item", zap.Error(err))
 		ctx.Error(err)
@@ -138,26 +135,26 @@ func (c *ItemsController) Modify(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto UpdateItemDTO
+	var req UpdateItemRequest
 
-	err = ctx.ShouldBindUri(&dto.ItemId)
+	err = ctx.ShouldBindUri(&req.ItemId)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("item_id", dto.Id))
+	span.SetAttributes(attribute.String("item_id", req.Id))
 
-	err = ctx.ShouldBindWith(&dto.ItemUpdateData, binding.JSON)
+	err = ctx.ShouldBindWith(&req.ItemUpdateData, binding.JSON)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	item, err := c.service.Update(sctx, dto)
+	item, err := c.service.Update(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to update item",
-			zap.String("item_id", dto.Id),
+			zap.String("item_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -178,26 +175,26 @@ func (c *ItemsController) Replace(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto ReplaceItemDTO
+	var req ReplaceItemRequest
 
-	err = ctx.ShouldBindUri(&dto.ItemId)
+	err = ctx.ShouldBindUri(&req.ItemId)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("item_id", dto.Id))
+	span.SetAttributes(attribute.String("item_id", req.Id))
 
-	err = ctx.ShouldBindWith(&dto.ReplacementData, binding.JSON)
+	err = ctx.ShouldBindWith(&req.ReplacementData, binding.JSON)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	item, err := c.service.Replace(sctx, dto)
+	item, err := c.service.Replace(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to replace item",
-			zap.String("item_id", dto.Id),
+			zap.String("item_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -218,20 +215,20 @@ func (c *ItemsController) Delete(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto DeleteItemDTO
+	var req DeleteItemRequest
 
-	err = ctx.ShouldBindUri(&dto)
+	err = ctx.ShouldBindUri(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("item_id", dto.Id))
+	span.SetAttributes(attribute.String("item_id", req.Id))
 
-	_, err = c.service.Delete(sctx, dto)
+	_, err = c.service.Delete(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to delete item",
-			zap.String("item_id", dto.Id),
+			zap.String("item_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return

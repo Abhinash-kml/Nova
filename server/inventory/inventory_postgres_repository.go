@@ -13,13 +13,13 @@ import (
 )
 
 type PostgresInventoryRepository struct {
-	config           *config.Config
+	config           *config.InventoryConfig
 	logger           *zap.Logger
 	pgx              *pgxpool.Pool
 	statementBuilder squirrel.StatementBuilderType
 }
 
-func NewPostgresInventoryRepositoryFromPgxPool(connection *pgxpool.Pool, c *config.Config, l *zap.Logger) *PostgresInventoryRepository {
+func NewPostgresInventoryRepositoryFromPgxPool(connection *pgxpool.Pool, c *config.InventoryConfig, l *zap.Logger) *PostgresInventoryRepository {
 	return &PostgresInventoryRepository{
 		config:           c,
 		logger:           l,
@@ -28,7 +28,7 @@ func NewPostgresInventoryRepositoryFromPgxPool(connection *pgxpool.Pool, c *conf
 	}
 }
 
-func (r *PostgresInventoryRepository) GetInventoryOfUser(ctx context.Context, dto GetInventoryOfUserDTO) ([]PlayerInventory, error) {
+func (r *PostgresInventoryRepository) GetInventoryOfUser(ctx context.Context, req GetInventoryOfUserRequest) ([]PlayerInventory, error) {
 	rawQuery := `SELECT
 					user_id,
 					item_id,
@@ -46,7 +46,7 @@ func (r *PostgresInventoryRepository) GetInventoryOfUser(ctx context.Context, dt
 	rows, err := r.pgx.Query(
 		ctx,
 		rawQuery,
-		dto.Id,
+		req.Id,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("getting inventory: %w", err)
@@ -80,7 +80,7 @@ func (r *PostgresInventoryRepository) GetInventoryOfUser(ctx context.Context, dt
 	return inventory, nil
 }
 
-func (r *PostgresInventoryRepository) DeleteInventoryOfUser(ctx context.Context, dto DeleteInventoryOfUserDTO) (UserID, error) {
+func (r *PostgresInventoryRepository) DeleteInventoryOfUser(ctx context.Context, req DeleteInventoryOfUserRequest) (UserID, error) {
 	rawQuery := `DELETE FROM 
 					player_inventory 
 				WHERE
@@ -88,7 +88,7 @@ func (r *PostgresInventoryRepository) DeleteInventoryOfUser(ctx context.Context,
 				RETURNING user_id;`
 
 	var deletedID string
-	userID, _ := uuid.Parse(dto.Id)
+	userID, _ := uuid.Parse(req.Id)
 	row := r.pgx.QueryRow(ctx, rawQuery, userID)
 	err := row.Scan(&deletedID)
 	if err != nil {
@@ -98,7 +98,7 @@ func (r *PostgresInventoryRepository) DeleteInventoryOfUser(ctx context.Context,
 	return UserID{Id: deletedID}, nil
 }
 
-func (r *PostgresInventoryRepository) GetInventoryItemOfUser(ctx context.Context, dto GetInventoryItemOfUserDTO) (PlayerInventory, error) {
+func (r *PostgresInventoryRepository) GetInventoryItemOfUser(ctx context.Context, req GetInventoryItemOfUserRequest) (PlayerInventory, error) {
 	rawQuery := `SELECT
 					user_id,
 					item_id,
@@ -117,8 +117,8 @@ func (r *PostgresInventoryRepository) GetInventoryItemOfUser(ctx context.Context
 	err := r.pgx.QueryRow(
 		ctx,
 		rawQuery,
-		dto.Id,
-		dto.ItemId,
+		req.Id,
+		req.ItemId,
 	).Scan(
 		&inventory.UserId,
 		&inventory.ItemId,
@@ -135,7 +135,7 @@ func (r *PostgresInventoryRepository) GetInventoryItemOfUser(ctx context.Context
 	return inventory, nil
 }
 
-func (r *PostgresInventoryRepository) AddInventoryItemOfUser(ctx context.Context, dto AddInventoryItemOfUserDTO) (InventoryItem, error) {
+func (r *PostgresInventoryRepository) AddInventoryItemOfUser(ctx context.Context, req AddInventoryItemOfUserRequest) (InventoryItem, error) {
 	rawQuery := `INSERT INTO
 					player_inventory(
 					user_id,
@@ -152,11 +152,11 @@ func (r *PostgresInventoryRepository) AddInventoryItemOfUser(ctx context.Context
 	row := r.pgx.QueryRow(
 		ctx,
 		rawQuery,
-		dto.UserID,
-		dto.ItemID,
-		dto.Quantity,
-		dto.Source,
-		dto.IsEquipped,
+		req.UserID,
+		req.ItemID,
+		req.Quantity,
+		req.Source,
+		req.IsEquipped,
 		now)
 
 	err := row.Scan(
@@ -174,9 +174,9 @@ func (r *PostgresInventoryRepository) AddInventoryItemOfUser(ctx context.Context
 	return item, nil
 }
 
-func (r *PostgresInventoryRepository) UpdateInventoryItemOfUser(ctx context.Context, dto UpdateInventoryItemOfUserDTO) (PlayerInventory, error) {
-	userID, _ := uuid.Parse(dto.UserID.Id)
-	itemID, _ := uuid.Parse(dto.ItemID.ItemId)
+func (r *PostgresInventoryRepository) UpdateInventoryItemOfUser(ctx context.Context, req UpdateInventoryItemOfUserRequest) (PlayerInventory, error) {
+	userID, _ := uuid.Parse(req.UserID.Id)
+	itemID, _ := uuid.Parse(req.ItemID.ItemId)
 	queryBuilder := r.statementBuilder.
 		Update("player_inventory").
 		Where(squirrel.Eq{
@@ -185,16 +185,16 @@ func (r *PostgresInventoryRepository) UpdateInventoryItemOfUser(ctx context.Cont
 		}).
 		Set("updated_at", time.Now())
 
-	if dto.Quantity != nil {
-		queryBuilder = queryBuilder.Set("quantity", *dto.Quantity)
+	if req.Quantity != nil {
+		queryBuilder = queryBuilder.Set("quantity", *req.Quantity)
 	}
 
-	if dto.Source != nil {
-		queryBuilder = queryBuilder.Set("source", *dto.Source)
+	if req.Source != nil {
+		queryBuilder = queryBuilder.Set("source", *req.Source)
 	}
 
-	if dto.IsEquipped != nil {
-		queryBuilder = queryBuilder.Set("is_equipped", *dto.IsEquipped)
+	if req.IsEquipped != nil {
+		queryBuilder = queryBuilder.Set("is_equipped", *req.IsEquipped)
 	}
 
 	queryBuilder = queryBuilder.Suffix(
@@ -234,15 +234,15 @@ func (r *PostgresInventoryRepository) UpdateInventoryItemOfUser(ctx context.Cont
 	return inventory, nil
 }
 
-func (r *PostgresInventoryRepository) DeleteInventoryItemOfUser(ctx context.Context, dto DeleteInventoryItemOfUserDTO) error {
+func (r *PostgresInventoryRepository) DeleteInventoryItemOfUser(ctx context.Context, req DeleteInventoryItemOfUserRequest) error {
 	rawQuery := `DELETE FROM
 					player_inventory
 				WHERE
 					user_id = $1
 					AND item_id = $2;`
 
-	userID, _ := uuid.Parse(dto.UserID.Id)
-	itemID, _ := uuid.Parse(dto.ItemID.ItemId)
+	userID, _ := uuid.Parse(req.UserID.Id)
+	itemID, _ := uuid.Parse(req.ItemID.ItemId)
 	_, err := r.pgx.Exec(
 		ctx,
 		rawQuery,

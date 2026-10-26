@@ -385,14 +385,14 @@ func main() {
 	// Setup inventory module
 	{
 		// Setup items
-		itemsRepo := inventory.NewItemsPostgresRepositoryFromPgxPool(postgresPool, config, logger)
+		itemsRepo := inventory.NewItemsPostgresRepositoryFromPgxPool(postgresPool, logger)
 		itemsService := inventory.NewLocalItemsService(itemsRepo, config, logger)
-		itemsController := inventory.NewItemsController(itemsService, config, logger)
+		itemsController := inventory.NewItemsController(itemsService, logger)
 
 		// Setup inventory
-		inventoryRepo := inventory.NewPostgresInventoryRepositoryFromPgxPool(postgresPool, config, logger)
+		inventoryRepo := inventory.NewPostgresInventoryRepositoryFromPgxPool(postgresPool, &config.InventoryConfig, logger)
 		inventoryService := inventory.NewLocalInventoryService(inventoryRepo, config, logger)
-		inventoryController := inventory.NewInventoryController(inventoryService, config, logger)
+		inventoryController := inventory.NewInventoryController(inventoryService, &config.InventoryConfig, logger)
 
 		// Setup routes
 		inventory.SetupRoutes(globalRouter, itemsController, inventoryController)

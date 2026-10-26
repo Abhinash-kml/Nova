@@ -12,11 +12,11 @@ import (
 
 type InventoryController struct {
 	service InventoryService
-	config  *config.Config
+	config  *config.InventoryConfig
 	logger  *zap.Logger
 }
 
-func NewInventoryController(s InventoryService, c *config.Config, l *zap.Logger) *InventoryController {
+func NewInventoryController(s InventoryService, c *config.InventoryConfig, l *zap.Logger) *InventoryController {
 	return &InventoryController{
 		config:  c,
 		service: s,
@@ -36,17 +36,17 @@ func (c *InventoryController) GetInventoryOfUser(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto GetInventoryOfUserDTO
-	err = ctx.ShouldBindQuery(&dto.UserID)
+	var req GetInventoryOfUserRequest
+	err = ctx.ShouldBindQuery(&req.UserID)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	inventory, err := c.service.GetInventoryOfUser(sctx, dto)
+	inventory, err := c.service.GetInventoryOfUser(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to get inventory of user",
-			zap.String("user_id", dto.Id),
+			zap.String("user_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -67,18 +67,18 @@ func (c *InventoryController) DeleteInventoryOfUser(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto DeleteInventoryOfUserDTO
+	var req DeleteInventoryOfUserRequest
 
-	err = ctx.ShouldBindQuery(&dto.UserID)
+	err = ctx.ShouldBindQuery(&req.UserID)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	_, err = c.service.DeleteInventoryOfUser(sctx, dto)
+	_, err = c.service.DeleteInventoryOfUser(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to delete inventory of user",
-			zap.String("user_id", dto.Id),
+			zap.String("user_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -99,25 +99,25 @@ func (c *InventoryController) GetInventoryItemOfUser(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto GetInventoryItemOfUserDTO
+	var req GetInventoryItemOfUserRequest
 
-	err = ctx.ShouldBindUri(&dto.ItemID)
+	err = ctx.ShouldBindUri(&req.ItemID)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	err = ctx.ShouldBindQuery(&dto.UserID)
+	err = ctx.ShouldBindQuery(&req.UserID)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	item, err := c.service.GetInventoryItemOfUser(sctx, dto)
+	item, err := c.service.GetInventoryItemOfUser(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to get inventory item of user",
-			zap.String("user_id", dto.Id),
-			zap.String("item_id", dto.ItemId),
+			zap.String("user_id", req.Id),
+			zap.String("item_id", req.ItemId),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -138,19 +138,19 @@ func (c *InventoryController) AddInventoryItemOfUser(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto AddInventoryItemOfUserDTO
+	var req AddInventoryItemOfUserRequest
 
-	err = ctx.ShouldBindBodyWith(&dto, binding.JSON)
+	err = ctx.ShouldBindBodyWith(&req, binding.JSON)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	item, err := c.service.AddInventoryItemOfUser(sctx, dto)
+	item, err := c.service.AddInventoryItemOfUser(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to add inventory item of user",
-			zap.String("user_id", dto.UserID.String()),
-			zap.String("item_id", dto.ItemID.String()),
+			zap.String("user_id", req.UserID.String()),
+			zap.String("item_id", req.ItemID.String()),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -171,31 +171,31 @@ func (c *InventoryController) UpdateInventoryItemOfUser(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto UpdateInventoryItemOfUserDTO
+	var req UpdateInventoryItemOfUserRequest
 
-	err = ctx.ShouldBindUri(&dto.ItemID)
+	err = ctx.ShouldBindUri(&req.ItemID)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	err = ctx.ShouldBindQuery(&dto.UserID)
+	err = ctx.ShouldBindQuery(&req.UserID)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	err = ctx.ShouldBindBodyWith(&dto.UpdateInventoryData, binding.JSON)
+	err = ctx.ShouldBindBodyWith(&req.UpdateInventoryData, binding.JSON)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	updatedItem, err := c.service.UpdateInventoryItemOfUser(sctx, dto)
+	updatedItem, err := c.service.UpdateInventoryItemOfUser(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to update inventory item of user",
-			zap.String("user_id", dto.Id),
-			zap.String("item_id", dto.ItemId),
+			zap.String("user_id", req.Id),
+			zap.String("item_id", req.ItemId),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -216,25 +216,25 @@ func (c *InventoryController) DeleteInventoryItemOfUser(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto DeleteInventoryItemOfUserDTO
+	var req DeleteInventoryItemOfUserRequest
 
-	err = ctx.ShouldBindUri(&dto.ItemID)
+	err = ctx.ShouldBindUri(&req.ItemID)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	err = ctx.ShouldBindQuery(&dto.UserID)
+	err = ctx.ShouldBindQuery(&req.UserID)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	err = c.service.DeleteInventoryItemOfUser(sctx, dto)
+	err = c.service.DeleteInventoryItemOfUser(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to delete inventory item of user",
-			zap.String("user_id", dto.Id),
-			zap.String("item_id", dto.ItemId),
+			zap.String("user_id", req.Id),
+			zap.String("item_id", req.ItemId),
 			zap.Error(err))
 		ctx.Error(err)
 		return

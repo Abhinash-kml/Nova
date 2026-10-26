@@ -23,20 +23,20 @@ type ItemID struct {
 	ItemId string `uri:"itemid" binding:"required,uuid"`
 }
 
-type GetInventoryOfUserDTO struct {
+type GetInventoryOfUserRequest struct {
 	UserID
 }
 
-type DeleteInventoryOfUserDTO struct {
+type DeleteInventoryOfUserRequest struct {
 	UserID
 }
 
-type GetInventoryItemOfUserDTO struct {
+type GetInventoryItemOfUserRequest struct {
 	UserID
 	ItemID
 }
 
-type AddInventoryItemOfUserDTO struct {
+type AddInventoryItemOfUserRequest struct {
 	UserID     uuid.UUID `json:"user_id"`
 	ItemID     uuid.UUID `json:"item_id"`
 	Quantity   int       `json:"quantity"`
@@ -49,13 +49,13 @@ type UpdateInventoryData struct {
 	IsEquipped *bool   `json:"is_equipped"`
 }
 
-type UpdateInventoryItemOfUserDTO struct {
+type UpdateInventoryItemOfUserRequest struct {
 	UserID
 	ItemID
 	UpdateInventoryData
 }
 
-type DeleteInventoryItemOfUserDTO struct {
+type DeleteInventoryItemOfUserRequest struct {
 	UserID
 	ItemID
 }

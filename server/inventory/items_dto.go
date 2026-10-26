@@ -8,16 +8,16 @@ type ItemId struct {
 	Id string `uri:"id" binding:"required,uuid"`
 }
 
-type GetItemDTO struct {
+type GetItemRequest struct {
 	ItemId
 }
 
-type GetAllDTO struct {
+type GetAllItemRequest struct {
 	Cursor int `form:"cursor,default=0" binding:"gte=0"`
 	Limit  int `form:"limit,default=10" binding:"gte=10,lte=20" default:"10"`
 }
 
-type CreateItemDTO struct {
+type CreateItemRequest struct {
 	Name        string          `json:"name" binding:"required"`
 	Description *string         `json:"description"`
 	Rarity      int             `json:"rarity"`
@@ -33,7 +33,7 @@ type ItemUpdateData struct {
 	Meta        json.RawMessage `json:"meta"`
 }
 
-type UpdateItemDTO struct {
+type UpdateItemRequest struct {
 	ItemId
 	ItemUpdateData
 }
@@ -46,11 +46,11 @@ type ReplacementData struct {
 	Meta        json.RawMessage `json:"meta"`
 }
 
-type ReplaceItemDTO struct {
+type ReplaceItemRequest struct {
 	ItemId
 	ReplacementData
 }
 
-type DeleteItemDTO struct {
+type DeleteItemRequest struct {
 	ItemId
 }

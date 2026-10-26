@@ -3,21 +3,22 @@ package config
 import "time"
 
 type Config struct {
-	AppName        string              `mapstructure:"appname"`
-	Logging        LoggingConfig       `mapstructure:"logging"`
-	HttpServer     HttpServerConfig    `mapstructure:"http"`
-	Observability  ObservabilityConfig `mapstructure:"observability"`
-	Realtime       RealtimeHubConfig   `mapstructure:"realtime-hub"`
-	Websocket      WebsocketConfig     `mapstructure:"websocket"`
-	Redis          RedisConfig         `mapstructure:"redis"`
-	Postgres       PostgresConfig      `mapstructure:"postgres"`
-	AuthToken      AuthTokenConfig     `mapstructure:"authentication"`
-	UsersConfig    UsersConfig         `mapstructure:"users"`
-	PostsConfig    PostsConfig         `mapstructure:"posts"`
-	CommentsConfig CommentsConfig      `mapstructure:"comments"`
-	ClansConfig    ClansConfig         `mapstructure:"clans"`
-	ChannelsConfig ChannelsConfig      `mapstructure:"channels"`
-	StatsConfig    StatsConfig         `mapstructure:"stats"`
+	AppName         string              `mapstructure:"appname"`
+	Logging         LoggingConfig       `mapstructure:"logging"`
+	HttpServer      HttpServerConfig    `mapstructure:"http"`
+	Observability   ObservabilityConfig `mapstructure:"observability"`
+	Realtime        RealtimeHubConfig   `mapstructure:"realtime-hub"`
+	Websocket       WebsocketConfig     `mapstructure:"websocket"`
+	Redis           RedisConfig         `mapstructure:"redis"`
+	Postgres        PostgresConfig      `mapstructure:"postgres"`
+	AuthToken       AuthTokenConfig     `mapstructure:"authentication"`
+	UsersConfig     UsersConfig         `mapstructure:"users"`
+	PostsConfig     PostsConfig         `mapstructure:"posts"`
+	CommentsConfig  CommentsConfig      `mapstructure:"comments"`
+	ClansConfig     ClansConfig         `mapstructure:"clans"`
+	ChannelsConfig  ChannelsConfig      `mapstructure:"channels"`
+	StatsConfig     StatsConfig         `mapstructure:"stats"`
+	InventoryConfig InventoryConfig     `mapstructure:"inventory"`
 }
 
 type LoggingConfig struct {
@@ -132,4 +133,10 @@ type StatsConfig struct {
 	SeedFile            string        `mapstructure:"seed"`
 	ProgressionSeedFile string        `mapstructure:"progression-seed"`
 	CacheDuration       time.Duration `mapstructure:"cacheduration"`
+}
+
+type InventoryConfig struct {
+	KeyPrefix     string        `mapstructure:"keyPrefix"`
+	SeedFile      string        `mapstructure:"seed"`
+	CacheDuration time.Duration `mapstructure:"cacheduration"`
 }

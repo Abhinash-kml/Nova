@@ -9,12 +9,12 @@ import (
 )
 
 type InventoryService interface {
-	GetInventoryOfUser(ctx context.Context, dto GetInventoryOfUserDTO) ([]PlayerInventory, error)
-	DeleteInventoryOfUser(ctx context.Context, dto DeleteInventoryOfUserDTO) (UserID, error)
-	GetInventoryItemOfUser(ctx context.Context, dto GetInventoryItemOfUserDTO) (PlayerInventory, error)
-	AddInventoryItemOfUser(ctx context.Context, dto AddInventoryItemOfUserDTO) (InventoryItem, error)
-	UpdateInventoryItemOfUser(ctx context.Context, dto UpdateInventoryItemOfUserDTO) (PlayerInventory, error)
-	DeleteInventoryItemOfUser(ctx context.Context, dto DeleteInventoryItemOfUserDTO) error
+	GetInventoryOfUser(ctx context.Context, req GetInventoryOfUserRequest) ([]PlayerInventory, error)
+	DeleteInventoryOfUser(ctx context.Context, req DeleteInventoryOfUserRequest) (UserID, error)
+	GetInventoryItemOfUser(ctx context.Context, req GetInventoryItemOfUserRequest) (PlayerInventory, error)
+	AddInventoryItemOfUser(ctx context.Context, req AddInventoryItemOfUserRequest) (InventoryItem, error)
+	UpdateInventoryItemOfUser(ctx context.Context, req UpdateInventoryItemOfUserRequest) (PlayerInventory, error)
+	DeleteInventoryItemOfUser(ctx context.Context, req DeleteInventoryItemOfUserRequest) error
 }
 
 type LocalInventoryService struct {
@@ -31,8 +31,8 @@ func NewLocalInventoryService(r InventoryRepository, c *config.Config, l *zap.Lo
 	}
 }
 
-func (s *LocalInventoryService) GetInventoryOfUser(ctx context.Context, dto GetInventoryOfUserDTO) ([]PlayerInventory, error) {
-	items, err := s.repository.GetInventoryOfUser(ctx, dto)
+func (s *LocalInventoryService) GetInventoryOfUser(ctx context.Context, req GetInventoryOfUserRequest) ([]PlayerInventory, error) {
+	items, err := s.repository.GetInventoryOfUser(ctx, req)
 	if err != nil {
 		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to get inventory of user")
 	}
@@ -40,8 +40,8 @@ func (s *LocalInventoryService) GetInventoryOfUser(ctx context.Context, dto GetI
 	return items, nil
 }
 
-func (s *LocalInventoryService) DeleteInventoryOfUser(ctx context.Context, dto DeleteInventoryOfUserDTO) (UserID, error) {
-	userID, err := s.repository.DeleteInventoryOfUser(ctx, dto)
+func (s *LocalInventoryService) DeleteInventoryOfUser(ctx context.Context, req DeleteInventoryOfUserRequest) (UserID, error) {
+	userID, err := s.repository.DeleteInventoryOfUser(ctx, req)
 	if err != nil {
 		return UserID{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to delete inventory of user")
 	}
@@ -49,8 +49,8 @@ func (s *LocalInventoryService) DeleteInventoryOfUser(ctx context.Context, dto D
 	return userID, nil
 }
 
-func (s *LocalInventoryService) GetInventoryItemOfUser(ctx context.Context, dto GetInventoryItemOfUserDTO) (PlayerInventory, error) {
-	inventory, err := s.repository.GetInventoryItemOfUser(ctx, dto)
+func (s *LocalInventoryService) GetInventoryItemOfUser(ctx context.Context, req GetInventoryItemOfUserRequest) (PlayerInventory, error) {
+	inventory, err := s.repository.GetInventoryItemOfUser(ctx, req)
 	if err != nil {
 		return PlayerInventory{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to get inventory item of user")
 	}
@@ -58,8 +58,8 @@ func (s *LocalInventoryService) GetInventoryItemOfUser(ctx context.Context, dto 
 	return inventory, nil
 }
 
-func (s *LocalInventoryService) AddInventoryItemOfUser(ctx context.Context, dto AddInventoryItemOfUserDTO) (InventoryItem, error) {
-	inventory, err := s.repository.AddInventoryItemOfUser(ctx, dto)
+func (s *LocalInventoryService) AddInventoryItemOfUser(ctx context.Context, req AddInventoryItemOfUserRequest) (InventoryItem, error) {
+	inventory, err := s.repository.AddInventoryItemOfUser(ctx, req)
 	if err != nil {
 		return InventoryItem{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to add inventory item of user")
 	}
@@ -67,8 +67,8 @@ func (s *LocalInventoryService) AddInventoryItemOfUser(ctx context.Context, dto 
 	return inventory, nil
 }
 
-func (s *LocalInventoryService) UpdateInventoryItemOfUser(ctx context.Context, dto UpdateInventoryItemOfUserDTO) (PlayerInventory, error) {
-	inventory, err := s.repository.UpdateInventoryItemOfUser(ctx, dto)
+func (s *LocalInventoryService) UpdateInventoryItemOfUser(ctx context.Context, req UpdateInventoryItemOfUserRequest) (PlayerInventory, error) {
+	inventory, err := s.repository.UpdateInventoryItemOfUser(ctx, req)
 	if err != nil {
 		return PlayerInventory{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to update inventory item of user")
 	}
@@ -76,9 +76,9 @@ func (s *LocalInventoryService) UpdateInventoryItemOfUser(ctx context.Context, d
 	return inventory, nil
 }
 
-func (s *LocalInventoryService) DeleteInventoryItemOfUser(ctx context.Context, dto DeleteInventoryItemOfUserDTO) error {
+func (s *LocalInventoryService) DeleteInventoryItemOfUser(ctx context.Context, req DeleteInventoryItemOfUserRequest) error {
 	return common.TranslatePostgresError(
-		s.repository.DeleteInventoryItemOfUser(ctx, dto),
+		s.repository.DeleteInventoryItemOfUser(ctx, req),
 		s.logger,
 	).WithMessage("Failed to delete inventory item of user")
 }

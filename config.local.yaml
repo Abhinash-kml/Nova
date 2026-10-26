@@ -87,3 +87,8 @@ stats:
   seed: "./seeds/stats.json"
   progression-seed: "./seeds/stats-progression.json"
   cacheduration: 30s
+
+inventory:
+  keyPrefix: "inventory:"
+  seed: "./seeds/inventory.json"
+  cacheduration: 30s
