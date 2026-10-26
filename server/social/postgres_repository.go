@@ -30,7 +30,7 @@ func NewPostgreRepository(pool *pgxpool.Pool, c *config.Config, l *zap.Logger) *
 	}
 }
 
-func (r *PostgresRepository) AddFriend(ctx context.Context, dto AddFriendDTO) error {
+func (r *PostgresRepository) AddFriend(ctx context.Context, req AddFriend_Request) error {
 	rawQuery := `
 		INSERT INTO 
 			friendships (
@@ -46,8 +46,8 @@ func (r *PostgresRepository) AddFriend(ctx context.Context, dto AddFriendDTO) er
 			$1::uuid
 		);`
 
-	userID, _ := uuid.Parse(dto.UserID)
-	targetID, _ := uuid.Parse(dto.TargetID)
+	userID, _ := uuid.Parse(req.UserID)
+	targetID, _ := uuid.Parse(req.TargetID)
 
 	_, err := r.pgx.Exec(ctx, rawQuery, userID, targetID)
 	if err != nil {
@@ -57,7 +57,7 @@ func (r *PostgresRepository) AddFriend(ctx context.Context, dto AddFriendDTO) er
 	return nil
 }
 
-func (r *PostgresRepository) RemoveFriend(ctx context.Context, dto RemoveFriendDTO) error {
+func (r *PostgresRepository) RemoveFriend(ctx context.Context, req RemoveFriend_Request) error {
 	rawQuery := `
 		DELETE FROM 
 			friendships
@@ -69,8 +69,8 @@ func (r *PostgresRepository) RemoveFriend(ctx context.Context, dto RemoveFriendD
 			status = 'accepted';
 	`
 
-	userID, _ := uuid.Parse(dto.UserID)
-	targetID, _ := uuid.Parse(dto.TargetID)
+	userID, _ := uuid.Parse(req.UserID)
+	targetID, _ := uuid.Parse(req.TargetID)
 
 	result, err := r.pgx.Exec(ctx, rawQuery, userID, targetID)
 	if err != nil {
@@ -83,7 +83,7 @@ func (r *PostgresRepository) RemoveFriend(ctx context.Context, dto RemoveFriendD
 	return nil
 }
 
-func (r *PostgresRepository) AcceptFriendRequest(ctx context.Context, dto AcceptFriendRequestDTO) error {
+func (r *PostgresRepository) AcceptFriendRequest(ctx context.Context, req AcceptFriendRequest_Request) error {
 	rawQuery := `
 		UPDATE
 			friendships
@@ -98,8 +98,8 @@ func (r *PostgresRepository) AcceptFriendRequest(ctx context.Context, dto Accept
 			status = 'pending';
 	`
 
-	userID, _ := uuid.Parse(dto.UserID)
-	targetID, _ := uuid.Parse(dto.TargetID)
+	userID, _ := uuid.Parse(req.UserID)
+	targetID, _ := uuid.Parse(req.TargetID)
 
 	result, err := r.pgx.Exec(ctx, rawQuery, targetID, userID)
 	if err != nil {
@@ -112,7 +112,7 @@ func (r *PostgresRepository) AcceptFriendRequest(ctx context.Context, dto Accept
 	return nil
 }
 
-func (r *PostgresRepository) RejectFriendRequest(ctx context.Context, dto RejectFriendRequestDTO) error {
+func (r *PostgresRepository) RejectFriendRequest(ctx context.Context, req RejectFriendRequest_Request) error {
 	rawQuery := `
 		DELETE FROM 
 			friendships
@@ -124,8 +124,8 @@ func (r *PostgresRepository) RejectFriendRequest(ctx context.Context, dto Reject
 			status = 'pending';
 	`
 
-	userID, _ := uuid.Parse(dto.UserID)
-	targetID, _ := uuid.Parse(dto.TargetID)
+	userID, _ := uuid.Parse(req.UserID)
+	targetID, _ := uuid.Parse(req.TargetID)
 
 	result, err := r.pgx.Exec(ctx, rawQuery, targetID, userID)
 	if err != nil {
@@ -138,7 +138,7 @@ func (r *PostgresRepository) RejectFriendRequest(ctx context.Context, dto Reject
 	return nil
 }
 
-func (r *PostgresRepository) GetAllIncomingFriendRequests(ctx context.Context, dto GetIncomingRequestsOfUserDTO) ([]RequestDTO, error) {
+func (r *PostgresRepository) GetAllIncomingFriendRequests(ctx context.Context, req GetIncomingRequestsOfUser_Request) ([]FriendRequest, error) {
 	rawQuery := `
 		SELECT
 			action_user_id,
@@ -155,7 +155,7 @@ func (r *PostgresRepository) GetAllIncomingFriendRequests(ctx context.Context, d
 			action_user_id <> $1::uuid;
 	`
 
-	userID, _ := uuid.Parse(dto.Id)
+	userID, _ := uuid.Parse(req.Id)
 
 	rows, err := r.pgx.Query(ctx, rawQuery, userID)
 	if err != nil {
@@ -163,10 +163,10 @@ func (r *PostgresRepository) GetAllIncomingFriendRequests(ctx context.Context, d
 	}
 	defer rows.Close()
 
-	var requests []RequestDTO
+	var requests []FriendRequest
 
 	for rows.Next() {
-		var result RequestDTO
+		var result FriendRequest
 		if err := rows.Scan(
 			&result.UserID,
 			&result.InitiatedAt,
@@ -184,7 +184,7 @@ func (r *PostgresRepository) GetAllIncomingFriendRequests(ctx context.Context, d
 	return requests, nil
 }
 
-func (r *PostgresRepository) GetAllOutgoingFriendRequests(ctx context.Context, dto GetOutgoingRequestsOfUserDTO) ([]RequestDTO, error) {
+func (r *PostgresRepository) GetAllOutgoingFriendRequests(ctx context.Context, req GetOutgoingRequestsOfUser_Request) ([]FriendRequest, error) {
 	rawQuery := `
 		SELECT
 			CASE
@@ -202,7 +202,7 @@ func (r *PostgresRepository) GetAllOutgoingFriendRequests(ctx context.Context, d
 			status = 'pending';
 	`
 
-	userID, _ := uuid.Parse(dto.Id)
+	userID, _ := uuid.Parse(req.Id)
 
 	rows, err := r.pgx.Query(ctx, rawQuery, userID)
 	if err != nil {
@@ -210,10 +210,10 @@ func (r *PostgresRepository) GetAllOutgoingFriendRequests(ctx context.Context, d
 	}
 	defer rows.Close()
 
-	var requests []RequestDTO
+	var requests []FriendRequest
 
 	for rows.Next() {
-		var result RequestDTO
+		var result FriendRequest
 		if err := rows.Scan(
 			&result.UserID,
 			&result.InitiatedAt,
@@ -231,7 +231,7 @@ func (r *PostgresRepository) GetAllOutgoingFriendRequests(ctx context.Context, d
 	return requests, nil
 }
 
-func (r *PostgresRepository) BlockUser(ctx context.Context, dto BlockUserDTO) error {
+func (r *PostgresRepository) BlockUser(ctx context.Context, req BlockUser_Request) error {
 	rawQuery := `
 		INSERT INTO
 			friendships(
@@ -252,8 +252,8 @@ func (r *PostgresRepository) BlockUser(ctx context.Context, dto BlockUserDTO) er
 			action_user_id = $1::uuid;
 	`
 
-	userID, _ := uuid.Parse(dto.UserID)
-	targetID, _ := uuid.Parse(dto.TargetID)
+	userID, _ := uuid.Parse(req.UserID)
+	targetID, _ := uuid.Parse(req.TargetID)
 
 	result, err := r.pgx.Exec(ctx, rawQuery, userID, targetID)
 	if err != nil {
@@ -266,7 +266,7 @@ func (r *PostgresRepository) BlockUser(ctx context.Context, dto BlockUserDTO) er
 	return nil
 }
 
-func (r *PostgresRepository) UnblockUser(ctx context.Context, dto UnblockUserDTO) error {
+func (r *PostgresRepository) UnblockUser(ctx context.Context, req UnblockUser_Request) error {
 	rawQuery := `
 		DELETE FROM 
 			friendships
@@ -280,8 +280,8 @@ func (r *PostgresRepository) UnblockUser(ctx context.Context, dto UnblockUserDTO
 			status = 'blocked';
 	`
 
-	userID, _ := uuid.Parse(dto.UserID)
-	targetID, _ := uuid.Parse(dto.TargetID)
+	userID, _ := uuid.Parse(req.UserID)
+	targetID, _ := uuid.Parse(req.TargetID)
 
 	result, err := r.pgx.Exec(ctx, rawQuery, userID, targetID)
 	if err != nil {
@@ -294,7 +294,7 @@ func (r *PostgresRepository) UnblockUser(ctx context.Context, dto UnblockUserDTO
 	return nil
 }
 
-func (r *PostgresRepository) GetAllFriends(ctx context.Context, dto GetAllFriendsDTO) ([]uuid.UUID, error) {
+func (r *PostgresRepository) GetAllFriends(ctx context.Context, req GetAllFriends_Request) ([]uuid.UUID, error) {
 	rawQuery := `
 		SELECT
 			CASE
@@ -309,7 +309,7 @@ func (r *PostgresRepository) GetAllFriends(ctx context.Context, dto GetAllFriend
 			status = 'accepted';
 	`
 
-	userID, _ := uuid.Parse(dto.Id)
+	userID, _ := uuid.Parse(req.Id)
 
 	rows, err := r.pgx.Query(ctx, rawQuery, userID)
 	if err != nil {
@@ -335,7 +335,7 @@ func (r *PostgresRepository) GetAllFriends(ctx context.Context, dto GetAllFriend
 	return friendIDs, nil
 }
 
-func (r *PostgresRepository) GetAllBlocked(ctx context.Context, dto GetAllBlockedDTO) ([]uuid.UUID, error) {
+func (r *PostgresRepository) GetAllBlocked(ctx context.Context, req GetAllBlocked_Request) ([]uuid.UUID, error) {
 	rawQuery := `
 		SELECT
 			CASE
@@ -350,7 +350,7 @@ func (r *PostgresRepository) GetAllBlocked(ctx context.Context, dto GetAllBlocke
 			status = 'blocked';
 	`
 
-	userID, _ := uuid.Parse(dto.Id)
+	userID, _ := uuid.Parse(req.Id)
 
 	rows, err := r.pgx.Query(ctx, rawQuery, userID)
 	if err != nil {
@@ -376,7 +376,7 @@ func (r *PostgresRepository) GetAllBlocked(ctx context.Context, dto GetAllBlocke
 	return blockedIDs, nil
 }
 
-func (r *PostgresRepository) GetMutualFriends(ctx context.Context, dto GetMutualFriendsDTO) ([]uuid.UUID, error) {
+func (r *PostgresRepository) GetMutualFriends(ctx context.Context, req GetMutualFriends_Request) ([]uuid.UUID, error) {
 	rawQuery := `
 		SELECT 
     		u1.friend_id AS mutual_friend_id
@@ -407,8 +407,8 @@ func (r *PostgresRepository) GetMutualFriends(ctx context.Context, dto GetMutual
 		) u2 ON u1.friend_id = u2.friend_id;
 	`
 
-	userID, _ := uuid.Parse(dto.UserOneID)
-	friendID, _ := uuid.Parse(dto.UserTwoID)
+	userID, _ := uuid.Parse(req.UserOneID)
+	friendID, _ := uuid.Parse(req.UserTwoID)
 
 	rows, err := r.pgx.Query(ctx, rawQuery, userID, friendID)
 	if err != nil {
@@ -534,7 +534,7 @@ func (r *PostgresRepository) CheckIfConversationExists(ctx context.Context, conv
 	return exists, nil
 }
 
-func (r *PostgresRepository) CreateConversation(ctx context.Context, dto CreateConversationDTO) (ConversationDetailsDTO, error) {
+func (r *PostgresRepository) CreateConversation(ctx context.Context, req CreateConversation_Request) (ConversationDetails_Response, error) {
 	query := `
 		INSERT INTO conversations(
 			id,
@@ -558,24 +558,24 @@ func (r *PostgresRepository) CreateConversation(ctx context.Context, dto CreateC
 		ctx,
 		query,
 		id,
-		dto.Type,
-		dto.Name,
+		req.Type,
+		req.Name,
 	)
 
-	var cd ConversationDetailsDTO
+	var cd ConversationDetails_Response
 	err := row.Scan(
 		&cd.ID,
 		&cd.Type,
 		&cd.Name,
 	)
 	if err != nil {
-		return ConversationDetailsDTO{}, fmt.Errorf("scanning row: %w", err)
+		return ConversationDetails_Response{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return cd, nil
 }
 
-func (r *PostgresRepository) AddConversationParticipant(ctx context.Context, dto AddConversationParticipantDTO) error {
+func (r *PostgresRepository) AddConversationParticipant(ctx context.Context, req AddConversationParticipant_Request) error {
 	query := `
 		INSERT INTO conversation_participant(
 			conversation_id,
@@ -593,8 +593,8 @@ func (r *PostgresRepository) AddConversationParticipant(ctx context.Context, dto
 	_, err := r.pgx.Exec(
 		ctx,
 		query,
-		dto.ConversationID,
-		dto.UserID,
+		req.ConversationID,
+		req.UserID,
 		now,
 	)
 	if err != nil {
@@ -604,7 +604,7 @@ func (r *PostgresRepository) AddConversationParticipant(ctx context.Context, dto
 	return nil
 }
 
-func (r *PostgresRepository) RemoveConversationParticipant(ctx context.Context, dto RemoveConversationParticipantDTO) error {
+func (r *PostgresRepository) RemoveConversationParticipant(ctx context.Context, req RemoveConversationParticipant_Request) error {
 	query := `
 		DELETE FROM 
 			conversation_participants
@@ -617,8 +617,8 @@ func (r *PostgresRepository) RemoveConversationParticipant(ctx context.Context, 
 	_, err := r.pgx.Exec(
 		ctx,
 		query,
-		dto.ConversationID,
-		dto.UserID,
+		req.ConversationID,
+		req.UserID,
 	)
 	if err != nil {
 		return fmt.Errorf("removing participants: %w", err)

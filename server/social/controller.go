@@ -24,7 +24,7 @@ func NewController(service Service, c *config.Config, l *zap.Logger) *Controller
 }
 
 func (c *Controller) AddFriend(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "social.controller.addfriend")
+	sctx, span := tracer.Start(ctx.Request.Context(), "social.controller.AddFriend")
 	var err error
 	defer func() {
 		if err != nil {
@@ -34,19 +34,19 @@ func (c *Controller) AddFriend(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto AddFriendDTO
+	var req AddFriend_Request
 
-	err = ctx.ShouldBindBodyWithJSON(&dto)
+	err = ctx.ShouldBindBodyWithJSON(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	err = c.service.AddFriend(sctx, dto)
+	err = c.service.AddFriend(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to add friend",
-			zap.String("user_id", dto.UserID),
-			zap.String("target_id", dto.TargetID),
+			zap.String("user_id", req.UserID),
+			zap.String("target_id", req.TargetID),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -56,7 +56,7 @@ func (c *Controller) AddFriend(ctx *gin.Context) {
 }
 
 func (c *Controller) RemoveFriend(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "social.controller.removefriend")
+	sctx, span := tracer.Start(ctx.Request.Context(), "social.controller.RemoveFriend")
 	var err error
 	defer func() {
 		if err != nil {
@@ -66,19 +66,19 @@ func (c *Controller) RemoveFriend(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto RemoveFriendDTO
+	var req RemoveFriend_Request
 
-	err = ctx.ShouldBindBodyWithJSON(&dto)
+	err = ctx.ShouldBindBodyWithJSON(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	err = c.service.RemoveFriend(sctx, dto)
+	err = c.service.RemoveFriend(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to remove friend",
-			zap.String("user_id", dto.UserID),
-			zap.String("target_id", dto.TargetID),
+			zap.String("user_id", req.UserID),
+			zap.String("target_id", req.TargetID),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -88,7 +88,7 @@ func (c *Controller) RemoveFriend(ctx *gin.Context) {
 }
 
 func (c *Controller) AcceptFriendRequest(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "social.controller.acceptfriendrequest")
+	sctx, span := tracer.Start(ctx.Request.Context(), "social.controller.AcceptFriendRequest")
 	var err error
 	defer func() {
 		if err != nil {
@@ -98,19 +98,19 @@ func (c *Controller) AcceptFriendRequest(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto AcceptFriendRequestDTO
+	var req AcceptFriendRequest_Request
 
-	err = ctx.ShouldBindBodyWithJSON(&dto)
+	err = ctx.ShouldBindBodyWithJSON(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	err = c.service.AcceptFriendRequest(sctx, dto)
+	err = c.service.AcceptFriendRequest(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to accept friend request",
-			zap.String("user_id", dto.UserID),
-			zap.String("target_id", dto.TargetID),
+			zap.String("user_id", req.UserID),
+			zap.String("target_id", req.TargetID),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -120,7 +120,7 @@ func (c *Controller) AcceptFriendRequest(ctx *gin.Context) {
 }
 
 func (c *Controller) RejectFriendRequest(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "social.controller.rejectfriendrequest")
+	sctx, span := tracer.Start(ctx.Request.Context(), "social.controller.RejectFriendRequest")
 	var err error
 	defer func() {
 		if err != nil {
@@ -130,19 +130,19 @@ func (c *Controller) RejectFriendRequest(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto RejectFriendRequestDTO
+	var req RejectFriendRequest_Request
 
-	err = ctx.ShouldBindBodyWithJSON(&dto)
+	err = ctx.ShouldBindBodyWithJSON(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	err = c.service.RejectFriendRequest(sctx, dto)
+	err = c.service.RejectFriendRequest(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to reject friend request",
-			zap.String("user_id", dto.UserID),
-			zap.String("target_id", dto.TargetID),
+			zap.String("user_id", req.UserID),
+			zap.String("target_id", req.TargetID),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -152,7 +152,7 @@ func (c *Controller) RejectFriendRequest(ctx *gin.Context) {
 }
 
 func (c *Controller) GetAllIncomingFriendRequests(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "social.controller.getallincomingfriendrequests")
+	sctx, span := tracer.Start(ctx.Request.Context(), "social.controller.GetAllIncomingFriendRequests")
 	var err error
 	defer func() {
 		if err != nil {
@@ -162,18 +162,18 @@ func (c *Controller) GetAllIncomingFriendRequests(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto GetIncomingRequestsOfUserDTO
+	var req GetIncomingRequestsOfUser_Request
 
-	err = ctx.ShouldBindQuery(&dto.UserID)
+	err = ctx.ShouldBindQuery(&req.UserID)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	incomingRequestIDs, err := c.service.GetAllIncomingFriendRequests(sctx, dto)
+	incomingRequestIDs, err := c.service.GetAllIncomingFriendRequests(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to get all friend requests",
-			zap.String("user_id", dto.Id),
+			zap.String("user_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -183,7 +183,7 @@ func (c *Controller) GetAllIncomingFriendRequests(ctx *gin.Context) {
 }
 
 func (c *Controller) GetAllOutgoingFriendRequests(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "social.controller.getalloutgoingfriendrequests")
+	sctx, span := tracer.Start(ctx.Request.Context(), "social.controller.GetAllOutgoingFriendRequests")
 	var err error
 	defer func() {
 		if err != nil {
@@ -193,18 +193,18 @@ func (c *Controller) GetAllOutgoingFriendRequests(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto GetOutgoingRequestsOfUserDTO
+	var req GetOutgoingRequestsOfUser_Request
 
-	err = ctx.ShouldBindQuery(&dto.UserID)
+	err = ctx.ShouldBindQuery(&req.UserID)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	outgoingRequestIDs, err := c.service.GetAllOutgoingFriendRequests(sctx, dto)
+	outgoingRequestIDs, err := c.service.GetAllOutgoingFriendRequests(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to get all outgoing friend requests",
-			zap.String("user_id", dto.Id),
+			zap.String("user_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -214,7 +214,7 @@ func (c *Controller) GetAllOutgoingFriendRequests(ctx *gin.Context) {
 }
 
 func (c *Controller) BlockUser(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "social.controller.blockuser")
+	sctx, span := tracer.Start(ctx.Request.Context(), "social.controller.BlockUser")
 	var err error
 	defer func() {
 		if err != nil {
@@ -224,19 +224,19 @@ func (c *Controller) BlockUser(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto BlockUserDTO
+	var req BlockUser_Request
 
-	err = ctx.ShouldBindBodyWithJSON(&dto)
+	err = ctx.ShouldBindBodyWithJSON(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	err = c.service.BlockUser(sctx, dto)
+	err = c.service.BlockUser(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to block user",
-			zap.String("user_id", dto.UserID),
-			zap.String("target_id", dto.TargetID),
+			zap.String("user_id", req.UserID),
+			zap.String("target_id", req.TargetID),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -246,7 +246,7 @@ func (c *Controller) BlockUser(ctx *gin.Context) {
 }
 
 func (c *Controller) UnblockUser(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "social.controller.unblockuser")
+	sctx, span := tracer.Start(ctx.Request.Context(), "social.controller.UnblockUser")
 	var err error
 	defer func() {
 		if err != nil {
@@ -256,19 +256,19 @@ func (c *Controller) UnblockUser(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto UnblockUserDTO
+	var req UnblockUser_Request
 
-	err = ctx.ShouldBindBodyWithJSON(&dto)
+	err = ctx.ShouldBindBodyWithJSON(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	err = c.service.UnblockUser(sctx, dto)
+	err = c.service.UnblockUser(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to unblock user",
-			zap.String("user_id", dto.UserID),
-			zap.String("target_id", dto.TargetID),
+			zap.String("user_id", req.UserID),
+			zap.String("target_id", req.TargetID),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -278,7 +278,7 @@ func (c *Controller) UnblockUser(ctx *gin.Context) {
 }
 
 func (c *Controller) GetAllFriends(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "social.controller.getallfriends")
+	sctx, span := tracer.Start(ctx.Request.Context(), "social.controller.GetAllFriends")
 	var err error
 	defer func() {
 		if err != nil {
@@ -288,18 +288,18 @@ func (c *Controller) GetAllFriends(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto GetAllFriendsDTO
+	var req GetAllFriends_Request
 
-	err = ctx.ShouldBindQuery(&dto.UserID)
+	err = ctx.ShouldBindQuery(&req.UserID)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	friendIDs, err := c.service.GetAllFriends(sctx, dto)
+	friendIDs, err := c.service.GetAllFriends(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to get all friends",
-			zap.String("user_id", dto.Id),
+			zap.String("user_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -309,7 +309,7 @@ func (c *Controller) GetAllFriends(ctx *gin.Context) {
 }
 
 func (c *Controller) GetAllBlocked(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "social.controller.getallblocked")
+	sctx, span := tracer.Start(ctx.Request.Context(), "social.controller.GetAllBlocked")
 	var err error
 	defer func() {
 		if err != nil {
@@ -319,18 +319,18 @@ func (c *Controller) GetAllBlocked(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto GetAllBlockedDTO
+	var req GetAllBlocked_Request
 
-	err = ctx.ShouldBindQuery(&dto.UserID)
+	err = ctx.ShouldBindQuery(&req.UserID)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	blockedIDs, err := c.service.GetAllBlocked(sctx, dto)
+	blockedIDs, err := c.service.GetAllBlocked(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to get all blocked users",
-			zap.String("user_id", dto.Id),
+			zap.String("user_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -340,7 +340,7 @@ func (c *Controller) GetAllBlocked(ctx *gin.Context) {
 }
 
 func (c *Controller) GetMutualFriends(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "social.controller.getmutualfriends")
+	sctx, span := tracer.Start(ctx.Request.Context(), "social.controller.GetMutualFriends")
 	var err error
 	defer func() {
 		if err != nil {
@@ -350,19 +350,19 @@ func (c *Controller) GetMutualFriends(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto GetMutualFriendsDTO
+	var req GetMutualFriends_Request
 
-	err = ctx.ShouldBindBodyWithJSON(&dto)
+	err = ctx.ShouldBindBodyWithJSON(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	mutualFriendIDs, err := c.service.GetMutualFriends(sctx, dto)
+	mutualFriendIDs, err := c.service.GetMutualFriends(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to get mutual friends",
-			zap.String("user_id", dto.UserOneID),
-			zap.String("target_id", dto.UserTwoID),
+			zap.String("user_id", req.UserOneID),
+			zap.String("target_id", req.UserTwoID),
 			zap.Error(err))
 		ctx.Error(err)
 		return

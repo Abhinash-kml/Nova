@@ -10,63 +10,63 @@ type UserID struct {
 	Id string `form:"userid" binding:"required,uuid"`
 }
 
-type AddFriendDTO struct {
+type AddFriend_Request struct {
 	UserID   string `json:"user_id"`
 	TargetID string `json:"target_id"`
 }
 
-type RemoveFriendDTO struct {
+type RemoveFriend_Request struct {
 	UserID   string `json:"user_id"`
 	TargetID string `json:"target_id"`
 }
 
-type AcceptFriendRequestDTO struct {
+type AcceptFriendRequest_Request struct {
 	UserID   string `json:"user_id"`
 	TargetID string `json:"target_id"`
 }
 
-type RejectFriendRequestDTO struct {
+type RejectFriendRequest_Request struct {
 	UserID   string `json:"user_id"`
 	TargetID string `json:"target_id"`
 }
 
-type GetIncomingRequestsOfUserDTO struct {
+type GetIncomingRequestsOfUser_Request struct {
 	UserID
 }
 
-type GetOutgoingRequestsOfUserDTO struct {
+type GetOutgoingRequestsOfUser_Request struct {
 	UserID
 }
 
-type BlockUserDTO struct {
+type BlockUser_Request struct {
 	UserID   string `json:"user_id"`
 	TargetID string `json:"target_id"`
 }
 
-type UnblockUserDTO struct {
+type UnblockUser_Request struct {
 	UserID   string `json:"user_id"`
 	TargetID string `json:"target_id"`
 }
 
-type GetAllFriendsDTO struct {
+type GetAllFriends_Request struct {
 	UserID
 }
 
-type GetAllBlockedDTO struct {
+type GetAllBlocked_Request struct {
 	UserID
 }
 
-type GetMutualFriendsDTO struct {
+type GetMutualFriends_Request struct {
 	UserOneID string `json:"user_one_id"`
 	UserTwoID string `json:"user_two_id"`
 }
 
-type RequestDTO struct {
+type FriendRequest struct {
 	UserID      string    `json:"user_id"`
 	InitiatedAt time.Time `json:"initiated_at"`
 }
 
-type ConversationDetailsDTO struct {
+type ConversationDetails_Response struct {
 	ID           uuid.UUID   `json:"conversation_id"`
 	Type         string      `json:"type"`
 	Name         string      `json:"name"`
@@ -74,17 +74,17 @@ type ConversationDetailsDTO struct {
 	Participants []uuid.UUID `json:"participants"`
 }
 
-type CreateConversationDTO struct {
+type CreateConversation_Request struct {
 	Type string `json:"type"`
 	Name string `json:"name"`
 }
 
-type AddConversationParticipantDTO struct {
+type AddConversationParticipant_Request struct {
 	ConversationID uuid.UUID   `json:"conversation_id"`
 	UserID         []uuid.UUID `json:"user_id"`
 }
 
-type RemoveConversationParticipantDTO struct {
+type RemoveConversationParticipant_Request struct {
 	ConversationID uuid.UUID   `json:"conversation_id"`
 	UserID         []uuid.UUID `json:"user_id"`
 }
