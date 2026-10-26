@@ -7,7 +7,6 @@ import (
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/abhinash-kml/nova/server/utils"
 	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -16,11 +15,11 @@ import (
 
 type Controller struct {
 	service Service
-	config  *config.Config
+	config  *config.ChannelsConfig
 	logger  *zap.Logger
 }
 
-func NewController(s Service, c *config.Config, l *zap.Logger) *Controller {
+func NewController(s Service, c *config.ChannelsConfig, l *zap.Logger) *Controller {
 	return &Controller{
 		config:  c,
 		service: s,
@@ -29,7 +28,7 @@ func NewController(s Service, c *config.Config, l *zap.Logger) *Controller {
 }
 
 func (c *Controller) GetAll(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "channels.controller.getall")
+	sctx, span := tracer.Start(ctx.Request.Context(), "channels.controller.GetAll")
 	var err error
 
 	defer func() {
@@ -40,21 +39,21 @@ func (c *Controller) GetAll(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto GetAllDTO
+	var req GetAllRequest
 
-	err = ctx.ShouldBindQuery(&dto)
+	err = ctx.ShouldBindQuery(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	decodedCursor, err := utils.DecodeCursor(dto.Cursor)
+	decodedCursor, err := utils.DecodeCursorUUID(req.Cursor)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	channels, err := c.service.GetAll(sctx, decodedCursor, dto.Limit)
+	channels, err := c.service.GetAll(sctx, decodedCursor, req.Limit)
 	if err != nil {
 		c.logger.Error("Failed to get all channels", zap.Error(err))
 		ctx.Error(err)
@@ -65,7 +64,7 @@ func (c *Controller) GetAll(ctx *gin.Context) {
 }
 
 func (c *Controller) Get(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "channels.controller.get")
+	sctx, span := tracer.Start(ctx.Request.Context(), "channels.controller.Get")
 	var err error
 
 	defer func() {
@@ -76,20 +75,20 @@ func (c *Controller) Get(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto GetDTO
+	var req GetRequest
 
-	err = ctx.ShouldBindUri(&dto)
+	err = ctx.ShouldBindUri(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	parsedId, _ := uuid.Parse(dto.Id)
+	parsedId, _ := uuid.Parse(req.Id)
 
 	channel, err := c.service.GetById(sctx, parsedId)
 	if err != nil {
 		c.logger.Error("Failed to get channel",
-			zap.String("channel_id", dto.Id),
+			zap.String("channel_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -99,7 +98,7 @@ func (c *Controller) Get(ctx *gin.Context) {
 }
 
 func (c *Controller) Create(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "channels.controller.create")
+	sctx, span := tracer.Start(ctx.Request.Context(), "channels.controller.Create")
 	var err error
 
 	defer func() {
@@ -110,15 +109,15 @@ func (c *Controller) Create(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto CreateDTO
+	var req CreateRequest
 
-	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	err = ctx.ShouldBindBodyWithJSON(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	channel, err := c.service.Add(sctx, dto)
+	channel, err := c.service.Add(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to create channel", zap.Error(err))
 		ctx.Error(err)
@@ -129,7 +128,7 @@ func (c *Controller) Create(ctx *gin.Context) {
 }
 
 func (c *Controller) Modify(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "channels.controller.modify")
+	sctx, span := tracer.Start(ctx.Request.Context(), "channels.controller.Modify")
 	var err error
 
 	defer func() {
@@ -140,24 +139,24 @@ func (c *Controller) Modify(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto UpdateDTO
+	var req UpdateRequest
 
-	err = ctx.ShouldBindUri(&dto.ChannelId)
+	err = ctx.ShouldBindUri(&req.ChannelId)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	err = ctx.ShouldBindWith(&dto.ChannelModifications, binding.JSON)
+	err = ctx.ShouldBindBodyWithJSON(&req.ChannelModifications)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	updatedChannel, err := c.service.Modify(sctx, dto)
+	updatedChannel, err := c.service.Modify(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to update channel",
-			zap.String("channel_id", dto.Id),
+			zap.String("channel_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -167,7 +166,7 @@ func (c *Controller) Modify(ctx *gin.Context) {
 }
 
 func (c *Controller) Delete(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "channels.controller.delete")
+	sctx, span := tracer.Start(ctx.Request.Context(), "channels.controller.Delete")
 	var err error
 
 	defer func() {
@@ -178,18 +177,18 @@ func (c *Controller) Delete(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto DeleteDTO
+	var req DeleteRequest
 
-	err = ctx.ShouldBindUri(&dto.ChannelId)
+	err = ctx.ShouldBindUri(&req.ChannelId)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	_, err = c.service.Delete(sctx, dto)
+	_, err = c.service.Delete(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to delete channel",
-			zap.String("channel_id", dto.Id),
+			zap.String("channel_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -199,7 +198,7 @@ func (c *Controller) Delete(ctx *gin.Context) {
 }
 
 func (c *Controller) BulkAdd(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "channels.controller.bulkadd")
+	sctx, span := tracer.Start(ctx.Request.Context(), "channels.controller.BulkAdd")
 	var err error
 
 	defer func() {
@@ -210,17 +209,17 @@ func (c *Controller) BulkAdd(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto BulkCreateDTO
+	var req BulkCreateRequest
 
-	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	err = ctx.ShouldBindBodyWithJSON(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.Int("count", len(dto.Channels)))
+	span.SetAttributes(attribute.Int("count", len(req.Channels)))
 
-	results, err := c.service.BulkAdd(sctx, dto)
+	results, err := c.service.BulkAdd(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to bulk add channels", zap.Error(err))
 		ctx.Error(err)
@@ -255,7 +254,7 @@ func (c *Controller) BulkAdd(ctx *gin.Context) {
 }
 
 func (c *Controller) BulkModify(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "channels.controller.bulkmodify")
+	sctx, span := tracer.Start(ctx.Request.Context(), "channels.controller.BulkModify")
 	var err error
 
 	defer func() {
@@ -266,17 +265,17 @@ func (c *Controller) BulkModify(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto BulkModifyDTO
+	var req BulkModifyRequest
 
-	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	err = ctx.ShouldBindBodyWithJSON(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.Int("count", len(dto.Updates)))
+	span.SetAttributes(attribute.Int("count", len(req.Updates)))
 
-	results, err := c.service.BulkModify(sctx, dto)
+	results, err := c.service.BulkModify(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to to bulk modify channels", zap.Error(err))
 		ctx.Error(err)
@@ -311,7 +310,7 @@ func (c *Controller) BulkModify(ctx *gin.Context) {
 }
 
 func (c *Controller) BulkDelete(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "channels.controller.bulkdelete")
+	sctx, span := tracer.Start(ctx.Request.Context(), "channels.controller.BulkDelete")
 	var err error
 
 	defer func() {
@@ -322,17 +321,17 @@ func (c *Controller) BulkDelete(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto BulkDeleteDTO
+	var req BulkDeleteRequest
 
-	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	err = ctx.ShouldBindBodyWithJSON(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.Int("count", len(dto.Channels)))
+	span.SetAttributes(attribute.Int("count", len(req.Channels)))
 
-	results, err := c.service.BulkDelete(sctx, dto)
+	results, err := c.service.BulkDelete(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to bulk delete channels", zap.Error(err))
 		ctx.Error(err)

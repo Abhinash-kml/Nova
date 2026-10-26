@@ -1,29 +1,27 @@
 package channels
 
 import (
-	"time"
-
 	"github.com/google/uuid"
 )
 
-type GetDTO struct {
+type ChannelId struct {
 	Id string `uri:"id" binding:"required,uuid"`
 }
 
-type GetAllDTO struct {
-	Cursor string `form:"cursor" binding:"required"`
-	Limit  int    `form:"limit" binding:"required,gte=10,lte=20"`
+type GetRequest struct {
+	ChannelId
 }
 
-type CreateDTO struct {
+type GetAllRequest struct {
+	Cursor string `form:"cursor,default=AAAAAAAAAAAAAAAAAAAAAA" binding:"required"`
+	Limit  int    `form:"limit,default=10" binding:"required,gte=10,lte=20"`
+}
+
+type CreateRequest struct {
 	Name            string `json:"name" binding:"required,min=5,max=15"`
 	ProcessInterval string `json:"process_interval" binding:"required"`
 	IsPersistant    bool   `json:"persistant" binding:"required"`
 	CreatedBy       string `json:"created_by" binding:"required,uuid"`
-}
-
-type ChannelId struct {
-	Id string `uri:"id" binding:"required,uuid"`
 }
 
 type ChannelModifications struct {
@@ -33,7 +31,7 @@ type ChannelModifications struct {
 	UpdatedBy       string `json:"updated_by" binding:"required,uuid"`
 }
 
-type UpdateDTO struct {
+type UpdateRequest struct {
 	ChannelId
 	ChannelModifications
 }
@@ -42,31 +40,19 @@ type DeleteOptions struct {
 	Type string `form:"type" binding:"required,oneof=delete disable"` // 1 - Soft, 2 - Hard
 }
 
-type DeleteDTO struct {
+type DeleteRequest struct {
 	ChannelId
 	DeleteOptions
 }
 
-type ChannelDTO struct {
-	Id              uuid.UUID     `json:"id"`
-	Name            string        `json:"name"`
-	IsPersistant    bool          `json:"is_persistant"`
-	Subscribers     uint64        `json:"total_subscribers"`
-	ProcessInterval time.Duration `json:"process_interval"`
-	CreatedBy       uuid.UUID     `json:"created_by"`
-	CreatedAt       time.Time     `json:"created_at"`
-	UpdatedBy       uuid.UUID     `json:"updated_by"`
-	UpdatedAt       time.Time     `json:"updated_at"`
+type BulkCreateRequest struct {
+	Channels []CreateRequest `json:"channels" binding:"required"`
 }
 
-type BulkCreateDTO struct {
-	Channels []CreateDTO `json:"channels" binding:"required"`
+type BulkModifyRequest struct {
+	Updates []UpdateRequest `json:"updates" binding:"required"`
 }
 
-type BulkModifyDTO struct {
-	Updates []UpdateDTO `json:"updates" binding:"required"`
-}
-
-type BulkDeleteDTO struct {
+type BulkDeleteRequest struct {
 	Channels []uuid.UUID `json:"channels" binding:"required"`
 }

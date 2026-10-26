@@ -15,12 +15,12 @@ import (
 
 type InMemoryChannelsRepository struct {
 	channels []Channel
-	config   *config.Config
+	config   *config.ChannelsConfig
 	logger   *zap.Logger
 	mu       sync.RWMutex
 }
 
-func NewInMemoryChannelsRepository(c *config.Config, l *zap.Logger) *InMemoryChannelsRepository {
+func NewInMemoryChannelsRepository(c *config.ChannelsConfig, l *zap.Logger) *InMemoryChannelsRepository {
 	return &InMemoryChannelsRepository{
 		config: c,
 		logger: l,
@@ -31,12 +31,11 @@ func (r *InMemoryChannelsRepository) Initialize() error {
 	return nil
 }
 
-func (r *InMemoryChannelsRepository) Seed() error {
-	return nil
+func (r *InMemoryChannelsRepository) Seed() {
 }
 
-func (r *InMemoryChannelsRepository) GetAll(ctx context.Context, cursor int, limit int) ([]Channel, error) {
-	_, span := tracer.Start(ctx, "channels.repository.getall")
+func (r *InMemoryChannelsRepository) GetAll(ctx context.Context, cursor uuid.UUID, limit int) ([]Channel, error) {
+	_, span := tracer.Start(ctx, "channels.repository.GetAll")
 	defer span.End()
 
 	r.mu.RLock()
@@ -58,7 +57,7 @@ func (r *InMemoryChannelsRepository) GetAll(ctx context.Context, cursor int, lim
 }
 
 func (r *InMemoryChannelsRepository) GetById(ctx context.Context, id uuid.UUID) (Channel, error) {
-	_, span := tracer.Start(ctx, "channels.repository.getbyid")
+	_, span := tracer.Start(ctx, "channels.repository.GetById")
 	defer span.End()
 
 	r.mu.RLock()
@@ -79,14 +78,14 @@ func (r *InMemoryChannelsRepository) GetById(ctx context.Context, id uuid.UUID) 
 	return Channel{}, common.ErrResourceNotFound
 }
 
-func (r *InMemoryChannelsRepository) Add(ctx context.Context, dto CreateDTO) (Channel, error) {
-	_, span := tracer.Start(ctx, "channels.repository.add")
+func (r *InMemoryChannelsRepository) Add(ctx context.Context, req CreateRequest) (Channel, error) {
+	_, span := tracer.Start(ctx, "channels.repository.Add")
 	defer span.End()
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	processInterval, err := time.ParseDuration(dto.ProcessInterval)
+	processInterval, err := time.ParseDuration(req.ProcessInterval)
 	if err != nil {
 		return Channel{}, fmt.Errorf("Failed to parse provided duration. Error: %w", err)
 	}
@@ -94,32 +93,32 @@ func (r *InMemoryChannelsRepository) Add(ctx context.Context, dto CreateDTO) (Ch
 	id := uuid.New()
 	r.channels = append(r.channels, Channel{
 		Id:              id,
-		Name:            dto.Name,
-		IsPersistant:    dto.IsPersistant,
+		Name:            req.Name,
+		IsPersistant:    req.IsPersistant,
 		ProcessInterval: processInterval,
 	})
 
 	return Channel{
 		Id:              id,
-		Name:            dto.Name,
-		IsPersistant:    dto.IsPersistant,
+		Name:            req.Name,
+		IsPersistant:    req.IsPersistant,
 		ProcessInterval: processInterval,
 	}, nil
 }
 
-func (r *InMemoryChannelsRepository) Modify(ctx context.Context, dto UpdateDTO) (Channel, error) {
-	_, span := tracer.Start(ctx, "channels.repository.modify")
+func (r *InMemoryChannelsRepository) Modify(ctx context.Context, req UpdateRequest) (Channel, error) {
+	_, span := tracer.Start(ctx, "channels.repository.Modify")
 	defer span.End()
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	channelId, err := uuid.Parse(dto.Id)
+	channelId, err := uuid.Parse(req.Id)
 	if err != nil {
 		return Channel{}, fmt.Errorf("Failed to parse provided uuid. Error: %w", err)
 	}
 
-	procesInterval, err := time.ParseDuration(dto.ProcessInterval)
+	procesInterval, err := time.ParseDuration(req.ProcessInterval)
 	if err != nil {
 		return Channel{}, fmt.Errorf("Failed to parse provided process interval. Error: %w", err)
 	}
@@ -127,7 +126,7 @@ func (r *InMemoryChannelsRepository) Modify(ctx context.Context, dto UpdateDTO) 
 	var channel Channel
 	for index := range r.channels {
 		if r.channels[index].Id == channelId {
-			r.channels[index].IsPersistant = *dto.IsPersistant
+			r.channels[index].IsPersistant = *req.IsPersistant
 			r.channels[index].ProcessInterval = procesInterval
 
 			channel.Id = r.channels[index].Id
@@ -141,14 +140,14 @@ func (r *InMemoryChannelsRepository) Modify(ctx context.Context, dto UpdateDTO) 
 	return channel, nil
 }
 
-func (r *InMemoryChannelsRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
-	_, span := tracer.Start(ctx, "channels.repository.delete")
+func (r *InMemoryChannelsRepository) Delete(ctx context.Context, req DeleteRequest) (uuid.UUID, error) {
+	_, span := tracer.Start(ctx, "channels.repository.Delete")
 	defer span.End()
 
 	r.mu.Lock()
 
 	oldLen := len(r.channels)
-	channelId, err := uuid.Parse(dto.Id)
+	channelId, err := uuid.Parse(req.Id)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("Failed to parse provided uuid. Error: %w", err)
 	}
@@ -170,15 +169,15 @@ func (r *InMemoryChannelsRepository) Delete(ctx context.Context, dto DeleteDTO) 
 }
 
 // Bulk operations (left out for future implementation if needed)
-func (r *InMemoryChannelsRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {
-	_, span := tracer.Start(ctx, "channels.repository.bulkadd")
+func (r *InMemoryChannelsRepository) BulkAdd(ctx context.Context, req BulkCreateRequest) ([]common.BulkOpResult, error) {
+	_, span := tracer.Start(ctx, "channels.repository.BulkAdd")
 	defer span.End()
 
-	results := make([]common.BulkOpResult, 0, len(dto.Channels))
+	results := make([]common.BulkOpResult, 0, len(req.Channels))
 
-	for index := range dto.Channels {
+	for index := range req.Channels {
 		var result common.BulkOpResult
-		channel, err := r.Add(ctx, dto.Channels[index])
+		channel, err := r.Add(ctx, req.Channels[index])
 		if err != nil {
 			result.Id = uuid.Nil
 			result.Success = false
@@ -195,23 +194,23 @@ func (r *InMemoryChannelsRepository) BulkAdd(ctx context.Context, dto BulkCreate
 	return results, nil
 }
 
-func (r *InMemoryChannelsRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
-	_, span := tracer.Start(ctx, "channels.repository.bulkmodify")
+func (r *InMemoryChannelsRepository) BulkModify(ctx context.Context, req BulkModifyRequest) ([]common.BulkOpResult, error) {
+	_, span := tracer.Start(ctx, "channels.repository.BulkModify")
 	defer span.End()
 
 	return []common.BulkOpResult{}, nil
 }
 
-func (r *InMemoryChannelsRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
-	_, span := tracer.Start(ctx, "channels.repository.bulkdelete")
+func (r *InMemoryChannelsRepository) BulkDelete(ctx context.Context, req BulkDeleteRequest) ([]common.BulkOpResult, error) {
+	_, span := tracer.Start(ctx, "channels.repository.BulkDelete")
 	defer span.End()
 
-	results := make([]common.BulkOpResult, 0, len(dto.Channels))
+	results := make([]common.BulkOpResult, 0, len(req.Channels))
 
-	for index := range dto.Channels {
+	for index := range req.Channels {
 		var result common.BulkOpResult
-		id := dto.Channels[index].String()
-		deletedId, err := r.Delete(ctx, DeleteDTO{
+		id := req.Channels[index].String()
+		deletedId, err := r.Delete(ctx, DeleteRequest{
 			ChannelId:     ChannelId{Id: id},
 			DeleteOptions: DeleteOptions{Type: "soft"},
 		})

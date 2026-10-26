@@ -18,20 +18,18 @@ import (
 )
 
 type PostgresRepository struct {
-	config           *config.Config
+	config           *config.ChannelsConfig
 	logger           *zap.Logger
 	pgx              *pgxpool.Pool
 	statementBuilder squirrel.StatementBuilderType
-	seedfile         string
 }
 
-func NewPostgresRepositoryFromPgxPool(connection *pgxpool.Pool, c *config.Config, l *zap.Logger, sfp string) *PostgresRepository {
+func NewPostgresRepositoryFromPgxPool(connection *pgxpool.Pool, c *config.ChannelsConfig, l *zap.Logger) *PostgresRepository {
 	return &PostgresRepository{
 		config:           c,
 		logger:           l,
 		pgx:              connection,
 		statementBuilder: squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar),
-		seedfile:         sfp,
 	}
 }
 
@@ -39,7 +37,7 @@ func (r *PostgresRepository) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (r *PostgresRepository) Seed(ctx context.Context) error {
+func (r *PostgresRepository) Seed(ctx context.Context) {
 	// Check if rows already exists, if so then dont seed
 	existQuery := `SELECT count(*) FROM channels;`
 	row := r.pgx.QueryRow(ctx, existQuery)
@@ -49,13 +47,12 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 	// Scan returned row
 	if err := row.Scan(&count); err != nil {
 		r.logger.Error("Failed to scan count of rows from channels table", zap.Error(err))
-		return common.ErrDbSeedingFailed
 	}
 
 	// Rows already exists, dont seed
 	if count != 0 {
 		r.logger.Sugar().Infof("Channels table contains %d rows, skipping seeding from file...", count)
-		return nil
+		return
 	}
 
 	// Table is empty, so seed from file to table
@@ -71,16 +68,16 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 	)
 
 	// Check if seeds file is provided and is of json format by suffix
-	if len(r.seedfile) == 0 || !strings.HasSuffix(r.seedfile, ".json") {
+	if len(r.config.SeedFile) == 0 || !strings.HasSuffix(r.config.SeedFile, ".json") {
 		r.logger.Error("Seeds file not provided or is not of json format. Skipping seeding")
-		return common.ErrDbSeedingFailed
+		return
 	}
 
 	// open file
-	file, err := os.OpenFile(r.seedfile, os.O_RDONLY, 0755)
+	file, err := os.OpenFile(r.config.SeedFile, os.O_RDONLY, 0755)
 	if err != nil {
-		r.logger.Error("Failed to open channels seeds file", zap.String("file", r.seedfile), zap.Error(err))
-		return common.ErrDbSeedingFailed
+		r.logger.Error("Failed to open channels seeds file", zap.String("file", r.config.SeedFile), zap.Error(err))
+		return
 	}
 	defer file.Close()
 
@@ -88,53 +85,49 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 	decoder := json.NewDecoder(file)
 	if decoder == nil {
 		r.logger.Error("Failed to create json decoder. Returned nil pointer")
-		return common.ErrDbSeedingFailed
+		return
 	}
 
 	// Decode
-	var channels []ChannelDTO
+	var channels []Channel
 	err = decoder.Decode(&channels)
 	if err != nil {
 		r.logger.Error("Failed to decode seeded channels from file", zap.Error(err))
-		return common.ErrDbSeedingFailed
+		return
 	}
 
 	for i := range channels {
-		queryBuilder = queryBuilder.Values(channels[i].Id,
+		queryBuilder = queryBuilder.Values(
+			channels[i].Id,
 			channels[i].Name,
 			channels[i].IsPersistant,
 			channels[i].ProcessInterval,
 			channels[i].CreatedBy,
 			channels[i].CreatedAt,
-			channels[i].UpdatedBy,
-			channels[i].UpdatedAt)
+			channels[i].Updatedby,
+			channels[i].UpdatedAt,
+		)
 	}
 
 	// Generate query
 	query, args, err := queryBuilder.ToSql()
 	if err != nil {
 		r.logger.Error("Failed to generate sql query with squirrel for seeding channels table", zap.Error(err))
-		return common.ErrDbSeedingFailed
+		return
 	}
 
 	// Execute query
 	_, err = r.pgx.Exec(ctx, query, args...)
 	if err != nil {
 		r.logger.Error("Failed to execute query to seed channels table", zap.Error(err))
-		return common.ErrDbSeedingFailed
+		return
 	}
 
 	r.logger.Info("Successfully seeded channels from file", zap.Int("count", len(channels)))
-
-	return nil
 }
 
 // General operations
-func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) ([]Channel, error) {
-	var rows pgx.Rows
-	var err error
-
-	// Generate query based on cursor
+func (r *PostgresRepository) GetAll(ctx context.Context, cursor uuid.UUID, limit int) ([]Channel, error) {
 	rawQuery := `SELECT
 					id,
 					name,
@@ -143,35 +136,32 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 					created_by,
 					created_at
 				FROM
-					channels`
-	if cursor == 0 {
-		rawQuery += ` ORDER BY
-						id
-					LIMIT 
-						$1;`
+					channels
+				WHERE
+					id >= $1
+				ORDER BY
+					name
+				LIMIT
+					$2;`
 
-		rows, err = r.pgx.Query(ctx, rawQuery, limit)
-	} else {
-		rawQuery += ` WHERE 
-						id > $1
-					ORDER BY
-						id
-					LIMIT
-						$2;`
-
-		rows, err = r.pgx.Query(ctx, rawQuery, cursor, limit)
-	}
+	rows, err := r.pgx.Query(ctx, rawQuery, cursor, limit)
 	if err != nil {
 		return nil, fmt.Errorf("getting channels: %w", err)
 	}
 	defer rows.Close()
 
-	// Scan returned rows
 	var channels []Channel
+	var channel Channel
+
 	for rows.Next() {
-		var channel Channel
-		err = rows.Scan(&channel.Id, &channel.Name, &channel.ProcessInterval, &channel.IsPersistant,
-			&channel.CreatedBy, &channel.CreatedAt)
+		err = rows.Scan(
+			&channel.Id,
+			&channel.Name,
+			&channel.ProcessInterval,
+			&channel.IsPersistant,
+			&channel.CreatedBy,
+			&channel.CreatedAt,
+		)
 		if err != nil {
 			return nil, fmt.Errorf("scanning row: %w", err)
 		}
@@ -207,8 +197,16 @@ func (r *PostgresRepository) GetById(ctx context.Context, id uuid.UUID) (Channel
 	row := r.pgx.QueryRow(ctx, rawQuery, id)
 
 	// Scan returned row
-	err := row.Scan(&channel.Id, &channel.Name, &channel.ProcessInterval, &channel.IsPersistant,
-		&channel.CreatedBy, &channel.CreatedAt, &channel.Updatedby, &channel.UpdatedAt)
+	err := row.Scan(
+		&channel.Id,
+		&channel.Name,
+		&channel.ProcessInterval,
+		&channel.IsPersistant,
+		&channel.CreatedBy,
+		&channel.CreatedAt,
+		&channel.Updatedby,
+		&channel.UpdatedAt,
+	)
 	if err != nil {
 		return Channel{}, fmt.Errorf("scanning row: %w", err)
 	}
@@ -216,37 +214,67 @@ func (r *PostgresRepository) GetById(ctx context.Context, id uuid.UUID) (Channel
 	return channel, nil
 }
 
-func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (Channel, error) {
+func (r *PostgresRepository) Add(ctx context.Context, req CreateRequest) (Channel, error) {
 	rawQuery := `INSERT INTO
-					channels(id, name, process_interval, persistant, created_by, created_at, updated_by, updated_at)
-				VALUES($1, $2, $3, $4, $5, $6, $7, $8);`
+					channels (
+						id,
+						name,
+						process_interval,
+						persistant, 
+						created_by, 
+						created_at, 
+						updated_by, 
+						updated_at
+					) VALUES (
+					 	$1, 
+						$2, 
+						$3, 
+						$4, 
+						$5, 
+						$6, 
+						$7, 
+						$8
+					);`
 
-	id, _ := uuid.NewV7()
-	now := time.Now()
+	id, err := uuid.NewV7()
+	if err != nil {
+		return Channel{}, fmt.Errorf("generating id: %w", err)
+	}
+	currentTime := time.Now()
 
 	// Execute query
-	_, err := r.pgx.Exec(ctx, rawQuery, id, dto.Name, dto.ProcessInterval, dto.IsPersistant,
-		dto.CreatedBy, now, uuid.Nil, now)
+	_, err = r.pgx.Exec(
+		ctx,
+		rawQuery,
+		id,
+		req.Name,
+		req.ProcessInterval,
+		req.IsPersistant,
+		req.CreatedBy,
+		currentTime,
+		uuid.Nil,
+		currentTime,
+	)
 	if err != nil {
 		return Channel{}, fmt.Errorf("inserting channel: %w", err)
 	}
 
-	processInterval, _ := time.ParseDuration(dto.ProcessInterval)
-	createdBy, _ := uuid.Parse(dto.CreatedBy)
+	processInterval, _ := time.ParseDuration(req.ProcessInterval)
+	createdBy, _ := uuid.Parse(req.CreatedBy)
 
 	return Channel{
 		Id:              id,
-		Name:            dto.Name,
+		Name:            req.Name,
 		ProcessInterval: processInterval,
-		IsPersistant:    dto.IsPersistant,
+		IsPersistant:    req.IsPersistant,
 		CreatedBy:       createdBy,
-		CreatedAt:       now,
+		CreatedAt:       currentTime,
 		Updatedby:       uuid.Nil,
 		UpdatedAt:       time.Time{},
 	}, nil
 }
 
-func (r *PostgresRepository) Modify(ctx context.Context, dto UpdateDTO) (Channel, error) {
+func (r *PostgresRepository) Modify(ctx context.Context, req UpdateRequest) (Channel, error) {
 	rawQuery := `UPDATE
 					channels
 				SET
@@ -261,15 +289,31 @@ func (r *PostgresRepository) Modify(ctx context.Context, dto UpdateDTO) (Channel
 					*;`
 
 	var channel Channel
-	now := time.Now()
+	currentTime := time.Now()
 
 	// Execute query
-	row := r.pgx.QueryRow(ctx, rawQuery, dto.Id, dto.Name, dto.ProcessInterval, dto.IsPersistant,
-		dto.UpdatedBy, now)
+	row := r.pgx.QueryRow(
+		ctx,
+		rawQuery,
+		req.Id,
+		req.Name,
+		req.ProcessInterval,
+		req.IsPersistant,
+		req.UpdatedBy,
+		currentTime,
+	)
 
 	// Scan returned row
-	err := row.Scan(&channel.Id, &channel.Name, &channel.ProcessInterval, &channel.IsPersistant,
-		&channel.CreatedBy, &channel.CreatedAt, &channel.Updatedby, &channel.UpdatedAt)
+	err := row.Scan(
+		&channel.Id,
+		&channel.Name,
+		&channel.ProcessInterval,
+		&channel.IsPersistant,
+		&channel.CreatedBy,
+		&channel.CreatedAt,
+		&channel.Updatedby,
+		&channel.UpdatedAt,
+	)
 	if err != nil {
 		return Channel{}, fmt.Errorf("scanning row: %w", err)
 	}
@@ -277,7 +321,7 @@ func (r *PostgresRepository) Modify(ctx context.Context, dto UpdateDTO) (Channel
 	return channel, nil
 }
 
-func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
+func (r *PostgresRepository) Delete(ctx context.Context, req DeleteRequest) (uuid.UUID, error) {
 	deleteQuery := `DELETE FROM
 						channels
 					WHERE
@@ -298,10 +342,10 @@ func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UU
 	var effectedChannel uuid.UUID
 
 	// Execute query based on delete / disable
-	if dto.Type == "disable" {
-		row = r.pgx.QueryRow(ctx, disableQuery, dto.Id)
+	if req.Type == "disable" {
+		row = r.pgx.QueryRow(ctx, disableQuery, req.Id)
 	} else {
-		row = r.pgx.QueryRow(ctx, deleteQuery, dto.Id)
+		row = r.pgx.QueryRow(ctx, deleteQuery, req.Id)
 	}
 
 	// Scan returned row
@@ -314,14 +358,14 @@ func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UU
 }
 
 // Bulk operations
-func (r *PostgresRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {
+func (r *PostgresRepository) BulkAdd(ctx context.Context, req BulkCreateRequest) ([]common.BulkOpResult, error) {
 	return nil, nil
 }
 
-func (r *PostgresRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
+func (r *PostgresRepository) BulkModify(ctx context.Context, req BulkModifyRequest) ([]common.BulkOpResult, error) {
 	return nil, nil
 }
 
-func (r *PostgresRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
+func (r *PostgresRepository) BulkDelete(ctx context.Context, req BulkDeleteRequest) ([]common.BulkOpResult, error) {
 	return nil, nil
 }

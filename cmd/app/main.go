@@ -330,12 +330,10 @@ func main() {
 
 	// Setup channels module
 	{
-		channelsRepository := channels.NewPostgresRepositoryFromPgxPool(postgresPool, config, logger, config.ChannelsConfig.SeedFile)
-		if err = channelsRepository.Seed(context.Background()); err != nil {
-			logger.Error("Failed to seed channels repository", zap.Error(err))
-		}
+		channelsRepository := channels.NewPostgresRepositoryFromPgxPool(postgresPool, &config.ChannelsConfig, logger)
+		channelsRepository.Seed(context.Background())
 		channelsService := channels.NewLocalChannelService(channelsRepository, config, logger)
-		channelsController := channels.NewController(channelsService, config, logger)
+		channelsController := channels.NewController(channelsService, &config.ChannelsConfig, logger)
 		channels.SetupRoutes(globalRouter, channelsController)
 	}
 
