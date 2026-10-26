@@ -341,12 +341,10 @@ func main() {
 
 	// Setup stats module
 	{
-		statsRepository := stats.NewPostgresRepositoryFromPgxPool(postgresPool, config, logger, config.StatsConfig.SeedFile)
-		if err = statsRepository.Seed(context.Background()); err != nil {
-			logger.Error("Failed to seed stats repository", zap.Error(err))
-		}
-		statsService := stats.NewService(statsRepository, config, logger)
-		statsController := stats.NewController(statsService, config, logger)
+		statsRepository := stats.NewPostgresRepositoryFromPgxPool(postgresPool, &config.StatsConfig, logger)
+		statsRepository.Seed(context.Background())
+		statsService := stats.NewService(statsRepository, &config.StatsConfig, logger)
+		statsController := stats.NewController(statsService, &config.StatsConfig, logger)
 		stats.SetupRoutes(globalRouter, statsController)
 	}
 	// Setup leaderboard module

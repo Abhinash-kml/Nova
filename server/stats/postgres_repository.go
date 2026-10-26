@@ -14,20 +14,18 @@ import (
 )
 
 type PostgresRepository struct {
-	config           *config.Config
+	config           *config.StatsConfig
 	logger           *zap.Logger
 	pgx              *pgxpool.Pool
 	statementBuilder squirrel.StatementBuilderType
-	seedfile         string
 }
 
-func NewPostgresRepositoryFromPgxPool(connection *pgxpool.Pool, c *config.Config, l *zap.Logger, sfp string) *PostgresRepository {
+func NewPostgresRepositoryFromPgxPool(connection *pgxpool.Pool, c *config.StatsConfig, l *zap.Logger) *PostgresRepository {
 	return &PostgresRepository{
 		config:           c,
 		logger:           l,
 		pgx:              connection,
 		statementBuilder: squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar),
-		seedfile:         sfp,
 	}
 }
 
@@ -35,11 +33,10 @@ func (r *PostgresRepository) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (r *PostgresRepository) Seed(ctx context.Context) error {
-	return nil
+func (r *PostgresRepository) Seed(ctx context.Context) {
 }
 
-func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (Stats, error) {
+func (r *PostgresRepository) Add(ctx context.Context, req CreateRequest) (Stats, error) {
 	rawQuery := `INSERT INTO
 					stats(key, name, description, start_value, created_at)
 				VALUES ($1, $2, $3, $4, $5)
@@ -57,10 +54,10 @@ func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (Stats, err
 	err := r.pgx.QueryRow(
 		ctx,
 		rawQuery,
-		dto.Key,
-		dto.Name,
-		dto.Description,
-		dto.StartValue,
+		req.Key,
+		req.Name,
+		req.Description,
+		req.StartValue,
 		now,
 	).Scan(
 		&stat.Id,
@@ -79,9 +76,6 @@ func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (Stats, err
 }
 
 func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) ([]Stats, error) {
-	var rows pgx.Rows
-	var err error
-
 	rawQuery := `SELECT
 					id,
 					key,
@@ -89,22 +83,16 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 					description,
 					start_value,
 					created_at
-				FROM stats`
+				FROM 
+					stats
+				WHERE
+					id >= $1
+				ORDER BY
+					name
+				LIMIT 
+					$2;`
 
-	if cursor == 0 {
-		rawQuery += ` ORDER BY id
-					LIMIT $1;`
-
-		rows, err = r.pgx.Query(ctx, rawQuery, limit)
-	} else {
-		rawQuery += ` WHERE
-						id > $1
-					ORDER BY
-						id
-					LIMIT $2;`
-
-		rows, err = r.pgx.Query(ctx, rawQuery, cursor, limit)
-	}
+	rows, err := r.pgx.Query(ctx, rawQuery, cursor, limit)
 	if err != nil {
 		return nil, fmt.Errorf("getting all stats: %w", err)
 	}
@@ -123,7 +111,6 @@ func (r *PostgresRepository) GetAll(ctx context.Context, cursor int, limit int) 
 			&stat.StartValue,
 			&stat.CreatedAt,
 		)
-
 		if err != nil {
 			return nil, fmt.Errorf("scanning row: %w", err)
 		}
@@ -173,17 +160,17 @@ func (r *PostgresRepository) GetById(ctx context.Context, id int) (Stats, error)
 	return stat, nil
 }
 
-func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (Stats, error) {
+func (r *PostgresRepository) Update(ctx context.Context, req UpdateRequest) (Stats, error) {
 	queryBuilder := r.statementBuilder.
 		Update("stats").
-		Where(squirrel.Eq{"id": dto.Id})
+		Where(squirrel.Eq{"id": req.Id})
 
-	if dto.Name != nil {
-		queryBuilder = queryBuilder.Set("name", *dto.Name)
+	if req.Name != nil {
+		queryBuilder = queryBuilder.Set("name", *req.Name)
 	}
 
-	if dto.StartValue != nil {
-		queryBuilder = queryBuilder.Set("start_value", *dto.StartValue)
+	if req.StartValue != nil {
+		queryBuilder = queryBuilder.Set("start_value", *req.StartValue)
 	}
 
 	queryBuilder = queryBuilder.Suffix("RETURNING id, key, name, description, start_value, created_at")
@@ -206,7 +193,7 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (Stats, 
 	_, err = tx.Exec(
 		ctx,
 		"SELECT id FROM stats WHERE id = $1 FOR UPDATE;",
-		dto.Id,
+		req.Id,
 	)
 	if err != nil {
 		return Stats{}, fmt.Errorf("locking row: %w", err)
@@ -234,7 +221,7 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (Stats, 
 	return stat, nil
 }
 
-func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (Stats, error) {
+func (r *PostgresRepository) Replace(ctx context.Context, req ReplaceRequest) (Stats, error) {
 	rawQuery := `UPDATE
 					stats
 				SET
@@ -266,7 +253,7 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (Stats
 	_, err = tx.Exec(
 		ctx,
 		"SELECT id FROM stats WHERE id = $1 FOR UPDATE;",
-		dto.Id,
+		req.Id,
 	)
 	if err != nil {
 		return Stats{}, fmt.Errorf("locking row: %w", err)
@@ -275,11 +262,11 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (Stats
 	result := tx.QueryRow(
 		ctx,
 		rawQuery,
-		dto.Id,
-		dto.Name,
-		dto.Key,
-		dto.Description,
-		dto.StartValue,
+		req.Id,
+		req.Name,
+		req.Key,
+		req.Description,
+		req.StartValue,
 	)
 	err = result.Scan(
 		&stat.Id,
@@ -301,7 +288,7 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (Stats
 	return stat, nil
 }
 
-func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteDTO) (int, error) {
+func (r *PostgresRepository) Delete(ctx context.Context, req DeleteRequest) (int, error) {
 	deleteQuery := `DELETE FROM
 						stats
 					WHERE
@@ -314,7 +301,7 @@ func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteDTO) (int, er
 	err := r.pgx.QueryRow(
 		ctx,
 		deleteQuery,
-		dto.Id,
+		req.Id,
 	).Scan(&deletedId)
 	if err != nil {
 		return 0, fmt.Errorf("scanning row: %w", err)
@@ -323,10 +310,7 @@ func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteDTO) (int, er
 	return deletedId, nil
 }
 
-func (r *PostgresRepository) GetPlayerStats(ctx context.Context, dto GetPlayerStatDTO) (PlayerStatsResponseDTO, error) {
-
-	var response PlayerStatsResponseDTO
-
+func (r *PostgresRepository) GetPlayerStats(ctx context.Context, req GetPlayerStatRequest) (PlayerStatsResponse, error) {
 	query := `SELECT
 				stat_id,
 				current_value
@@ -338,30 +322,31 @@ func (r *PostgresRepository) GetPlayerStats(ctx context.Context, dto GetPlayerSt
 	rows, err := r.pgx.Query(
 		ctx,
 		query,
-		dto.Id,
+		req.Id,
 	)
 	if err != nil {
-		return PlayerStatsResponseDTO{}, fmt.Errorf("getting player stats: %w", err)
+		return PlayerStatsResponse{}, fmt.Errorf("getting player stats: %w", err)
 	}
 	defer rows.Close()
 
+	var response PlayerStatsResponse
 	for rows.Next() {
-		var stat StatResponseDTO
+		var stat StatResponse
 		if err := rows.Scan(&stat.Id, &stat.Value); err != nil {
-			return PlayerStatsResponseDTO{}, fmt.Errorf("scanning row: %w", err)
+			return PlayerStatsResponse{}, fmt.Errorf("scanning row: %w", err)
 		}
 
 		response.Stats = append(response.Stats, stat)
 	}
 
 	if err := rows.Err(); err != nil {
-		return PlayerStatsResponseDTO{}, fmt.Errorf("iterating rows: %w", err)
+		return PlayerStatsResponse{}, fmt.Errorf("iterating rows: %w", err)
 	}
 
 	return response, nil
 }
 
-func (r *PostgresRepository) UpdatePlayerStats(ctx context.Context, dto UpdatePlayerStatDTO) error {
+func (r *PostgresRepository) UpdatePlayerStats(ctx context.Context, req UpdatePlayerStatRequest) error {
 	query := `INSERT INTO
 				player_stats_progression (
 					player_id,
@@ -383,9 +368,9 @@ func (r *PostgresRepository) UpdatePlayerStats(ctx context.Context, dto UpdatePl
 	_, err := r.pgx.Exec(
 		ctx,
 		query,
-		dto.Id,
-		dto.StatId,
-		dto.Value,
+		req.Id,
+		req.StatId,
+		req.Value,
 	)
 	if err != nil {
 		return fmt.Errorf("updating stats: %w", err)
@@ -394,7 +379,7 @@ func (r *PostgresRepository) UpdatePlayerStats(ctx context.Context, dto UpdatePl
 	return nil
 }
 
-func (r *PostgresRepository) DeletePlayerStats(ctx context.Context, dto DeletePlayerStatDTO) error {
+func (r *PostgresRepository) DeletePlayerStats(ctx context.Context, req DeletePlayerStatRequest) error {
 	query := `DELETE FROM 
 				player_stats_progression
 			WHERE 
@@ -403,7 +388,7 @@ func (r *PostgresRepository) DeletePlayerStats(ctx context.Context, dto DeletePl
 	_, err := r.pgx.Exec(
 		ctx,
 		query,
-		dto.Id,
+		req.Id,
 	)
 	if err != nil {
 		return fmt.Errorf("delete stats: %w", err)
@@ -412,7 +397,7 @@ func (r *PostgresRepository) DeletePlayerStats(ctx context.Context, dto DeletePl
 	return nil
 }
 
-func (r *PostgresRepository) DeletePlayerStatSpecific(ctx context.Context, dto DeletePlayerStatSpecificDTO) error {
+func (r *PostgresRepository) DeletePlayerStatSpecific(ctx context.Context, req DeletePlayerStatSpecificRequest) error {
 	query := `DELETE FROM 
 				player_stats_progression
 			WHERE 
@@ -420,12 +405,12 @@ func (r *PostgresRepository) DeletePlayerStatSpecific(ctx context.Context, dto D
 			AND 
 				stat_id = $2`
 
-	statId, _ := uuid.Parse(dto.StatsId)
+	statId, _ := uuid.Parse(req.StatsId)
 
 	_, err := r.pgx.Exec(
 		ctx,
 		query,
-		dto.Id,
+		req.Id,
 		statId,
 	)
 	if err != nil {

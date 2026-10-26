@@ -4,23 +4,23 @@ type StatsId struct {
 	Id int `uri:"id" json:"id" binding:"required"`
 }
 
-type GetDTO struct {
+type GetRequest struct {
 	StatsId
 }
 
-type GetAllDTO struct {
-	Cursor string `form:"cursor" binding:"required"`
-	Limit  int    `form:"limit" binding:"required,gte=10,lte=20" default:"10"`
+type GetAllRequest struct {
+	Cursor int `form:"cursor,default=1" binding:"required"`
+	Limit  int `form:"limit,default=10" binding:"required,gte=10,lte=20"`
 }
 
-type CreateDTO struct {
+type CreateRequest struct {
 	Key         string `json:"key" binding:"required"`
 	Name        string `json:"name" binding:"required"`
 	Description string `json:"description" binding:"required"`
 	StartValue  int    `json:"start_value" binding:"required"`
 }
 
-type UpdateDTO struct {
+type UpdateRequest struct {
 	StatsId
 
 	Name       *string `json:"name"`
@@ -34,12 +34,12 @@ type ReplacementData struct {
 	StartValue  int    `json:"start_value" binding:"required"`
 }
 
-type ReplaceDTO struct {
+type ReplaceRequest struct {
 	StatsId
 	ReplacementData
 }
 
-type DeleteDTO struct {
+type DeleteRequest struct {
 	StatsId
 }
 
@@ -47,24 +47,24 @@ type UserId struct {
 	Id string `uri:"id" json:"id" binding:"required"`
 }
 
-type GetPlayerStatDTO struct {
+type GetPlayerStatRequest struct {
 	UserId
 }
 
-type StatResponseDTO struct {
+type StatResponse struct {
 	Id    int64 `json:"id"`
 	Value int   `json:"value"`
 }
 
-type PlayerStatsResponseDTO struct {
-	Stats []StatResponseDTO `json:"player_stats"`
+type PlayerStatsResponse struct {
+	Stats []StatResponse `json:"player_stats"`
 }
 
-type DeletePlayerStatDTO struct {
+type DeletePlayerStatRequest struct {
 	UserId
 }
 
-type DeletePlayerStatSpecificDTO struct {
+type DeletePlayerStatSpecificRequest struct {
 	UserId
 	StatsId string `form:"statid" binding:"required,uuid"`
 }
@@ -74,7 +74,7 @@ type IncomingPlayerStat struct {
 	Value  int    `json:"value"`
 }
 
-type UpdatePlayerStatDTO struct {
+type UpdatePlayerStatRequest struct {
 	UserId
 	IncomingPlayerStat
 }

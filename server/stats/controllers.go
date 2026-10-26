@@ -14,11 +14,11 @@ import (
 
 type Controller struct {
 	service Service
-	config  *config.Config
+	config  *config.StatsConfig
 	logger  *zap.Logger
 }
 
-func NewController(s Service, c *config.Config, l *zap.Logger) *Controller {
+func NewController(s Service, c *config.StatsConfig, l *zap.Logger) *Controller {
 	return &Controller{
 		service: s,
 		config:  c,
@@ -38,25 +38,19 @@ func (c *Controller) GetAll(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto GetAllDTO
+	var req GetAllRequest
 
-	err = ctx.ShouldBindQuery(&dto)
+	err = ctx.ShouldBindQuery(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	cursor, err := utils.DecodeCursor(dto.Cursor)
-	if err != nil {
-		ctx.Error(err)
-		return
-	}
-
-	stats, err := c.service.GetAll(sctx, cursor, dto.Limit)
+	stats, err := c.service.GetAll(sctx, req.Cursor, req.Limit)
 	if err != nil {
 		c.logger.Error("Failed to get all stats",
-			zap.String("cursor", dto.Cursor),
-			zap.Int("limit", dto.Limit),
+			zap.Int("cursor", req.Cursor),
+			zap.Int("limit", req.Limit),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -77,7 +71,7 @@ func (c *Controller) Get(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var data GetDTO
+	var data GetRequest
 
 	err = ctx.ShouldBindUri(&data)
 	if err != nil {
@@ -111,15 +105,15 @@ func (c *Controller) Create(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto CreateDTO
+	var req CreateRequest
 
-	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	err = ctx.ShouldBindWith(&req, binding.JSON)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	stat, err := c.service.Add(sctx, dto)
+	stat, err := c.service.Add(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to create stat", zap.Error(err))
 		ctx.Error(err)
@@ -141,26 +135,26 @@ func (c *Controller) Modify(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto UpdateDTO
+	var req UpdateRequest
 
-	err = ctx.ShouldBindUri(&dto.StatsId)
+	err = ctx.ShouldBindUri(&req.StatsId)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.Int("stat_id", dto.Id))
+	span.SetAttributes(attribute.Int("stat_id", req.Id))
 
-	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	err = ctx.ShouldBindWith(&req, binding.JSON)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	modifiedStat, err := c.service.Update(sctx, dto)
+	modifiedStat, err := c.service.Update(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to update stat",
-			zap.Int("stat_id", dto.Id),
+			zap.Int("stat_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -181,20 +175,20 @@ func (c *Controller) Delete(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto DeleteDTO
+	var req DeleteRequest
 
-	err = ctx.ShouldBindUri(&dto.StatsId)
+	err = ctx.ShouldBindUri(&req.StatsId)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.Int("stat_id", dto.Id))
+	span.SetAttributes(attribute.Int("stat_id", req.Id))
 
-	_, err = c.service.Delete(sctx, dto)
+	_, err = c.service.Delete(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to delete stat",
-			zap.Int("stat_it", dto.Id),
+			zap.Int("stat_it", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -215,26 +209,26 @@ func (c *Controller) Replace(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto ReplaceDTO
+	var req ReplaceRequest
 
-	err = ctx.ShouldBindUri(&dto.StatsId)
+	err = ctx.ShouldBindUri(&req.StatsId)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.Int("stat_id", dto.Id))
+	span.SetAttributes(attribute.Int("stat_id", req.Id))
 
-	err = ctx.ShouldBindWith(&dto.ReplacementData, binding.JSON)
+	err = ctx.ShouldBindWith(&req.ReplacementData, binding.JSON)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	replacedStat, err := c.service.Replace(sctx, dto)
+	replacedStat, err := c.service.Replace(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to replace stat",
-			zap.Int("stat_id", dto.Id),
+			zap.Int("stat_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -255,30 +249,30 @@ func (c *Controller) UpdatePlayerStats(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto UpdatePlayerStatDTO
+	var req UpdatePlayerStatRequest
 
-	err = ctx.ShouldBindUri(&dto.UserId)
+	err = ctx.ShouldBindUri(&req.UserId)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
 	span.SetAttributes(
-		attribute.String("user_id", dto.Id),
-		attribute.String("stat_id", dto.StatId),
+		attribute.String("user_id", req.Id),
+		attribute.String("stat_id", req.StatId),
 	)
 
-	err = ctx.ShouldBindWith(&dto.IncomingPlayerStat, binding.JSON)
+	err = ctx.ShouldBindWith(&req.IncomingPlayerStat, binding.JSON)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	err = c.service.UpdatePlayerStats(sctx, dto)
+	err = c.service.UpdatePlayerStats(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to update player stat",
-			zap.String("user_id", dto.Id),
-			zap.String("stat_it", dto.StatId))
+			zap.String("user_id", req.Id),
+			zap.String("stat_it", req.StatId))
 		ctx.Error(err)
 		return
 	}
@@ -298,17 +292,17 @@ func (c *Controller) DeletePlayerStats(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto DeletePlayerStatDTO
+	var req DeletePlayerStatRequest
 
-	err = ctx.ShouldBindUri(&dto.UserId)
+	err = ctx.ShouldBindUri(&req.UserId)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("user_id", dto.Id))
+	span.SetAttributes(attribute.String("user_id", req.Id))
 
-	err = c.service.DeletePlayerStats(sctx, dto)
+	err = c.service.DeletePlayerStats(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to delete player stats", zap.Error(err))
 		ctx.Error(err)
@@ -330,17 +324,17 @@ func (c *Controller) GetPlayerStats(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto GetPlayerStatDTO
+	var req GetPlayerStatRequest
 
-	err = ctx.ShouldBindUri(&dto.UserId)
+	err = ctx.ShouldBindUri(&req.UserId)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("user_id", dto.Id))
+	span.SetAttributes(attribute.String("user_id", req.Id))
 
-	playerStats, err := c.service.GetPlayerStats(sctx, dto)
+	playerStats, err := c.service.GetPlayerStats(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to get player stats", zap.Error(err))
 		ctx.Error(err)
