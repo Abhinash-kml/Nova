@@ -1,7 +1,7 @@
 app_name: "nova backend"
 
 logging:
-  level: info
+  level: debug
 
 http:
   address: :8000
@@ -26,10 +26,10 @@ realtime-hub:
     broker: 10
 
 websocket:
-  ping-interval: 5
-  write-wait: 5
-  pong-wait: 5
-  message-size: 512
+  ping-interval: 15s
+  write-wait: 5s
+  pong-wait: 5s
+  message-size: 5000
   max-messages: 1024
 
 redis:
@@ -85,5 +85,25 @@ channels:
 stats:
   keyPrefix: "stats:"
   seed: "./seeds/stats.json"
-  progression-seed: "./seeds/stats-progression.json"
+  progression-seed: "./seeds/statsprogression.json"
+  cacheduration: 30s
+
+playeritems:
+  keyPrefix: "items:"
+  seed: "./seeds/playeritems.json"
+  cacheduration: 30s
+
+inventory:
+  keyPrefix: "inventory:"
+  seed: "./seeds/inventory.json"
+  cacheduration: 30s
+
+currency:
+  keyPrefix: "currency:"
+  seed: "./seeds/currency.json"
+  cacheduration: 30s
+
+wallet:
+  keyPrefix: "wallet:"
+  seed: "./seeds/wallet.json"
   cacheduration: 30s

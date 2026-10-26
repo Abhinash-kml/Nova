@@ -9,19 +9,19 @@ import (
 )
 
 type WalletService interface {
-	CreateWalletOfNewPlayer(ctx context.Context, dto CreateNewPlayerWalletDTO) error
-	GetWalletOfPlayer(ctx context.Context, dto GetWalletOfPlayerDTO) ([]WalletDTO, error)
-	UpdateWalletOfPlayer(ctx context.Context, dto UpdateWalletOfPlayerDTO) ([]WalletDTO, error)
-	DeleteWalletOfPlayer(ctx context.Context, dto DeleteWalletOfPlayerDTO) error
+	CreateWalletOfNewPlayer(ctx context.Context, dto CreateNewPlayerWalletRequest) error
+	GetWalletOfPlayer(ctx context.Context, dto GetWalletOfPlayerRequest) ([]WalletCurrency, error)
+	UpdateWalletOfPlayer(ctx context.Context, dto UpdateWalletOfPlayerRequest) ([]WalletCurrency, error)
+	DeleteWalletOfPlayer(ctx context.Context, dto DeleteWalletOfPlayerRequest) error
 }
 
 type LocalWalletService struct {
 	repo   WalletRepository
-	config *config.Config
+	config *config.WalletConfig
 	logger *zap.Logger
 }
 
-func NewLocalWalletService(repository WalletRepository, c *config.Config, l *zap.Logger) *LocalWalletService {
+func NewLocalWalletService(repository WalletRepository, c *config.WalletConfig, l *zap.Logger) *LocalWalletService {
 	return &LocalWalletService{
 		repo:   repository,
 		config: c,
@@ -29,8 +29,8 @@ func NewLocalWalletService(repository WalletRepository, c *config.Config, l *zap
 	}
 }
 
-func (s *LocalWalletService) CreateWalletOfNewPlayer(ctx context.Context, dto CreateNewPlayerWalletDTO) error {
-	ctx, span := tracer.Start(ctx, "economy.wallet.createwalletofnewplayer")
+func (s *LocalWalletService) CreateWalletOfNewPlayer(ctx context.Context, dto CreateNewPlayerWalletRequest) error {
+	ctx, span := tracer.Start(ctx, "economy.wallet.CreateWalletOfNewPlayer")
 	defer span.End()
 
 	return common.TranslatePostgresError(
@@ -39,8 +39,8 @@ func (s *LocalWalletService) CreateWalletOfNewPlayer(ctx context.Context, dto Cr
 	).WithMessage("Failed to create wallet")
 }
 
-func (s *LocalWalletService) GetWalletOfPlayer(ctx context.Context, dto GetWalletOfPlayerDTO) ([]WalletDTO, error) {
-	ctx, span := tracer.Start(ctx, "economy.wallet.getwalletofplayer")
+func (s *LocalWalletService) GetWalletOfPlayer(ctx context.Context, dto GetWalletOfPlayerRequest) ([]WalletCurrency, error) {
+	ctx, span := tracer.Start(ctx, "economy.wallet.GetWalletOfPlayer")
 	defer span.End()
 
 	wallet, err := s.repo.GetWalletOfPlayer(ctx, dto)
@@ -51,8 +51,8 @@ func (s *LocalWalletService) GetWalletOfPlayer(ctx context.Context, dto GetWalle
 	return wallet, nil
 }
 
-func (s *LocalWalletService) UpdateWalletOfPlayer(ctx context.Context, dto UpdateWalletOfPlayerDTO) ([]WalletDTO, error) {
-	ctx, span := tracer.Start(ctx, "economy.wallet.updatewalletofplayer")
+func (s *LocalWalletService) UpdateWalletOfPlayer(ctx context.Context, dto UpdateWalletOfPlayerRequest) ([]WalletCurrency, error) {
+	ctx, span := tracer.Start(ctx, "economy.wallet.UpdateWalletOfPlayer")
 	defer span.End()
 
 	wallet, err := s.repo.UpdateWalletOfPlayer(ctx, dto)
@@ -63,8 +63,8 @@ func (s *LocalWalletService) UpdateWalletOfPlayer(ctx context.Context, dto Updat
 	return wallet, nil
 }
 
-func (s *LocalWalletService) DeleteWalletOfPlayer(ctx context.Context, dto DeleteWalletOfPlayerDTO) error {
-	ctx, span := tracer.Start(ctx, "economy.wallet.deletewalletofplayer")
+func (s *LocalWalletService) DeleteWalletOfPlayer(ctx context.Context, dto DeleteWalletOfPlayerRequest) error {
+	ctx, span := tracer.Start(ctx, "economy.wallet.DeleteWalletOfPlayer")
 	defer span.End()
 
 	return common.TranslatePostgresError(

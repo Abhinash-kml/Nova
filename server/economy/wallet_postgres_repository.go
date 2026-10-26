@@ -16,12 +16,12 @@ import (
 
 type PostgresWalletRepository struct {
 	pgx              *pgxpool.Pool
-	config           *config.Config
+	config           *config.WalletConfig
 	logger           *zap.Logger
 	statementBuilder squirrel.StatementBuilderType
 }
 
-func NewPostgresWalletRepository(pool *pgxpool.Pool, c *config.Config, l *zap.Logger) *PostgresWalletRepository {
+func NewPostgresWalletRepository(pool *pgxpool.Pool, c *config.WalletConfig, l *zap.Logger) *PostgresWalletRepository {
 	return &PostgresWalletRepository{
 		pgx:              pool,
 		config:           c,
@@ -30,7 +30,7 @@ func NewPostgresWalletRepository(pool *pgxpool.Pool, c *config.Config, l *zap.Lo
 	}
 }
 
-func (r *PostgresWalletRepository) CreateWalletOfNewPlayer(ctx context.Context, dto CreateNewPlayerWalletDTO) error {
+func (r *PostgresWalletRepository) CreateWalletOfNewPlayer(ctx context.Context, req CreateNewPlayerWalletRequest) error {
 	rawQuery := `
 		INSERT INTO
 			wallets(
@@ -48,7 +48,7 @@ func (r *PostgresWalletRepository) CreateWalletOfNewPlayer(ctx context.Context, 
 		ON CONFLICT (user_id, currency_id)
 		DO NOTHING;
 	`
-	_, err := r.pgx.Exec(ctx, rawQuery, dto.UserID)
+	_, err := r.pgx.Exec(ctx, rawQuery, req.UserID)
 	if err != nil {
 		return fmt.Errorf("creating wallet of player: %w", err)
 	}
@@ -56,7 +56,7 @@ func (r *PostgresWalletRepository) CreateWalletOfNewPlayer(ctx context.Context, 
 	return nil
 }
 
-func (r *PostgresWalletRepository) GetWalletOfPlayer(ctx context.Context, dto GetWalletOfPlayerDTO) ([]WalletDTO, error) {
+func (r *PostgresWalletRepository) GetWalletOfPlayer(ctx context.Context, req GetWalletOfPlayerRequest) ([]WalletCurrency, error) {
 	rawQuery := `
 		SELECT
 			currency_id,
@@ -67,20 +67,17 @@ func (r *PostgresWalletRepository) GetWalletOfPlayer(ctx context.Context, dto Ge
 			user_id = $1::uuid;
 	`
 
-	rows, err := r.pgx.Query(ctx, rawQuery, dto.UserID)
+	rows, err := r.pgx.Query(ctx, rawQuery, req.UserID)
 	if err != nil {
 		return nil, fmt.Errorf("getting wallet of player: %w", err)
 	}
 	defer rows.Close()
 
-	var wallets []WalletDTO
+	var wallets []WalletCurrency
+	var wallet WalletCurrency
 
 	for rows.Next() {
-		var wallet WalletDTO
-		if err := rows.Scan(
-			&wallet.CurrencyID,
-			&wallet.BalanceMinor,
-		); err != nil {
+		if err := rows.Scan(&wallet.CurrencyID, &wallet.BalanceMinor); err != nil {
 			return nil, fmt.Errorf("scanning row: %w", err)
 		}
 
@@ -94,7 +91,7 @@ func (r *PostgresWalletRepository) GetWalletOfPlayer(ctx context.Context, dto Ge
 	return wallets, nil
 }
 
-func (r *PostgresWalletRepository) UpdateWalletOfPlayer(ctx context.Context, dto UpdateWalletOfPlayerDTO) ([]WalletDTO, error) {
+func (r *PostgresWalletRepository) UpdateWalletOfPlayer(ctx context.Context, req UpdateWalletOfPlayerRequest) ([]WalletCurrency, error) {
 	walletQuery := `
 		UPDATE
 			wallets
@@ -126,7 +123,7 @@ func (r *PostgresWalletRepository) UpdateWalletOfPlayer(ctx context.Context, dto
 			);
 	`
 
-	now := time.Now()
+	currentTime := time.Now()
 
 	transaction, err := r.pgx.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
@@ -138,13 +135,13 @@ func (r *PostgresWalletRepository) UpdateWalletOfPlayer(ctx context.Context, dto
 		}
 	}()
 
-	_, err = transaction.Exec(ctx, walletQuery, dto.UserID, dto.CurrencyID, dto.Amount)
+	_, err = transaction.Exec(ctx, walletQuery, req.UserID, req.CurrencyID, req.Amount)
 	if err != nil {
 		return nil, fmt.Errorf("update wallet: %w", err)
 	}
 
 	dummyIdempotencyKey, _ := uuid.NewV7()
-	_, err = transaction.Exec(ctx, ledgerQuery, dto.UserID, dto.CurrencyID, dto.Amount, dto.Operation, dummyIdempotencyKey, now)
+	_, err = transaction.Exec(ctx, ledgerQuery, req.UserID, req.CurrencyID, req.Amount, req.Operation, dummyIdempotencyKey, currentTime)
 	if err != nil {
 		return nil, fmt.Errorf("update wallet ledger: %w", err)
 	}
@@ -157,7 +154,7 @@ func (r *PostgresWalletRepository) UpdateWalletOfPlayer(ctx context.Context, dto
 	return nil, nil
 }
 
-func (r *PostgresWalletRepository) DeleteWalletOfPlayer(ctx context.Context, dto DeleteWalletOfPlayerDTO) error {
+func (r *PostgresWalletRepository) DeleteWalletOfPlayer(ctx context.Context, req DeleteWalletOfPlayerRequest) error {
 	rawQuery := `
 		DELETE FROM
 			wallets
@@ -165,7 +162,7 @@ func (r *PostgresWalletRepository) DeleteWalletOfPlayer(ctx context.Context, dto
 			user_id = $1::uuid;
 	`
 
-	_, err := r.pgx.Exec(ctx, rawQuery, dto.UserID)
+	_, err := r.pgx.Exec(ctx, rawQuery, req.UserID)
 	if err != nil {
 		return fmt.Errorf("deleting wallet of player: %w", err)
 	}

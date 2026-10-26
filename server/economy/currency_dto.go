@@ -3,15 +3,15 @@ package economy
 type CurrencyID struct {
 	ID string `uri:"id" binding:"required,numeric"`
 }
-type GetCurrencyDTO struct {
+type GetCurrencyRequest struct {
 	CurrencyID
 }
-type GetAllCurrencyDTO struct {
-	Limit  int `form:"limit,default=10"`
+type GetAllCurrencyRequest struct {
 	Cursor int `form:"cursor,default=0"`
+	Limit  int `form:"limit,default=10"`
 }
 
-type CreateCurrencyDTO struct {
+type CreateCurrencyRequest struct {
 	Name              string `json:"name" binding:"required"`
 	Code              string `json:"code" binding:"required"`
 	Kind              string `json:"kind" binding:"required"`
@@ -33,16 +33,16 @@ type UpdateData struct {
 	SortOrder         *int   `json:"sort_order"`
 }
 
-type UpdateCurrencyDTO struct {
+type UpdateCurrencyRequest struct {
 	CurrencyID
 	UpdateData
 }
 
-type DeleetCurrencyDTO struct {
+type DeleteCurrencyRequest struct {
 	CurrencyID
 }
 
-type CurrencyDTO struct {
+type Currency struct {
 	ID                int    `json:"id"`
 	Name              string `json:"name"`
 	Code              string `json:"code"`

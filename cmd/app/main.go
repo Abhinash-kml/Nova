@@ -397,14 +397,14 @@ func main() {
 	//	Setup economy module
 	{
 		// Setup currency
-		currencyRepo := economy.NewPostgresCurrencyRepository(postgresPool, config, logger)
-		currencyService := economy.NewLocalCurrencyService(currencyRepo, config, logger)
-		currencyController := economy.NBewCurrencyController(currencyService, config, logger)
+		currencyRepo := economy.NewPostgresCurrencyRepository(postgresPool, &config.CurrencyConfig, logger)
+		currencyService := economy.NewLocalCurrencyService(currencyRepo, &config.CurrencyConfig, logger)
+		currencyController := economy.NewCurrencyController(currencyService, &config.CurrencyConfig, logger)
 
 		// Setup wallet
-		walletRepo := economy.NewPostgresWalletRepository(postgresPool, config, logger)
-		walletService := economy.NewLocalWalletService(walletRepo, config, logger)
-		walletController := economy.NewWalletController(walletService, config, logger)
+		walletRepo := economy.NewPostgresWalletRepository(postgresPool, &config.WalletConfig, logger)
+		walletService := economy.NewLocalWalletService(walletRepo, &config.WalletConfig, logger)
+		walletController := economy.NewWalletController(walletService, &config.WalletConfig, logger)
 
 		economy.SetupRoutes(globalRouter, currencyController, walletController)
 	}

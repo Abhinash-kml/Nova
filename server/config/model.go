@@ -18,7 +18,10 @@ type Config struct {
 	ClansConfig     ClansConfig         `mapstructure:"clans"`
 	ChannelsConfig  ChannelsConfig      `mapstructure:"channels"`
 	StatsConfig     StatsConfig         `mapstructure:"stats"`
+	ItemsConfig     ItemsConfig         `mapstructure:"playeritems"`
 	InventoryConfig InventoryConfig     `mapstructure:"inventory"`
+	CurrencyConfig  CurrencyConfig      `mapstructure:"currency"`
+	WalletConfig    WalletConfig        `mapstructure:"wallets"`
 }
 
 type LoggingConfig struct {
@@ -136,6 +139,24 @@ type StatsConfig struct {
 }
 
 type InventoryConfig struct {
+	KeyPrefix     string        `mapstructure:"keyPrefix"`
+	SeedFile      string        `mapstructure:"seed"`
+	CacheDuration time.Duration `mapstructure:"cacheduration"`
+}
+
+type ItemsConfig struct {
+	KeyPrefix     string        `mapstructure:"keyPrefix"`
+	SeedFile      string        `mapstructure:"seed"`
+	CacheDuration time.Duration `mapstructure:"cacheduration"`
+}
+
+type CurrencyConfig struct {
+	KeyPrefix     string        `mapstructure:"keyPrefix"`
+	SeedFile      string        `mapstructure:"seed"`
+	CacheDuration time.Duration `mapstructure:"cacheduration"`
+}
+
+type WalletConfig struct {
 	KeyPrefix     string        `mapstructure:"keyPrefix"`
 	SeedFile      string        `mapstructure:"seed"`
 	CacheDuration time.Duration `mapstructure:"cacheduration"`

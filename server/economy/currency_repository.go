@@ -5,9 +5,9 @@ import (
 )
 
 type CurrencyRepository interface {
-	Get(ctx context.Context, dto GetCurrencyDTO) (CurrencyDTO, error)
-	GetAll(ctx context.Context, dto GetAllCurrencyDTO) ([]CurrencyDTO, error)
-	Create(ctx context.Context, dto CreateCurrencyDTO) (CurrencyDTO, error)
-	Update(ctx context.Context, dto UpdateCurrencyDTO) (CurrencyDTO, error)
-	Delete(ctx context.Context, dto DeleetCurrencyDTO) (int, error)
+	Get(ctx context.Context, req GetCurrencyRequest) (Currency, error)
+	GetAll(ctx context.Context, req GetAllCurrencyRequest) ([]Currency, error)
+	Create(ctx context.Context, req CreateCurrencyRequest) (Currency, error)
+	Update(ctx context.Context, req UpdateCurrencyRequest) (Currency, error)
+	Delete(ctx context.Context, req DeleteCurrencyRequest) (int, error)
 }

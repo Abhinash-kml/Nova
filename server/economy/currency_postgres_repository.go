@@ -13,12 +13,12 @@ import (
 
 type PostgresCurrencyRepository struct {
 	pgx              *pgxpool.Pool
-	config           *config.Config
+	config           *config.CurrencyConfig
 	logger           *zap.Logger
 	statementbuilder squirrel.StatementBuilderType
 }
 
-func NewPostgresCurrencyRepository(pool *pgxpool.Pool, c *config.Config, l *zap.Logger) *PostgresCurrencyRepository {
+func NewPostgresCurrencyRepository(pool *pgxpool.Pool, c *config.CurrencyConfig, l *zap.Logger) *PostgresCurrencyRepository {
 	return &PostgresCurrencyRepository{
 		pgx:              pool,
 		config:           c,
@@ -27,7 +27,7 @@ func NewPostgresCurrencyRepository(pool *pgxpool.Pool, c *config.Config, l *zap.
 	}
 }
 
-func (r *PostgresCurrencyRepository) Get(ctx context.Context, dto GetCurrencyDTO) (CurrencyDTO, error) {
+func (r *PostgresCurrencyRepository) Get(ctx context.Context, req GetCurrencyRequest) (Currency, error) {
 	rawQuery := `
 		SELECT
 			id,
@@ -44,9 +44,9 @@ func (r *PostgresCurrencyRepository) Get(ctx context.Context, dto GetCurrencyDTO
 		WHERE
 			id = $1;
 	`
-	var currency CurrencyDTO
+	var currency Currency
 
-	row := r.pgx.QueryRow(ctx, rawQuery, dto.ID)
+	row := r.pgx.QueryRow(ctx, rawQuery, req.ID)
 	if err := row.Scan(
 		&currency.ID,
 		&currency.Name,
@@ -58,13 +58,13 @@ func (r *PostgresCurrencyRepository) Get(ctx context.Context, dto GetCurrencyDTO
 		&currency.MaxBalanceMinor,
 		&currency.SortOrder,
 	); err != nil {
-		return CurrencyDTO{}, fmt.Errorf("getting currency (%s): %w", dto.ID, err)
+		return Currency{}, fmt.Errorf("getting currency (%s): %w", req.ID, err)
 	}
 
 	return currency, nil
 }
 
-func (r *PostgresCurrencyRepository) GetAll(ctx context.Context, dto GetAllCurrencyDTO) ([]CurrencyDTO, error) {
+func (r *PostgresCurrencyRepository) GetAll(ctx context.Context, req GetAllCurrencyRequest) ([]Currency, error) {
 	rawQuery := `
 		SELECT
 			id,
@@ -84,17 +84,16 @@ func (r *PostgresCurrencyRepository) GetAll(ctx context.Context, dto GetAllCurre
 			$2;
 	`
 
-	rows, err := r.pgx.Query(ctx, rawQuery, dto.Cursor, dto.Limit)
+	rows, err := r.pgx.Query(ctx, rawQuery, req.Cursor, req.Limit)
 	if err != nil {
 		return nil, fmt.Errorf("getting all currency: %w", err)
 	}
 	defer rows.Close()
 
-	var currencies []CurrencyDTO
+	var currencies []Currency
+	var currency Currency
 
 	for rows.Next() {
-		var currency CurrencyDTO
-
 		if err := rows.Scan(
 			&currency.ID,
 			&currency.Name,
@@ -119,7 +118,7 @@ func (r *PostgresCurrencyRepository) GetAll(ctx context.Context, dto GetAllCurre
 	return currencies, nil
 }
 
-func (r *PostgresCurrencyRepository) Create(ctx context.Context, dto CreateCurrencyDTO) (CurrencyDTO, error) {
+func (r *PostgresCurrencyRepository) Create(ctx context.Context, req CreateCurrencyRequest) (Currency, error) {
 	rawQuery := `
 		INSERT INTO
 			currencies(
@@ -144,19 +143,19 @@ func (r *PostgresCurrencyRepository) Create(ctx context.Context, dto CreateCurre
 		RETURNING *;
 	`
 
-	var currency CurrencyDTO
+	var currency Currency
 
 	row := r.pgx.QueryRow(
 		ctx,
 		rawQuery,
-		dto.Name,
-		dto.Code,
-		dto.Kind,
-		dto.IsPurchasable,
-		dto.IsPurchasable,
-		dto.ExipiresAfterDays,
-		dto.MaxBalanceMinor,
-		dto.SortOrder)
+		req.Name,
+		req.Code,
+		req.Kind,
+		req.IsPurchasable,
+		req.IsPurchasable,
+		req.ExipiresAfterDays,
+		req.MaxBalanceMinor,
+		req.SortOrder)
 	if err := row.Scan(
 		&currency.ID,
 		&currency.Name,
@@ -168,49 +167,48 @@ func (r *PostgresCurrencyRepository) Create(ctx context.Context, dto CreateCurre
 		&currency.MaxBalanceMinor,
 		&currency.SortOrder,
 	); err != nil {
-		return CurrencyDTO{}, fmt.Errorf("scanning row: %w", err)
+		return Currency{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return currency, nil
 }
 
-func (r *PostgresCurrencyRepository) Update(ctx context.Context, dto UpdateCurrencyDTO) (CurrencyDTO, error) {
+func (r *PostgresCurrencyRepository) Update(ctx context.Context, req UpdateCurrencyRequest) (Currency, error) {
 	builder := r.statementbuilder.Update("currencies")
-	if dto.Name != "" {
-		builder = builder.Set("name", dto.Name)
+	if req.Name != "" {
+		builder = builder.Set("name", req.Name)
 	}
-	if dto.Code != "" {
-		builder = builder.Set("code", dto.Code)
+	if req.Code != "" {
+		builder = builder.Set("code", req.Code)
 	}
-	if dto.Kind != "" {
-		builder = builder.Set("kind", dto.Kind)
+	if req.Kind != "" {
+		builder = builder.Set("kind", req.Kind)
 	}
-	if dto.IsPurchasable != nil {
-		builder = builder.Set("is_purchasable", *dto.IsPurchasable)
+	if req.IsPurchasable != nil {
+		builder = builder.Set("is_purchasable", *req.IsPurchasable)
 	}
-	if dto.IsTradable != nil {
-		builder = builder.Set("is_tradable", *dto.IsTradable)
+	if req.IsTradable != nil {
+		builder = builder.Set("is_tradable", *req.IsTradable)
 	}
-	if dto.ExipiresAfterDays != nil {
-		builder = builder.Set("expires_after_days", *dto.ExipiresAfterDays)
+	if req.ExipiresAfterDays != nil {
+		builder = builder.Set("expires_after_days", *req.ExipiresAfterDays)
 	}
-	if dto.MaxBalanceMinor != nil {
-		builder = builder.Set("max_balance_minor", *dto.MaxBalanceMinor)
+	if req.MaxBalanceMinor != nil {
+		builder = builder.Set("max_balance_minor", *req.MaxBalanceMinor)
 	}
-	if dto.SortOrder != nil {
-		builder = builder.Set("sort_order", *dto.SortOrder)
+	if req.SortOrder != nil {
+		builder = builder.Set("sort_order", *req.SortOrder)
 	}
 	builder = builder.Suffix("RETURNING *")
 
 	query, args, err := builder.ToSql()
 	if err != nil {
 		r.logger.Error("Failed to build sql query for updating currency", zap.Error(err))
-		return CurrencyDTO{}, common.TranslatePostgresError(err, r.logger)
+		return Currency{}, common.TranslatePostgresError(err, r.logger)
 	}
 
 	row := r.pgx.QueryRow(ctx, query, args...)
-
-	var currency CurrencyDTO
+	var currency Currency
 
 	if err := row.Scan(
 		&currency.ID,
@@ -223,13 +221,13 @@ func (r *PostgresCurrencyRepository) Update(ctx context.Context, dto UpdateCurre
 		&currency.MaxBalanceMinor,
 		&currency.SortOrder,
 	); err != nil {
-		return CurrencyDTO{}, fmt.Errorf("scanning row: %w", err)
+		return Currency{}, fmt.Errorf("scanning row: %w", err)
 	}
 
 	return currency, nil
 }
 
-func (r *PostgresCurrencyRepository) Delete(ctx context.Context, dto DeleetCurrencyDTO) (int, error) {
+func (r *PostgresCurrencyRepository) Delete(ctx context.Context, req DeleteCurrencyRequest) (int, error) {
 	rawQuery := `
 		DELETE FROM
 			currencies
@@ -239,8 +237,7 @@ func (r *PostgresCurrencyRepository) Delete(ctx context.Context, dto DeleetCurre
 			id;
 	`
 
-	row := r.pgx.QueryRow(ctx, rawQuery, dto.ID)
-
+	row := r.pgx.QueryRow(ctx, rawQuery, req.ID)
 	var deletedCurrencyID int
 
 	if err := row.Scan(&deletedCurrencyID); err != nil {

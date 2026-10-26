@@ -11,11 +11,11 @@ import (
 
 type CurrencyController struct {
 	service CurrencyService
-	config  *config.Config
+	config  *config.CurrencyConfig
 	logger  *zap.Logger
 }
 
-func NBewCurrencyController(service CurrencyService, c *config.Config, l *zap.Logger) *CurrencyController {
+func NewCurrencyController(service CurrencyService, c *config.CurrencyConfig, l *zap.Logger) *CurrencyController {
 	return &CurrencyController{
 		service: service,
 		config:  c,
@@ -24,29 +24,30 @@ func NBewCurrencyController(service CurrencyService, c *config.Config, l *zap.Lo
 }
 
 func (c *CurrencyController) Get(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "economy.currency.controller.get")
+	sctx, span := tracer.Start(ctx.Request.Context(), "economy.currency.controller.Get")
 	var err error
 
 	defer func() {
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
+			c.logger.Debug("Failed to get currency", zap.Error(err))
 		}
 		span.End()
 	}()
 
-	var dto GetCurrencyDTO
+	var req GetCurrencyRequest
 
-	err = ctx.ShouldBindUri(&dto.CurrencyID)
+	err = ctx.ShouldBindUri(&req.CurrencyID)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	currency, err := c.service.Get(sctx, dto)
+	currency, err := c.service.Get(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to get currency data",
-			zap.String("currency_id", dto.ID),
+			zap.String("currency_id", req.ID),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -56,30 +57,31 @@ func (c *CurrencyController) Get(ctx *gin.Context) {
 }
 
 func (c *CurrencyController) GetAll(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "economy.currency.controller.getall")
+	sctx, span := tracer.Start(ctx.Request.Context(), "economy.currency.controller.GetAll")
 	var err error
 
 	defer func() {
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
+			c.logger.Debug("Failed to get all currency", zap.Error(err))
 		}
 		span.End()
 	}()
 
-	var dto GetAllCurrencyDTO
+	var req GetAllCurrencyRequest
 
-	err = ctx.ShouldBindQuery(&dto)
+	err = ctx.ShouldBindQuery(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	currencies, err := c.service.GetAll(sctx, dto)
+	currencies, err := c.service.GetAll(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to get all currency",
-			zap.Int("limit", dto.Limit),
-			zap.Int("cursor", dto.Cursor),
+			zap.Int("limit", req.Limit),
+			zap.Int("cursor", req.Cursor),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -89,26 +91,27 @@ func (c *CurrencyController) GetAll(ctx *gin.Context) {
 }
 
 func (c *CurrencyController) Create(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "economy.currency.controller.create")
+	sctx, span := tracer.Start(ctx.Request.Context(), "economy.currency.controller.Create")
 	var err error
 
 	defer func() {
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
+			c.logger.Debug("Failed to create currency", zap.Error(err))
 		}
 		span.End()
 	}()
 
-	var dto CreateCurrencyDTO
+	var req CreateCurrencyRequest
 
-	err = ctx.ShouldBindBodyWithJSON(&dto)
+	err = ctx.ShouldBindBodyWithJSON(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	currency, err := c.service.Create(sctx, dto)
+	currency, err := c.service.Create(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to create currency", zap.Error(err))
 		ctx.Error(err)
@@ -119,35 +122,36 @@ func (c *CurrencyController) Create(ctx *gin.Context) {
 }
 
 func (c *CurrencyController) Update(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "economy.currency.controller.update")
+	sctx, span := tracer.Start(ctx.Request.Context(), "economy.currency.controller.Update")
 	var err error
 
 	defer func() {
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
+			c.logger.Debug("Failed to update currency", zap.Error(err))
 		}
 		span.End()
 	}()
 
-	var dto UpdateCurrencyDTO
+	var req UpdateCurrencyRequest
 
-	err = ctx.ShouldBindUri(&dto.CurrencyID)
+	err = ctx.ShouldBindUri(&req.CurrencyID)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	err = ctx.ShouldBindBodyWithJSON(&dto.UpdateData)
+	err = ctx.ShouldBindBodyWithJSON(&req.UpdateData)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	updatedCurrency, err := c.service.Update(sctx, dto)
+	updatedCurrency, err := c.service.Update(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to update currency",
-			zap.String("currency_id", dto.ID),
+			zap.String("currency_id", req.ID),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -157,29 +161,30 @@ func (c *CurrencyController) Update(ctx *gin.Context) {
 }
 
 func (c *CurrencyController) Delete(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "economy.currency.controller.delete")
+	sctx, span := tracer.Start(ctx.Request.Context(), "economy.currency.controller.Delete")
 	var err error
 
 	defer func() {
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
+			c.logger.Debug("Failed to delete currency", zap.Error(err))
 		}
 		span.End()
 	}()
 
-	var dto DeleetCurrencyDTO
+	var req DeleteCurrencyRequest
 
-	err = ctx.ShouldBindUri(&dto.CurrencyID)
+	err = ctx.ShouldBindUri(&req.CurrencyID)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	_, err = c.service.Delete(sctx, dto)
+	_, err = c.service.Delete(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to delete currency",
-			zap.String("currency_id", dto.ID),
+			zap.String("currency_id", req.ID),
 			zap.Error(err))
 		ctx.Error(err)
 		return

@@ -11,11 +11,11 @@ import (
 
 type WalletController struct {
 	service WalletService
-	config  *config.Config
+	config  *config.WalletConfig
 	logger  *zap.Logger
 }
 
-func NewWalletController(service WalletService, c *config.Config, l *zap.Logger) *WalletController {
+func NewWalletController(service WalletService, c *config.WalletConfig, l *zap.Logger) *WalletController {
 	return &WalletController{
 		service: service,
 		config:  c,
@@ -24,28 +24,29 @@ func NewWalletController(service WalletService, c *config.Config, l *zap.Logger)
 }
 
 func (c *WalletController) CreateWalletOfNewPlayer(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "economy.wallet.createwalletofnewplayer")
+	sctx, span := tracer.Start(ctx.Request.Context(), "economy.wallet.CreateWalletOfNewPlayer")
 	var err error
 	defer func() {
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
+			c.logger.Debug("Failed to create wallet of new player", zap.Error(err))
 		}
 		span.End()
 	}()
 
-	var dto CreateNewPlayerWalletDTO
+	var req CreateNewPlayerWalletRequest
 
-	err = ctx.ShouldBindQuery(&dto.WalletUserID)
+	err = ctx.ShouldBindQuery(&req.WalletUserID)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	err = c.service.CreateWalletOfNewPlayer(sctx, dto)
+	err = c.service.CreateWalletOfNewPlayer(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to create wallet of new player",
-			zap.String("user_id", dto.UserID),
+			zap.String("user_id", req.UserID),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -55,28 +56,29 @@ func (c *WalletController) CreateWalletOfNewPlayer(ctx *gin.Context) {
 }
 
 func (c *WalletController) GetWalletOfPlayer(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "economy.wallet.getwalletofplayer")
+	sctx, span := tracer.Start(ctx.Request.Context(), "economy.wallet.GetWalletOfPlayer")
 	var err error
 	defer func() {
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
+			c.logger.Debug("Failed to get wallet of player", zap.Error(err))
 		}
 		span.End()
 	}()
 
-	var dto GetWalletOfPlayerDTO
+	var req GetWalletOfPlayerRequest
 
-	err = ctx.ShouldBindQuery(&dto.WalletUserID)
+	err = ctx.ShouldBindQuery(&req.WalletUserID)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	wallet, err := c.service.GetWalletOfPlayer(sctx, dto)
+	wallet, err := c.service.GetWalletOfPlayer(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to get wallet of player",
-			zap.String("user_id", dto.UserID),
+			zap.String("user_id", req.UserID),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -86,28 +88,29 @@ func (c *WalletController) GetWalletOfPlayer(ctx *gin.Context) {
 }
 
 func (c *WalletController) UpdateWalletOfPlayer(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "economy.wallet.updatewalletofplayer")
+	sctx, span := tracer.Start(ctx.Request.Context(), "economy.wallet.UpdateWalletOfPlayer")
 	var err error
 	defer func() {
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
+			c.logger.Debug("Failed to update wallet of player", zap.Error(err))
 		}
 		span.End()
 	}()
 
-	var dto UpdateWalletOfPlayerDTO
+	var req UpdateWalletOfPlayerRequest
 
-	err = ctx.ShouldBindBodyWithJSON(&dto)
+	err = ctx.ShouldBindBodyWithJSON(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	updatedWallet, err := c.service.UpdateWalletOfPlayer(sctx, dto)
+	updatedWallet, err := c.service.UpdateWalletOfPlayer(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to update wallet of player",
-			zap.String("user_id", dto.UserID.String()),
+			zap.String("user_id", req.UserID.String()),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -117,27 +120,28 @@ func (c *WalletController) UpdateWalletOfPlayer(ctx *gin.Context) {
 }
 
 func (c *WalletController) DeleteWalletOfPlayer(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "economy.wallet.deletewalletofplayer")
+	sctx, span := tracer.Start(ctx.Request.Context(), "economy.wallet.DeleteWalletOfPlayer")
 	var err error
 	defer func() {
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
+			c.logger.Debug("Failed to delete wallet of player", zap.Error(err))
 		}
 		span.End()
 	}()
 
-	var dto DeleteWalletOfPlayerDTO
+	var req DeleteWalletOfPlayerRequest
 
-	if err := ctx.ShouldBindQuery(&dto.WalletUserID); err != nil {
+	if err := ctx.ShouldBindQuery(&req.WalletUserID); err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	err = c.service.DeleteWalletOfPlayer(sctx, dto)
+	err = c.service.DeleteWalletOfPlayer(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to delete wallet of player",
-			zap.String("user_id", dto.UserID),
+			zap.String("user_id", req.UserID),
 			zap.Error(err))
 		ctx.Error(err)
 		return
