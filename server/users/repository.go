@@ -10,32 +10,32 @@ import (
 
 type UsersRepository interface {
 	Initialize(context.Context) error
-	Seed(context.Context) error
+	Seed(context.Context)
 
 	// General operations
-	Add(ctx context.Context, dto CreateDTO) (User, error)
+	Add(ctx context.Context, req CreateRequest) (User, error)
 	GetAll(ctx context.Context, cursor uuid.UUID, limit int, sortBy, sortDirection string) ([]User, error)
 	GetAllByAttribute(ctx context.Context, attribute string) ([]User, error)
 	GetById(ctx context.Context, id uuid.UUID) (User, error)
 	GetByName(ctx context.Context, name string) (User, error)
 	GetBySocialProfileId(ctx context.Context, provider, socialUserId string) (User, error)
 
-	Update(ctx context.Context, dto UpdateDTO) (User, error)
-	Replace(ctx context.Context, dto ReplaceDTO) (User, error)
-	Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error)
+	Update(ctx context.Context, req UpdateRequest) (User, error)
+	Replace(ctx context.Context, req ReplaceRequest) (User, error)
+	Delete(ctx context.Context, req DeleteRequest) (uuid.UUID, error)
 
 	// Operations
 	FindOrCreateUserFromSocialProfile(ctx context.Context, profile auth.UnifiedUserProfile) (uuid.UUID, bool, error)
 	CheckIfUserIsBanned(ctx context.Context, userId uuid.UUID) (bool, error)
 
-	Ban(ctx context.Context, dto BanDTO) (BannedUser, error)
-	UnBan(ctx context.Context, dto UnbanDTO) error
+	Ban(ctx context.Context, req BanRequest) (BannedUserResponse, error)
+	UnBan(ctx context.Context, req UnbanRequest) error
 
 	// Bulk operations
-	BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error)
-	BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error)
-	BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error)
+	BulkAdd(ctx context.Context, req BulkCreateRequest) ([]common.BulkOpResult, error)
+	BulkModify(ctx context.Context, req BulkModifyRequest) ([]common.BulkOpResult, error)
+	BulkDelete(ctx context.Context, req BulkDeleteRequest) ([]common.BulkOpResult, error)
 
-	CheckUsername(ctx context.Context, dto CheckUsernameDTO) (bool, error)
-	GetAllUsernames(ctx context.Context, dto UserId) ([]string, error)
+	CheckUsername(ctx context.Context, req CheckUsernameRequest) (bool, error)
+	GetAllUsernames(ctx context.Context, req UserId) ([]string, error)
 }

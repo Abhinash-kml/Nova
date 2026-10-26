@@ -294,11 +294,9 @@ func main() {
 
 	// Setup users module
 	{
-		usersRepository := users.NewPostgresRepositoryFromPgxPool(postgresPool, config, logger, config.UsersConfig.SeedFile)
-		if err = usersRepository.Seed(context.Background()); err != nil {
-			logger.Error("Failed to seed users repository", zap.Error(err))
-		}
-		usersService := users.NewLocalUsersService(usersRepository, tieredCache, config, logger)
+		usersRepository := users.NewPostgresRepositoryFromPgxPool(postgresPool, &config.UsersConfig, logger)
+		usersRepository.Seed(context.Background())
+		usersService := users.NewLocalUsersService(usersRepository, tieredCache, &config.UsersConfig, logger)
 		usersController := users.NewController(usersService, config, logger)
 		users.SetupRoutes(globalRouter, usersController)
 	}

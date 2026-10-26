@@ -42,27 +42,27 @@ func (c *Controller) GetAll(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto GetAllDTO
+	var req GetAllRequest
 
-	err = ctx.ShouldBindQuery(&dto)
+	err = ctx.ShouldBindQuery(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	fmt.Println("Passed cursor:", dto.Cursor)
-	decodedCursor, err := utils.DecodeCursorUUID(dto.Cursor)
+	fmt.Println("Passed cursor:", req.Cursor)
+	decodedCursor, err := utils.DecodeCursorUUID(req.Cursor)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 	fmt.Println("decoded cursor:", decodedCursor.String())
 
-	users, err := c.service.GetAll(sctx, decodedCursor, dto.Limit, dto.SortBy, dto.SortDirection)
+	users, err := c.service.GetAll(sctx, decodedCursor, req.Limit, req.SortBy, req.SortDirection)
 	if err != nil {
 		c.logger.Error("Failed to get all users",
 			zap.String("cursor", decodedCursor.String()),
-			zap.Int("limit", dto.Limit),
+			zap.Int("limit", req.Limit),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -83,22 +83,22 @@ func (c *Controller) Get(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto GetDTO
+	var req GetRequest
 
-	err = ctx.ShouldBindUri(&dto)
+	err = ctx.ShouldBindUri(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("user_id", dto.Id))
+	span.SetAttributes(attribute.String("user_id", req.Id))
 
-	parsedId, _ := uuid.Parse(dto.Id)
+	parsedId, _ := uuid.Parse(req.Id)
 
 	user, err := c.service.GetById(sctx, parsedId)
 	if err != nil {
 		c.logger.Error("Failed to get user",
-			zap.String("user_id", dto.Id),
+			zap.String("user_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -119,15 +119,15 @@ func (c *Controller) Create(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto CreateDTO
+	var req CreateRequest
 
-	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	err = ctx.ShouldBindWith(&req, binding.JSON)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	user, err := c.service.Add(sctx, dto)
+	user, err := c.service.Add(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to create user", zap.Error(err))
 		ctx.Error(err)
@@ -149,25 +149,25 @@ func (c *Controller) Modify(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto UpdateDTO
+	var req UpdateRequest
 
-	err = ctx.ShouldBindUri(&dto.UserId)
+	err = ctx.ShouldBindUri(&req.UserId)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("user_id", dto.Id))
+	span.SetAttributes(attribute.String("user_id", req.Id))
 
-	if err := ctx.ShouldBindBodyWithJSON(&dto); err != nil {
+	if err := ctx.ShouldBindBodyWithJSON(&req); err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	modifiedUser, err := c.service.Update(sctx, dto)
+	modifiedUser, err := c.service.Update(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to update user",
-			zap.String("user_id", dto.Id),
+			zap.String("user_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -188,29 +188,29 @@ func (c *Controller) Delete(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto DeleteDTO
+	var req DeleteRequest
 
-	err = ctx.ShouldBindUri(&dto.UserId)
+	err = ctx.ShouldBindUri(&req.UserId)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("user_id", dto.Id))
+	span.SetAttributes(attribute.String("user_id", req.Id))
 
-	err = ctx.ShouldBindQuery(&dto.DeleteOptions)
+	err = ctx.ShouldBindQuery(&req.DeleteOptions)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("type", dto.Type))
+	span.SetAttributes(attribute.String("type", req.Type))
 
-	_, err = c.service.Delete(sctx, dto)
+	_, err = c.service.Delete(sctx, req)
 	if err != nil {
 		ctx.Error(err)
 		c.logger.Error("Failed to delete user",
-			zap.String("user_id", dto.Id),
+			zap.String("user_id", req.Id),
 			zap.Error(err))
 		return
 	}
@@ -230,26 +230,26 @@ func (c *Controller) Replace(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto ReplaceDTO
+	var req ReplaceRequest
 
-	err = ctx.ShouldBindUri(&dto.UserId)
+	err = ctx.ShouldBindUri(&req.UserId)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.String("user_id", dto.Id))
+	span.SetAttributes(attribute.String("user_id", req.Id))
 
-	err = ctx.ShouldBindWith(&dto.ReplacementData, binding.JSON)
+	err = ctx.ShouldBindWith(&req.ReplacementData, binding.JSON)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	replacedUser, err := c.service.Replace(sctx, dto)
+	replacedUser, err := c.service.Replace(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to replace user",
-			zap.String("user_id", dto.Id),
+			zap.String("user_id", req.Id),
 			zap.Error(err))
 		ctx.Error(err)
 		return
@@ -270,17 +270,17 @@ func (c *Controller) BulkAdd(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto BulkCreateDTO
+	var req BulkCreateRequest
 
-	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	err = ctx.ShouldBindWith(&req, binding.JSON)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.Int("count", len(dto.Users)))
+	span.SetAttributes(attribute.Int("count", len(req.Users)))
 
-	results, err := c.service.BulkAdd(sctx, dto)
+	results, err := c.service.BulkAdd(sctx, req)
 	if err != nil {
 		c.logger.Error("Bulk add operation failed", zap.Error(err))
 		ctx.Error(err)
@@ -326,17 +326,17 @@ func (c *Controller) BulkModify(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto BulkModifyDTO
+	var req BulkModifyRequest
 
-	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	err = ctx.ShouldBindWith(&req, binding.JSON)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.Int("count", len(dto.Updates)))
+	span.SetAttributes(attribute.Int("count", len(req.Updates)))
 
-	results, err := c.service.BulkModify(sctx, dto)
+	results, err := c.service.BulkModify(sctx, req)
 	if err != nil {
 		c.logger.Error("Bulk modify operation failed", zap.Error(err))
 		ctx.Error(err)
@@ -382,17 +382,17 @@ func (c *Controller) BulkDelete(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto BulkDeleteDTO
+	var req BulkDeleteRequest
 
-	err = ctx.ShouldBindWith(&dto, binding.JSON)
+	err = ctx.ShouldBindWith(&req, binding.JSON)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	span.SetAttributes(attribute.Int("count", len(dto.Users)))
+	span.SetAttributes(attribute.Int("count", len(req.Users)))
 
-	results, err := c.service.BulkDelete(sctx, dto)
+	results, err := c.service.BulkDelete(sctx, req)
 	if err != nil {
 		c.logger.Error("Bulk delete operation failed", zap.Error(err))
 		ctx.Error(err)
@@ -468,15 +468,15 @@ func (c *Controller) Refresh(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto auth.TokenRefreshRequest
+	var req auth.TokenRefreshRequest
 
-	err = ctx.ShouldBindBodyWith(&dto, binding.JSON)
+	err = ctx.ShouldBindBodyWith(&req, binding.JSON)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	response, err := c.service.Refresh(sctx, dto)
+	response, err := c.service.Refresh(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to refresh user token", zap.Error(err))
 		ctx.Error(err)
@@ -499,15 +499,15 @@ func (c *Controller) Ban(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto BanDTO
+	var req BanRequest
 
-	err = ctx.ShouldBindBodyWithJSON(&dto)
+	err = ctx.ShouldBindBodyWithJSON(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	bannedUser, err := c.service.Ban(sctx, dto)
+	bannedUser, err := c.service.Ban(sctx, req)
 	if err != nil {
 		ctx.Error(err)
 		return
@@ -529,15 +529,15 @@ func (c *Controller) Unban(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto UnbanDTO
+	var req UnbanRequest
 
-	err = ctx.ShouldBindBodyWithJSON(&dto)
+	err = ctx.ShouldBindBodyWithJSON(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	err = c.service.UnBan(sctx, dto)
+	err = c.service.UnBan(sctx, req)
 	if err != nil {
 		ctx.Error(err)
 		return
@@ -559,15 +559,15 @@ func (c *Controller) CheckUsername(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto CheckUsernameDTO
+	var req CheckUsernameRequest
 
-	err = ctx.ShouldBindBodyWithJSON(&dto)
+	err = ctx.ShouldBindBodyWithJSON(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	valid, err := c.service.CheckUsername(sctx, dto)
+	valid, err := c.service.CheckUsername(sctx, req)
 	if err != nil {
 		ctx.Error(err)
 		return
@@ -589,15 +589,15 @@ func (c *Controller) GetAllUsernames(ctx *gin.Context) {
 		span.End()
 	}()
 
-	var dto UserId
+	var req UserId
 
-	err = ctx.ShouldBindUri(&dto)
+	err = ctx.ShouldBindUri(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
 	}
 
-	usernames, err := c.service.GetAllUsernames(sctx, dto)
+	usernames, err := c.service.GetAllUsernames(sctx, req)
 	if err != nil {
 		ctx.Error(err)
 		return

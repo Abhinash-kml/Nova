@@ -10,11 +10,11 @@ type DeleteOptions struct {
 	Type string `form:"type" json:"type" binding:"required,oneof=soft hard"`
 }
 
-type GetDTO struct {
+type GetRequest struct {
 	UserId
 }
 
-type GetAllDTO struct {
+type GetAllRequest struct {
 	Cursor        string `form:"cursor,default=AAAAAAAAAAAAAAAAAAAAAA" binding:"required"`
 	Limit         int    `form:"limit,default=10" binding:"required,gte=10,lte=20"`
 	SortDirection string `form:"sort,default=asc" binding:"required,oneof=asc desc"`
@@ -22,7 +22,7 @@ type GetAllDTO struct {
 	// Filter string `form:"filter,default=id" binding:"required"`
 }
 
-type CreateDTO struct {
+type CreateRequest struct {
 	Username    string `json:"username" binding:"required,gte=5,lte=20"`
 	DisplayName string `json:"display_name" binding:"required,gte=5,lte=20"`
 	Email       string `json:"email" binding:"required,email"`
@@ -43,7 +43,7 @@ type FieldUpdates struct {
 	Updates []FieldUpdate `json:"updates" binding:"required"`
 }
 
-type UpdateDTO struct {
+type UpdateRequest struct {
 	UserId
 	Username    *string `json:"username"`
 	DisplayName *string `json:"display_name"`
@@ -64,42 +64,42 @@ type ReplacementData struct {
 	Timezone    string `json:"timezone" binding:"required"`
 }
 
-type ReplaceDTO struct {
+type ReplaceRequest struct {
 	UserId
 	ReplacementData
 }
 
-type DeleteDTO struct {
+type DeleteRequest struct {
 	UserId
 	DeleteOptions
 }
 
-type BanDetailsDTO struct {
+type BanDetailsResponse struct {
 	By     string    `json:"by"`
 	Reason string    `json:"reason"`
 	On     time.Time `json:"on"`
 	Till   time.Time `json:"till"`
 }
 
-type BulkCreateDTO struct {
-	Users []CreateDTO `json:"users" binding:"required"`
+type BulkCreateRequest struct {
+	Users []CreateRequest `json:"users" binding:"required"`
 }
 
-type BulkModifyDTO struct {
-	Updates []UpdateDTO `json:"updates" binding:"required"`
+type BulkModifyRequest struct {
+	Updates []UpdateRequest `json:"updates" binding:"required"`
 }
 
-type BulkDeleteDTO struct {
-	Users []DeleteDTO `json:"users" binding:"required"`
+type BulkDeleteRequest struct {
+	Users []DeleteRequest `json:"users" binding:"required"`
 }
-type BanDTO struct {
+type BanRequest struct {
 	UserID   string    `json:"user_id" binding:"required,uuid"`
 	Reason   string    `json:"reason" binding:"required"`
 	Type     string    `json:"ban_type" binding:"required"`
 	Duration time.Time `json:"duration" binding:"required"`
 }
 
-type BannedUser struct {
+type BannedUserResponse struct {
 	UserID     string    `json:"user_id"`
 	Reason     string    `json:"reason"`
 	Type       string    `json:"ban_type"`
@@ -107,10 +107,10 @@ type BannedUser struct {
 	BannedTill time.Time `json:"banned_till"`
 }
 
-type UnbanDTO struct {
+type UnbanRequest struct {
 	UserID string `json:"user_id" binding:"required,uuid"`
 }
 
-type CheckUsernameDTO struct {
+type CheckUsernameRequest struct {
 	Username string `json:"username" binding:"required"`
 }

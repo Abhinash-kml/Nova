@@ -3,7 +3,6 @@ package users
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"os"
 	"slices"
@@ -18,12 +17,12 @@ import (
 
 type InMemoryUsersRepository struct {
 	users  []User
-	config *config.Config
+	config *config.UsersConfig
 	logger *zap.Logger
 	mu     sync.RWMutex
 }
 
-func NewInMemoryUsersRepository(c *config.Config, l *zap.Logger) *InMemoryUsersRepository {
+func NewInMemoryUsersRepository(c *config.UsersConfig, l *zap.Logger) *InMemoryUsersRepository {
 	return &InMemoryUsersRepository{
 		config: c,
 		logger: l,
@@ -35,32 +34,27 @@ func (r *InMemoryUsersRepository) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (r *InMemoryUsersRepository) Seed(ctx context.Context) error {
-	file, err := os.OpenFile("./seeds/users.json", os.O_RDONLY, 0755)
+func (r *InMemoryUsersRepository) Seed(ctx context.Context) {
+	file, err := os.OpenFile(r.config.SeedFile, os.O_RDONLY, 0755)
 	if err != nil {
 		r.logger.Error("Failed to open users seeds file", zap.Error(err))
-		return fmt.Errorf("Failed to open user's seeds file. Error: %w", err)
 	}
 	defer file.Close()
 
 	decoder := json.NewDecoder(file)
 	if decoder == nil {
 		r.logger.Error("Failed to create json decoder. Returned nil pointer")
-		return fmt.Errorf("Failed to create json decoder. Returned nil pointer")
 	}
 
 	err = decoder.Decode(&r.users)
 	if err != nil {
 		r.logger.Error("Failed to decode user's seeds data to repository", zap.Error(err))
-		return fmt.Errorf("Failed to decode user's seeds data to repository. Error: %w", err)
 	}
 
 	r.logger.Info("Added users from seeds", zap.Int("Count", len(r.users)))
-
-	return nil
 }
 
-func (r *InMemoryUsersRepository) Add(ctx context.Context, user CreateDTO) (User, error) {
+func (r *InMemoryUsersRepository) Add(ctx context.Context, req CreateRequest) (User, error) {
 	_, span := tracer.Start(ctx, "users.repository.add")
 	defer span.End()
 
@@ -70,13 +64,13 @@ func (r *InMemoryUsersRepository) Add(ctx context.Context, user CreateDTO) (User
 	now := time.Now()
 	newUser := User{
 		Id:         uuid.New(),
-		Username:   user.DisplayName,
-		Email:      user.Email,
-		Country:    user.Country,
-		State:      user.State,
+		Username:   req.DisplayName,
+		Email:      req.Email,
+		Country:    req.Country,
+		State:      req.State,
 		AvatarURL:  "-",
-		LangTag:    user.LangTag,
-		Timezone:   user.Timezone,
+		LangTag:    req.LangTag,
+		Timezone:   req.Timezone,
 		CreatedAt:  now,
 		UpdatedAt:  now,
 		VerifiedAt: now,
@@ -150,37 +144,37 @@ func (r *InMemoryUsersRepository) GetByName(ctx context.Context, name string) (U
 	return User{}, common.ErrResourceNotFound
 }
 
-func (r *InMemoryUsersRepository) Update(ctx context.Context, dto UpdateDTO) (User, error) {
+func (r *InMemoryUsersRepository) Update(ctx context.Context, req UpdateRequest) (User, error) {
 	_, span := tracer.Start(ctx, "users.repository.update")
 	defer span.End()
 
-	parsedId, _ := uuid.Parse(dto.Id)
+	parsedId, _ := uuid.Parse(req.Id)
 	var updatedUserindex int = -1
 
 	for index := range r.users {
 		if r.users[index].Id == parsedId {
 			r.mu.Lock()
 
-			if dto.Username != nil {
-				r.users[index].Username = *dto.Username
+			if req.Username != nil {
+				r.users[index].Username = *req.Username
 			}
-			if dto.DisplayName != nil {
-				r.users[index].DisplayName = *dto.DisplayName
+			if req.DisplayName != nil {
+				r.users[index].DisplayName = *req.DisplayName
 			}
-			if dto.Email != nil {
-				r.users[index].Email = *dto.Email
+			if req.Email != nil {
+				r.users[index].Email = *req.Email
 			}
-			if dto.Country != nil {
-				r.users[index].Country = *dto.Country
+			if req.Country != nil {
+				r.users[index].Country = *req.Country
 			}
-			if dto.State != nil {
-				r.users[index].State = *dto.State
+			if req.State != nil {
+				r.users[index].State = *req.State
 			}
-			if dto.LangTag != nil {
-				r.users[index].LangTag = *dto.LangTag
+			if req.LangTag != nil {
+				r.users[index].LangTag = *req.LangTag
 			}
-			if dto.Timezone != nil {
-				r.users[index].Timezone = *dto.Timezone
+			if req.Timezone != nil {
+				r.users[index].Timezone = *req.Timezone
 			}
 			r.mu.Unlock()
 			updatedUserindex = index
@@ -195,11 +189,11 @@ func (r *InMemoryUsersRepository) Update(ctx context.Context, dto UpdateDTO) (Us
 	}
 }
 
-func (r *InMemoryUsersRepository) Replace(ctx context.Context, dto ReplaceDTO) (User, error) {
+func (r *InMemoryUsersRepository) Replace(ctx context.Context, req ReplaceRequest) (User, error) {
 	_, span := tracer.Start(ctx, "users.repository.replace")
 	defer span.End()
 
-	parsedId, _ := uuid.Parse(dto.Id)
+	parsedId, _ := uuid.Parse(req.Id)
 	var updatedUserindex int
 
 	for index := range r.users {
@@ -208,13 +202,13 @@ func (r *InMemoryUsersRepository) Replace(ctx context.Context, dto ReplaceDTO) (
 
 			r.mu.Lock()
 
-			r.users[index].Username = dto.Username
-			r.users[index].DisplayName = dto.DisplayName
-			r.users[index].Email = dto.Email
-			r.users[index].Country = dto.Country
-			r.users[index].State = dto.State
-			r.users[index].LangTag = dto.LangTag
-			r.users[index].Timezone = dto.Timezone
+			r.users[index].Username = req.Username
+			r.users[index].DisplayName = req.DisplayName
+			r.users[index].Email = req.Email
+			r.users[index].Country = req.Country
+			r.users[index].State = req.State
+			r.users[index].LangTag = req.LangTag
+			r.users[index].Timezone = req.Timezone
 
 			r.users[index].UpdatedAt = time.Now()
 
@@ -230,14 +224,14 @@ func (r *InMemoryUsersRepository) Replace(ctx context.Context, dto ReplaceDTO) (
 	}
 }
 
-func (r *InMemoryUsersRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
+func (r *InMemoryUsersRepository) Delete(ctx context.Context, req DeleteRequest) (uuid.UUID, error) {
 	_, span := tracer.Start(ctx, "users.repository.delete")
 	defer span.End()
 
 	oldLen := len(r.users)
 
 	r.mu.Lock()
-	parsedId, _ := uuid.Parse(dto.Id)
+	parsedId, _ := uuid.Parse(req.Id)
 	r.users = slices.DeleteFunc(r.users, func(u User) bool {
 		if u.Id == parsedId {
 			return true
@@ -255,15 +249,15 @@ func (r *InMemoryUsersRepository) Delete(ctx context.Context, dto DeleteDTO) (uu
 	return uuid.Nil, common.ErrResourceCannotBeDeleted
 }
 
-func (r *InMemoryUsersRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {
+func (r *InMemoryUsersRepository) BulkAdd(ctx context.Context, req BulkCreateRequest) ([]common.BulkOpResult, error) {
 	_, span := tracer.Start(ctx, "users.repository.bulkadd")
 	defer span.End()
 
-	results := make([]common.BulkOpResult, 0, len(dto.Users))
+	results := make([]common.BulkOpResult, 0, len(req.Users))
 
-	for index := range dto.Users {
+	for index := range req.Users {
 		var result common.BulkOpResult
-		user, err := r.Add(ctx, dto.Users[index])
+		user, err := r.Add(ctx, req.Users[index])
 		if err != nil {
 			result.Id = uuid.Nil
 			result.Success = false
@@ -280,15 +274,15 @@ func (r *InMemoryUsersRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO
 	return results, nil
 }
 
-func (r *InMemoryUsersRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
+func (r *InMemoryUsersRepository) BulkModify(ctx context.Context, req BulkModifyRequest) ([]common.BulkOpResult, error) {
 	_, span := tracer.Start(ctx, "users.repository.bulkmodify")
 	defer span.End()
 
-	results := make([]common.BulkOpResult, 0, len(dto.Updates))
+	results := make([]common.BulkOpResult, 0, len(req.Updates))
 
-	for index := range dto.Updates {
+	for index := range req.Updates {
 		var result common.BulkOpResult
-		updated, err := r.Update(ctx, dto.Updates[index])
+		updated, err := r.Update(ctx, req.Updates[index])
 		if err != nil {
 			result.Id = uuid.Nil
 			result.Success = false
@@ -305,15 +299,15 @@ func (r *InMemoryUsersRepository) BulkModify(ctx context.Context, dto BulkModify
 	return results, nil
 }
 
-func (r *InMemoryUsersRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
+func (r *InMemoryUsersRepository) BulkDelete(ctx context.Context, req BulkDeleteRequest) ([]common.BulkOpResult, error) {
 	_, span := tracer.Start(ctx, "users.repository.bulkdelete")
 	defer span.End()
 
-	results := make([]common.BulkOpResult, 0, len(dto.Users))
+	results := make([]common.BulkOpResult, 0, len(req.Users))
 
-	for index := range dto.Users {
+	for index := range req.Users {
 		var result common.BulkOpResult
-		deletedId, err := r.Delete(ctx, dto.Users[index])
+		deletedId, err := r.Delete(ctx, req.Users[index])
 		if err != nil {
 			result.Id = uuid.Nil
 			result.Success = false

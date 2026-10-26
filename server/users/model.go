@@ -10,7 +10,6 @@ import (
 
 var tracer = otel.Tracer("users-tracer")
 
-const UserPrefix = "user:"
 const SystemUser = "01a1498d-fb97-721b-90f4-b134122fcd23"
 
 type User struct {

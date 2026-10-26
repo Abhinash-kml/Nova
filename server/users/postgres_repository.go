@@ -20,20 +20,18 @@ import (
 )
 
 type PostgresRepository struct {
-	config           *config.Config
+	config           *config.UsersConfig
 	logger           *zap.Logger
 	pgx              *pgxpool.Pool
 	statementBuilder squirrel.StatementBuilderType
-	seedfile         string
 }
 
-func NewPostgresRepositoryFromPgxPool(connection *pgxpool.Pool, c *config.Config, l *zap.Logger, sfp string) *PostgresRepository {
+func NewPostgresRepositoryFromPgxPool(connection *pgxpool.Pool, c *config.UsersConfig, l *zap.Logger) *PostgresRepository {
 	return &PostgresRepository{
 		config:           c,
 		logger:           l,
 		pgx:              connection,
 		statementBuilder: squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar),
-		seedfile:         sfp,
 	}
 }
 
@@ -41,7 +39,7 @@ func (r *PostgresRepository) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (r *PostgresRepository) Seed(ctx context.Context) error {
+func (r *PostgresRepository) Seed(ctx context.Context) {
 	// Check if rows already exists, if so then dont seed
 	existQuery := `SELECT count(*) FROM users;`
 	row := r.pgx.QueryRow(ctx, existQuery)
@@ -51,13 +49,11 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 	// Scan returned row
 	if err := row.Scan(&count); err != nil {
 		r.logger.Error("Failed to scan count of rows from users table", zap.Error(err))
-		return common.ErrDbSeedingFailed
 	}
 
 	// Rows already exists, dont seed
 	if count != 0 {
 		r.logger.Sugar().Infof("Users table contains %d rows, skipping seeding from file...", count)
-		return nil
 	}
 
 	// Table is empty, so seed from file to table
@@ -77,16 +73,14 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 	)
 
 	// Check if seeds file is provided and is of json format by suffix
-	if len(r.seedfile) == 0 || !strings.HasSuffix(r.seedfile, ".json") {
+	if len(r.config.SeedFile) == 0 || !strings.HasSuffix(r.config.SeedFile, ".json") {
 		r.logger.Error("Seeds file not provided or is not of json format. Skipping seeding")
-		return common.ErrDbSeedingFailed
 	}
 
 	// open file
-	file, err := os.OpenFile(r.seedfile, os.O_RDONLY, 0755)
+	file, err := os.OpenFile(r.config.SeedFile, os.O_RDONLY, 0755)
 	if err != nil {
-		r.logger.Error("Failed to open users seeds file", zap.String("file", r.seedfile), zap.Error(err))
-		return common.ErrDbSeedingFailed
+		r.logger.Error("Failed to open users seeds file", zap.String("file", r.config.SeedFile), zap.Error(err))
 	}
 	defer file.Close()
 
@@ -94,7 +88,6 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 	decoder := json.NewDecoder(file)
 	if decoder == nil {
 		r.logger.Error("Failed to create json decoder. Returned nil pointer")
-		return common.ErrDbSeedingFailed
 	}
 
 	// Decode
@@ -102,7 +95,6 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 	err = decoder.Decode(&users)
 	if err != nil {
 		r.logger.Error("Failed to decode seeded users from file", zap.Error(err))
-		return common.ErrDbSeedingFailed
 	}
 
 	for i := range users {
@@ -126,23 +118,19 @@ func (r *PostgresRepository) Seed(ctx context.Context) error {
 	query, args, err := queryBuilder.ToSql()
 	if err != nil {
 		r.logger.Error("Failed to generate sql query with squirrel for seeding users table", zap.Error(err))
-		return common.ErrDbSeedingFailed
 	}
 
 	// Execute query
 	_, err = r.pgx.Exec(ctx, query, args...)
 	if err != nil {
 		r.logger.Error("Failed to execute query to seed users table", zap.Error(err))
-		return common.ErrDbSeedingFailed
 	}
 
 	r.logger.Info("Successfully seeded users from file", zap.Int("count", len(users)))
-
-	return nil
 }
 
 // General operations
-func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (User, error) {
+func (r *PostgresRepository) Add(ctx context.Context, req CreateRequest) (User, error) {
 	rawQuery := `INSERT INTO 
 					users(id, username, displayname, email, country, state, avatar_url, lang_tag, timezone, created_at, updated_at, verified_at)
 				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);`
@@ -152,31 +140,31 @@ func (r *PostgresRepository) Add(ctx context.Context, dto CreateDTO) (User, erro
 
 	_, err := r.pgx.Exec(ctx, rawQuery,
 		id,
-		dto.Username,
-		dto.DisplayName,
-		dto.Email,
-		dto.Country,
-		dto.State,
-		dto.AvatarURL,
-		dto.LangTag,
-		dto.Timezone,
+		req.Username,
+		req.DisplayName,
+		req.Email,
+		req.Country,
+		req.State,
+		req.AvatarURL,
+		req.LangTag,
+		req.Timezone,
 		now,
 		now,
 		now)
 	if err != nil {
-		return User{}, fmt.Errorf("getting user: %w", err)
+		return User{}, fmt.Errorf("adding user: %w", err)
 	}
 
 	return User{
 		Id:          id,
-		Username:    dto.Username,
-		DisplayName: dto.DisplayName,
-		Email:       dto.Email,
-		Country:     dto.Country,
-		State:       dto.State,
-		AvatarURL:   dto.AvatarURL,
-		LangTag:     dto.LangTag,
-		Timezone:    dto.Timezone,
+		Username:    req.Username,
+		DisplayName: req.DisplayName,
+		Email:       req.Email,
+		Country:     req.Country,
+		State:       req.State,
+		AvatarURL:   req.AvatarURL,
+		LangTag:     req.LangTag,
+		Timezone:    req.Timezone,
 		CreatedAt:   now,
 		UpdatedAt:   now,
 		VerifiedAt:  now,
@@ -363,29 +351,29 @@ func (r *PostgresRepository) GetByName(ctx context.Context, name string) (User, 
 	return user, nil
 }
 
-func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (User, error) {
+func (r *PostgresRepository) Update(ctx context.Context, req UpdateRequest) (User, error) {
 	// build dynamic query using squirrel
-	queryBuilder := r.statementBuilder.Update("users").Where(squirrel.Eq{"id": dto.Id})
-	if dto.Username != nil {
-		queryBuilder = queryBuilder.Set("username", dto.Username)
+	queryBuilder := r.statementBuilder.Update("users").Where(squirrel.Eq{"id": req.Id})
+	if req.Username != nil {
+		queryBuilder = queryBuilder.Set("username", req.Username)
 	}
-	if dto.DisplayName != nil {
-		queryBuilder = queryBuilder.Set("displayname", dto.DisplayName)
+	if req.DisplayName != nil {
+		queryBuilder = queryBuilder.Set("displayname", req.DisplayName)
 	}
-	if dto.Email != nil {
-		queryBuilder = queryBuilder.Set("email", dto.Email)
+	if req.Email != nil {
+		queryBuilder = queryBuilder.Set("email", req.Email)
 	}
-	if dto.Country != nil {
-		queryBuilder = queryBuilder.Set("country", dto.Country)
+	if req.Country != nil {
+		queryBuilder = queryBuilder.Set("country", req.Country)
 	}
-	if dto.State != nil {
-		queryBuilder = queryBuilder.Set("state", dto.State)
+	if req.State != nil {
+		queryBuilder = queryBuilder.Set("state", req.State)
 	}
-	if dto.LangTag != nil {
-		queryBuilder = queryBuilder.Set("langtag", dto.LangTag)
+	if req.LangTag != nil {
+		queryBuilder = queryBuilder.Set("langtag", req.LangTag)
 	}
-	if dto.Timezone != nil {
-		queryBuilder = queryBuilder.Set("timezone", dto.Timezone)
+	if req.Timezone != nil {
+		queryBuilder = queryBuilder.Set("timezone", req.Timezone)
 	}
 	queryBuilder = queryBuilder.Suffix("RETURNING *")
 	query, args, err := queryBuilder.ToSql()
@@ -424,7 +412,7 @@ func (r *PostgresRepository) Update(ctx context.Context, dto UpdateDTO) (User, e
 	return user, nil
 }
 
-func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (User, error) {
+func (r *PostgresRepository) Replace(ctx context.Context, req ReplaceRequest) (User, error) {
 	rawQuery := `UPDATE 
 					users
 				SET
@@ -455,7 +443,7 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (User,
 	defer tx.Rollback(ctx)
 
 	// Lock row inside transaction
-	_, err = tx.Exec(ctx, "SELECT username FROM users WHERE id = $1 FOR UPDATE;", dto.Id)
+	_, err = tx.Exec(ctx, "SELECT username FROM users WHERE id = $1 FOR UPDATE;", req.Id)
 	if err != nil {
 		return User{}, fmt.Errorf("locking row: %w", err)
 	}
@@ -464,14 +452,14 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (User,
 	result := tx.QueryRow(
 		ctx,
 		rawQuery,
-		dto.Id,
-		dto.Username,
-		dto.DisplayName,
-		dto.Email,
-		dto.Country,
-		dto.State,
-		dto.LangTag,
-		dto.Timezone,
+		req.Id,
+		req.Username,
+		req.DisplayName,
+		req.Email,
+		req.Country,
+		req.State,
+		req.LangTag,
+		req.Timezone,
 		now,
 		now)
 	err = result.Scan(
@@ -506,7 +494,7 @@ func (r *PostgresRepository) Replace(ctx context.Context, dto ReplaceDTO) (User,
 	return user, nil
 }
 
-func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
+func (r *PostgresRepository) Delete(ctx context.Context, req DeleteRequest) (uuid.UUID, error) {
 	deleteQuery := `DELETE FROM
 						users
 					WHERE 
@@ -527,10 +515,10 @@ func (r *PostgresRepository) Delete(ctx context.Context, dto DeleteDTO) (uuid.UU
 	var deletedId uuid.UUID
 
 	// Execute query based on delete type
-	if dto.DeleteOptions.Type == "soft" {
-		result = r.pgx.QueryRow(ctx, disableQuery, dto.Id, now)
+	if req.DeleteOptions.Type == "soft" {
+		result = r.pgx.QueryRow(ctx, disableQuery, req.Id, now)
 	} else {
-		result = r.pgx.QueryRow(ctx, deleteQuery, dto.Id)
+		result = r.pgx.QueryRow(ctx, deleteQuery, req.Id)
 	}
 
 	// Scan returned row
@@ -555,7 +543,7 @@ func (r *PostgresRepository) FindOrCreateUserFromSocialProfile(ctx context.Conte
 		// 1. Create a user first in users table
 		hash := sha256.Sum256([]byte(profile.UserId))
 		username := fmt.Sprintf("%x", hash)
-		newUser := CreateDTO{
+		newUser := CreateRequest{
 			Username:    username,
 			DisplayName: profile.DisplayName,
 			Email:       profile.Email,
@@ -708,7 +696,7 @@ func (r *PostgresRepository) CheckIfUserIsBanned(ctx context.Context, userId uui
 }
 
 // Bulk operations - subject to change for improvement (dont use these queries right now)
-func (r *PostgresRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {
+func (r *PostgresRepository) BulkAdd(ctx context.Context, req BulkCreateRequest) ([]common.BulkOpResult, error) {
 	queryBuilder := r.statementBuilder.Insert("users").Columns(
 		"id",
 		"username",
@@ -726,20 +714,20 @@ func (r *PostgresRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]
 
 	var results []common.BulkOpResult
 
-	for i := range dto.Users {
+	for i := range req.Users {
 		id, _ := uuid.NewV7()
 		now := time.Now()
 		dummyAvatarUrl := "-"
 		queryBuilder = queryBuilder.Values(
 			id,
-			dto.Users[i].Username,
-			dto.Users[i].DisplayName,
-			dto.Users[i].Email,
-			dto.Users[i].Country,
-			dto.Users[i].State,
+			req.Users[i].Username,
+			req.Users[i].DisplayName,
+			req.Users[i].Email,
+			req.Users[i].Country,
+			req.Users[i].State,
 			dummyAvatarUrl,
-			dto.Users[i].LangTag,
-			dto.Users[i].Timezone,
+			req.Users[i].LangTag,
+			req.Users[i].Timezone,
 			now,
 			now,
 			now,
@@ -771,7 +759,7 @@ func (r *PostgresRepository) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]
 	return results, nil
 }
 
-func (r *PostgresRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
+func (r *PostgresRepository) BulkModify(ctx context.Context, req BulkModifyRequest) ([]common.BulkOpResult, error) {
 	queryBuilder := r.statementBuilder.Update("users")
 
 	var results []common.BulkOpResult
@@ -796,13 +784,13 @@ func (r *PostgresRepository) BulkModify(ctx context.Context, dto BulkModifyDTO) 
 	return nil, nil
 }
 
-func (r *PostgresRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
+func (r *PostgresRepository) BulkDelete(ctx context.Context, req BulkDeleteRequest) ([]common.BulkOpResult, error) {
 	queryBuilder := r.statementBuilder.Delete("users")
 
 	var results []common.BulkOpResult
 
-	for i := range dto.Users {
-		currentUser := dto.Users[i]
+	for i := range req.Users {
+		currentUser := req.Users[i]
 		queryBuilder = queryBuilder.Where(squirrel.Eq{"id": currentUser.Id})
 
 		var result common.BulkOpResult
@@ -832,7 +820,7 @@ func (r *PostgresRepository) BulkDelete(ctx context.Context, dto BulkDeleteDTO) 
 	return results, nil
 }
 
-func (r *PostgresRepository) Ban(ctx context.Context, dto BanDTO) (BannedUser, error) {
+func (r *PostgresRepository) Ban(ctx context.Context, req BanRequest) (BannedUserResponse, error) {
 	rawQuery := `
 		INSERT INTO users_banned(
 			id,
@@ -851,33 +839,33 @@ func (r *PostgresRepository) Ban(ctx context.Context, dto BanDTO) (BannedUser, e
 		);
 	`
 
-	userID, _ := uuid.Parse(dto.UserID)
+	userID, _ := uuid.Parse(req.UserID)
 	currentTimeUTC := time.Now().UTC()
 
 	_, err := r.pgx.Exec(
 		ctx,
 		rawQuery,
 		userID,
-		dto.Reason,
-		dto.Type,
+		req.Reason,
+		req.Type,
 		currentTimeUTC,
-		dto.Duration.UTC(),
+		req.Duration.UTC(),
 		SystemUser,
 	)
 	if err != nil {
-		return BannedUser{}, fmt.Errorf("banning user: %w", err)
+		return BannedUserResponse{}, fmt.Errorf("banning user: %w", err)
 	}
 
-	return BannedUser{
-		UserID:     dto.UserID,
-		Reason:     dto.Reason,
-		Type:       dto.Type,
+	return BannedUserResponse{
+		UserID:     req.UserID,
+		Reason:     req.Reason,
+		Type:       req.Type,
 		BannedBy:   "system",
-		BannedTill: dto.Duration,
+		BannedTill: req.Duration,
 	}, nil
 }
 
-func (r *PostgresRepository) UnBan(ctx context.Context, dto UnbanDTO) error {
+func (r *PostgresRepository) UnBan(ctx context.Context, req UnbanRequest) error {
 	rawQuery := `
 		DELETE FROM
 			users_banned
@@ -885,7 +873,7 @@ func (r *PostgresRepository) UnBan(ctx context.Context, dto UnbanDTO) error {
 			id = $1;
 	`
 
-	userID, _ := uuid.Parse(dto.UserID)
+	userID, _ := uuid.Parse(req.UserID)
 
 	_, err := r.pgx.Query(
 		ctx,
@@ -899,7 +887,7 @@ func (r *PostgresRepository) UnBan(ctx context.Context, dto UnbanDTO) error {
 	return nil
 }
 
-func (r *PostgresRepository) CheckUsername(ctx context.Context, dto CheckUsernameDTO) (bool, error) {
+func (r *PostgresRepository) CheckUsername(ctx context.Context, req CheckUsernameRequest) (bool, error) {
 	rawQuery := `
 		SELECT EXISTS(
 			SELECT 
@@ -911,7 +899,7 @@ func (r *PostgresRepository) CheckUsername(ctx context.Context, dto CheckUsernam
 		);
 	`
 
-	row := r.pgx.QueryRow(ctx, rawQuery, dto.Username)
+	row := r.pgx.QueryRow(ctx, rawQuery, req.Username)
 
 	var valid bool
 
@@ -923,7 +911,7 @@ func (r *PostgresRepository) CheckUsername(ctx context.Context, dto CheckUsernam
 	return valid, nil
 }
 
-func (r *PostgresRepository) GetAllUsernames(ctx context.Context, dto UserId) ([]string, error) {
+func (r *PostgresRepository) GetAllUsernames(ctx context.Context, req UserId) ([]string, error) {
 	rawQuery := `SELECT 
 					display_name
 				FROM 
@@ -931,7 +919,7 @@ func (r *PostgresRepository) GetAllUsernames(ctx context.Context, dto UserId) ([
 				WHERE
 					id = $1;`
 
-	userID, _ := uuid.Parse(dto.Id)
+	userID, _ := uuid.Parse(req.Id)
 	rows, err := r.pgx.Query(ctx, rawQuery, userID)
 	if err != nil {
 		return nil, fmt.Errorf("getting usernames: %w", err)

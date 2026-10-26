@@ -16,44 +16,44 @@ import (
 
 type Service interface {
 	// General operations
-	Add(ctx context.Context, dto CreateDTO) (User, error)
+	Add(ctx context.Context, req CreateRequest) (User, error)
 	GetAll(ctx context.Context, cursor uuid.UUID, limit int, sortBy, sortDirection string) ([]User, error)
 	GetAllByAttribute(ctx context.Context, attribute string) ([]User, error)
 	GetById(ctx context.Context, id uuid.UUID) (User, error)
 	GetByName(ctx context.Context, name string) (User, error)
 	GetBySocialProfileId(ctx context.Context, provider, socialUserId string) (User, error)
-	Update(ctx context.Context, dto UpdateDTO) (User, error)
-	Replace(ctx context.Context, dto ReplaceDTO) (User, error)
-	Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error)
+	Update(ctx context.Context, req UpdateRequest) (User, error)
+	Replace(ctx context.Context, req ReplaceRequest) (User, error)
+	Delete(ctx context.Context, req DeleteRequest) (uuid.UUID, error)
 
 	// Auth operations
 	Login(ctx context.Context, loginRequest auth.LoginRequest) (auth.LoginResponse, error)
-	Refresh(ctx context.Context, dto auth.TokenRefreshRequest) (auth.TokenRefreshResponse, error)
+	Refresh(ctx context.Context, req auth.TokenRefreshRequest) (auth.TokenRefreshResponse, error)
 
 	// Operations
 	FindOrCreateUserFromSocialProfile(ctx context.Context, profile auth.UnifiedUserProfile) (uuid.UUID, bool, error)
 	CheckIfUserIsBanned(ctx context.Context, userId uuid.UUID) (bool, error)
 
-	Ban(ctx context.Context, dto BanDTO) (BannedUser, error)
-	UnBan(ctx context.Context, dto UnbanDTO) error
+	Ban(ctx context.Context, req BanRequest) (BannedUserResponse, error)
+	UnBan(ctx context.Context, req UnbanRequest) error
 
 	// Bulk operations
-	BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error)
-	BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error)
-	BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error)
+	BulkAdd(ctx context.Context, req BulkCreateRequest) ([]common.BulkOpResult, error)
+	BulkModify(ctx context.Context, req BulkModifyRequest) ([]common.BulkOpResult, error)
+	BulkDelete(ctx context.Context, req BulkDeleteRequest) ([]common.BulkOpResult, error)
 
-	CheckUsername(ctx context.Context, dto CheckUsernameDTO) (bool, error)
-	GetAllUsernames(ctx context.Context, dto UserId) ([]string, error)
+	CheckUsername(ctx context.Context, req CheckUsernameRequest) (bool, error)
+	GetAllUsernames(ctx context.Context, req UserId) ([]string, error)
 }
 
 type LocalUsersService struct {
 	repo   UsersRepository
 	logger *zap.Logger
 	cache  *cache.TieredCache
-	config *config.Config
+	config *config.UsersConfig
 }
 
-func NewLocalUsersService(repository UsersRepository, cache *cache.TieredCache, c *config.Config, l *zap.Logger) *LocalUsersService {
+func NewLocalUsersService(repository UsersRepository, cache *cache.TieredCache, c *config.UsersConfig, l *zap.Logger) *LocalUsersService {
 	return &LocalUsersService{
 		repo:   repository,
 		cache:  cache,
@@ -62,11 +62,11 @@ func NewLocalUsersService(repository UsersRepository, cache *cache.TieredCache, 
 	}
 }
 
-func (s *LocalUsersService) Add(ctx context.Context, user CreateDTO) (User, error) {
+func (s *LocalUsersService) Add(ctx context.Context, req CreateRequest) (User, error) {
 	ctx, span := tracer.Start(ctx, "users.service.add")
 	defer span.End()
 
-	createdUser, err := s.repo.Add(ctx, user)
+	createdUser, err := s.repo.Add(ctx, req)
 	if err != nil {
 		return User{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to create user")
 	}
@@ -102,10 +102,10 @@ func (s *LocalUsersService) GetById(ctx context.Context, id uuid.UUID) (User, er
 	ctx, span := tracer.Start(ctx, "users.service.getbyid")
 	defer span.End()
 
-	key := UserPrefix + id.String()
+	key := s.config.KeyPrefix + id.String()
 
 	// Get from cache
-	raw, err := s.cache.GetOrLoad(ctx, key, func(ctx context.Context) ([]byte, error) {
+	raw, err := s.cache.GetOrLoadWithTTL(ctx, key, s.config.CacheDuration, func(ctx context.Context) ([]byte, error) {
 		user, err := s.repo.GetById(ctx, id)
 		if err != nil {
 			return nil, err
@@ -130,10 +130,10 @@ func (s *LocalUsersService) GetByName(ctx context.Context, name string) (User, e
 	ctx, span := tracer.Start(ctx, "users.service.getbyname")
 	defer span.End()
 
-	key := UserPrefix + name
+	key := s.config.KeyPrefix + name
 
 	// Get from cache or load into it from db
-	raw, err := s.cache.GetOrLoad(ctx, key, func(ctx context.Context) ([]byte, error) {
+	raw, err := s.cache.GetOrLoadWithTTL(ctx, key, s.config.CacheDuration, func(ctx context.Context) ([]byte, error) {
 		user, err := s.repo.GetByName(ctx, name)
 		if err != nil {
 			return nil, err
@@ -154,52 +154,52 @@ func (s *LocalUsersService) GetByName(ctx context.Context, name string) (User, e
 	return user, nil
 }
 
-func (s *LocalUsersService) Update(ctx context.Context, dto UpdateDTO) (User, error) {
+func (s *LocalUsersService) Update(ctx context.Context, req UpdateRequest) (User, error) {
 	ctx, span := tracer.Start(ctx, "users.service.update")
 	defer span.End()
 
 	// Update repository first
-	user, err := s.repo.Update(ctx, dto)
+	user, err := s.repo.Update(ctx, req)
 	if err != nil {
 		return User{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to update user")
 	}
 
 	// Invalidate old record from cache, next get call with repopulate it
-	key := UserPrefix + dto.Id
+	key := s.config.KeyPrefix + req.Id
 	go s.cache.Delete(ctx, key)
 
 	return user, nil
 }
 
-func (s *LocalUsersService) Replace(ctx context.Context, dto ReplaceDTO) (User, error) {
+func (s *LocalUsersService) Replace(ctx context.Context, req ReplaceRequest) (User, error) {
 	ctx, span := tracer.Start(ctx, "users.service.replace")
 	defer span.End()
 
 	// Update repository first
-	user, err := s.repo.Replace(ctx, dto)
+	user, err := s.repo.Replace(ctx, req)
 	if err != nil {
 		return User{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to replace user")
 	}
 
 	// Invalidate old record from cache, next get call with repopulate it
-	key := UserPrefix + dto.Id
+	key := s.config.KeyPrefix + req.Id
 	go s.cache.Delete(ctx, key)
 
 	return user, nil
 }
 
-func (s *LocalUsersService) Delete(ctx context.Context, dto DeleteDTO) (uuid.UUID, error) {
+func (s *LocalUsersService) Delete(ctx context.Context, req DeleteRequest) (uuid.UUID, error) {
 	ctx, span := tracer.Start(ctx, "users.service.delete")
 	defer span.End()
 
 	// Delete in repo
-	deletedId, err := s.repo.Delete(ctx, dto)
+	deletedId, err := s.repo.Delete(ctx, req)
 	if err != nil {
 		return uuid.Nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to delete user")
 	}
 
 	// Delete from cache
-	key := UserPrefix + dto.Id
+	key := s.config.KeyPrefix + req.Id
 	go s.cache.Delete(ctx, key)
 
 	return deletedId, nil
@@ -268,7 +268,7 @@ func (s *LocalUsersService) Login(ctx context.Context, loginRequest auth.LoginRe
 	tokens := auth.SuccessfulResponse{
 		AccessToken:  tokenPair.AccessToken,
 		TokenType:    "Bearer",
-		ExpiresIn:    time.Now().Add(time.Duration(s.config.AuthToken.AccessToken.ExpiresIn)), // Fixed cast typo
+		ExpiresIn:    time.Now().Add(time.Duration(config.GetInstance().AuthToken.AccessToken.ExpiresIn)), // Fixed cast typo
 		RefreshToken: tokenPair.RefreshToken,
 		Scope:        "", //s.config.AuthToken.AccessToken.Scopes
 	}
@@ -284,8 +284,8 @@ func (s *LocalUsersService) Login(ctx context.Context, loginRequest auth.LoginRe
 	return response, nil
 }
 
-func (s *LocalUsersService) Refresh(ctx context.Context, dto auth.TokenRefreshRequest) (auth.TokenRefreshResponse, error) {
-	tokenPair, err := auth.GetJwtService().RefreshTokens(ctx, dto.RefreshToken, "player")
+func (s *LocalUsersService) Refresh(ctx context.Context, req auth.TokenRefreshRequest) (auth.TokenRefreshResponse, error) {
+	tokenPair, err := auth.GetJwtService().RefreshTokens(ctx, req.RefreshToken, "player")
 	if err != nil {
 		s.logger.Error("Failed to generate token pair for refreshing tokens", zap.Error(err))
 
@@ -301,7 +301,7 @@ func (s *LocalUsersService) Refresh(ctx context.Context, dto auth.TokenRefreshRe
 		Successful: &auth.SuccessfulResponse{
 			AccessToken:  tokenPair.AccessToken,
 			TokenType:    "Bearer",
-			ExpiresIn:    time.Now().Add(time.Duration(s.config.AuthToken.AccessToken.ExpiresIn)),
+			ExpiresIn:    time.Now().Add(time.Duration(config.GetInstance().AuthToken.AccessToken.ExpiresIn)),
 			RefreshToken: tokenPair.RefreshToken,
 			// Scope: ,
 		},
@@ -329,11 +329,11 @@ func (s *LocalUsersService) CheckIfUserIsBanned(ctx context.Context, userId uuid
 	return s.repo.CheckIfUserIsBanned(ctx, userId)
 }
 
-func (s *LocalUsersService) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]common.BulkOpResult, error) {
+func (s *LocalUsersService) BulkAdd(ctx context.Context, req BulkCreateRequest) ([]common.BulkOpResult, error) {
 	ctx, span := tracer.Start(ctx, "users.service.bulkadd")
 	defer span.End()
 
-	results, err := s.repo.BulkAdd(ctx, dto)
+	results, err := s.repo.BulkAdd(ctx, req)
 	if err != nil {
 		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to bulk add users")
 	}
@@ -341,11 +341,11 @@ func (s *LocalUsersService) BulkAdd(ctx context.Context, dto BulkCreateDTO) ([]c
 	return results, nil
 }
 
-func (s *LocalUsersService) BulkModify(ctx context.Context, dto BulkModifyDTO) ([]common.BulkOpResult, error) {
+func (s *LocalUsersService) BulkModify(ctx context.Context, req BulkModifyRequest) ([]common.BulkOpResult, error) {
 	ctx, span := tracer.Start(ctx, "users.service.bulkmodify")
 	defer span.End()
 
-	results, err := s.repo.BulkModify(ctx, dto)
+	results, err := s.repo.BulkModify(ctx, req)
 	if err != nil {
 		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to bulk modify users")
 	}
@@ -353,11 +353,11 @@ func (s *LocalUsersService) BulkModify(ctx context.Context, dto BulkModifyDTO) (
 	return results, nil
 }
 
-func (s *LocalUsersService) BulkDelete(ctx context.Context, dto BulkDeleteDTO) ([]common.BulkOpResult, error) {
+func (s *LocalUsersService) BulkDelete(ctx context.Context, req BulkDeleteRequest) ([]common.BulkOpResult, error) {
 	ctx, span := tracer.Start(ctx, "users.service.bulkdelete")
 	defer span.End()
 
-	results, err := s.repo.BulkDelete(ctx, dto)
+	results, err := s.repo.BulkDelete(ctx, req)
 	if err != nil {
 		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to bulk delete users")
 	}
@@ -365,23 +365,23 @@ func (s *LocalUsersService) BulkDelete(ctx context.Context, dto BulkDeleteDTO) (
 	return results, nil
 }
 
-func (s *LocalUsersService) Ban(ctx context.Context, dto BanDTO) (BannedUser, error) {
+func (s *LocalUsersService) Ban(ctx context.Context, req BanRequest) (BannedUserResponse, error) {
 	ctx, span := tracer.Start(ctx, "users.service.ban")
 	defer span.End()
 
-	bannedUser, err := s.repo.Ban(ctx, dto)
+	bannedUser, err := s.repo.Ban(ctx, req)
 	if err != nil {
-		return BannedUser{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to ban user")
+		return BannedUserResponse{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to ban user")
 	}
 
 	return bannedUser, nil
 }
 
-func (s *LocalUsersService) UnBan(ctx context.Context, dto UnbanDTO) error {
+func (s *LocalUsersService) UnBan(ctx context.Context, req UnbanRequest) error {
 	ctx, span := tracer.Start(ctx, "users.service.unban")
 	defer span.End()
 
-	err := s.repo.UnBan(ctx, dto)
+	err := s.repo.UnBan(ctx, req)
 	if err != nil {
 		return common.TranslatePostgresError(err, s.logger).WithMessage("Failed to unban user")
 	}
@@ -389,11 +389,11 @@ func (s *LocalUsersService) UnBan(ctx context.Context, dto UnbanDTO) error {
 	return nil
 }
 
-func (s *LocalUsersService) CheckUsername(ctx context.Context, dto CheckUsernameDTO) (bool, error) {
+func (s *LocalUsersService) CheckUsername(ctx context.Context, req CheckUsernameRequest) (bool, error) {
 	ctx, span := tracer.Start(ctx, "users.service.checkusername")
 	defer span.End()
 
-	valid, err := s.repo.CheckUsername(ctx, dto)
+	valid, err := s.repo.CheckUsername(ctx, req)
 	if err != nil {
 		return false, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to check username")
 	}
@@ -401,11 +401,11 @@ func (s *LocalUsersService) CheckUsername(ctx context.Context, dto CheckUsername
 	return valid, nil
 }
 
-func (s *LocalUsersService) GetAllUsernames(ctx context.Context, dto UserId) ([]string, error) {
+func (s *LocalUsersService) GetAllUsernames(ctx context.Context, req UserId) ([]string, error) {
 	ctx, span := tracer.Start(ctx, "users.service.getallusername")
 	defer span.End()
 
-	usernames, err := s.repo.GetAllUsernames(ctx, dto)
+	usernames, err := s.repo.GetAllUsernames(ctx, req)
 	if err != nil {
 		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to get all usernames")
 	}
