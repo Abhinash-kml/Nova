@@ -2,7 +2,7 @@ package achievements
 
 import "github.com/gin-gonic/gin"
 
-func SetupRoutes(router *gin.Engine, c *Controller, cc *CriteriaController, pc *ProgressController, cac *CompletedAchievementsController) {
+func SetupRoutes(router *gin.Engine, c *Controller) {
 	achievement := router.Group("/private/achievements")
 	{
 		// Achievement routes
@@ -13,40 +13,29 @@ func SetupRoutes(router *gin.Engine, c *Controller, cc *CriteriaController, pc *
 		achievement.DELETE("/:id", c.Delete) // Delete an existing achievement
 	}
 
-	// Criteria private routes
-	criteria := router.Group("/private/achievements-criteria")
-	{
-		criteria.GET("", cc.GetAll)        // Get all achievementsd criterias
-		criteria.GET("/:id", cc.Get)       // Get details of a particular achievement criteria
-		criteria.POST("", cc.Create)       // Create an achievement criteria
-		criteria.PATCH("/:id", cc.Modify)  // Modify an existing achievement criteria
-		criteria.DELETE("/:id", cc.Delete) // Delete an existing achievement criteria
-	}
-
-	// Criteria public routes
-	pCriteria := router.Group("/public/achievements-criteria")
-	{
-		pCriteria.GET("/:achievement_id", cc.GetByAchievement) // Get all criterias of achievement
-	}
-
 	// Progress public routes
-	publicProgress := router.Group("/public/progress")
+	publicProgress := router.Group("/public/achievements/progress")
 	{
-		publicProgress.GET("", pc.GetOfUser)
+		publicProgress.GET("", c.GetProgressOfUser)
 	}
 
 	// Progress private routes
-	privateProgress := router.Group("/private/progress")
+	privateProgress := router.Group("/private/achievements/progress")
 	{
-		privateProgress.GET("/:id", pc.Get)
-		privateProgress.POST("", pc.Create)
-		privateProgress.PATCH("/:id", pc.Update)
-		privateProgress.DELETE("/:id", pc.Delete)
+		privateProgress.GET("/:id", c.GetProgress)
+		privateProgress.DELETE("/:id", c.DeleteProgress)
+	}
+
+	// Player progress operation private routes
+	privatePlayerProgress := router.Group("/private/achievements/progress/user")
+	{
+		privatePlayerProgress.PATCH("", c.UpdateProgressOfUser)
+		privatePlayerProgress.DELETE("/:id", c.DeleteAllProgressOfUser)
 	}
 
 	// Completed achievement private routes
-	privateCompleted := router.Group("/private/completed")
+	privateComplete := router.Group("/private/achievements/complete")
 	{
-		privateCompleted.POST("", cac.Create)
+		privateComplete.POST("", c.CompleteAchievement)
 	}
 }

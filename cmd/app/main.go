@@ -24,6 +24,7 @@ import (
 	"github.com/abhinash-kml/nova/server/common"
 	configs "github.com/abhinash-kml/nova/server/config"
 	"github.com/abhinash-kml/nova/server/economy"
+	"github.com/abhinash-kml/nova/server/events"
 	"github.com/abhinash-kml/nova/server/infra"
 	"github.com/abhinash-kml/nova/server/inventory"
 	"github.com/abhinash-kml/nova/server/leaderboard"
@@ -292,6 +293,10 @@ func main() {
 
 	tieredCache := cache.NewTieredCache(redisClient, time.Second*30, time.Second*30, time.Second*10)
 
+	// Global events manager
+	globalEventsManager := events.NewRedisEventsManager(globalCtx, redisClient)
+	events.SetGlobalEventsManager(globalEventsManager)
+
 	// Setup users module
 	{
 		usersRepository := users.NewPostgresRepositoryFromPgxPool(postgresPool, &config.UsersConfig, logger)
@@ -342,6 +347,7 @@ func main() {
 		statsRepository := stats.NewPostgresRepositoryFromPgxPool(postgresPool, &config.StatsConfig, logger)
 		statsRepository.Seed(context.Background())
 		statsService := stats.NewService(statsRepository, &config.StatsConfig, logger)
+		statsService.Initialize()
 		statsController := stats.NewController(statsService, &config.StatsConfig, logger)
 		stats.SetupRoutes(globalRouter, statsController)
 	}
@@ -360,23 +366,14 @@ func main() {
 		achievementService := achievements.NewAchievementService(achievementRepo, config, logger)
 		achievementController := achievements.NewController(achievementService, config, logger)
 
-		// Criteria
-		criteriaRepo := achievements.NewCriteriaPostgresRepository(postgresPool, config, logger)
-		criteriaService := achievements.NewCriteriaService(criteriaRepo, config, logger)
-		criteriaController := achievements.NewCriteriaController(criteriaService, config, logger)
-
-		// Progress
-		progressRepo := achievements.NewProgressPostgresRepository(postgresPool, config, logger)
-		progressService := achievements.NewLocalProgressServiceService(progressRepo, config, logger)
-		progressController := achievements.NewProgressController(progressService, config, logger)
-
-		// Completed
-		completedRepo := achievements.NewPostgresCompletedAchievementRepository(postgresPool, config, logger)
-		completedService := achievements.NewLocalCompletedAchievementService(completedRepo, config, logger)
-		completedController := achievements.NewCompletedAchievementController(completedService, config, logger)
+		// Achievement evaluator
+		evaluator := achievements.NewEvaluator(globalCtx, achievementService, "stats:update")
+		evaluator.Initialize()
+		evaluator.BuildMapping()
+		evaluator.Run()
 
 		// Setup routes
-		achievements.SetupRoutes(globalRouter, achievementController, criteriaController, progressController, completedController)
+		achievements.SetupRoutes(globalRouter, achievementController)
 	}
 	// Setup inventory module
 	{

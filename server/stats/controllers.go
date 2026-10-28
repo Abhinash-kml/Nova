@@ -27,7 +27,7 @@ func NewController(s Service, c *config.StatsConfig, l *zap.Logger) *Controller 
 }
 
 func (c *Controller) GetAll(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "stats.controller.getall")
+	sctx, span := tracer.Start(ctx.Request.Context(), "stats.controller.GetAll")
 	var err error
 
 	defer func() {
@@ -60,7 +60,7 @@ func (c *Controller) GetAll(ctx *gin.Context) {
 }
 
 func (c *Controller) Get(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "stats.controller.get")
+	sctx, span := tracer.Start(ctx.Request.Context(), "stats.controller.Get")
 	var err error
 
 	defer func() {
@@ -94,7 +94,7 @@ func (c *Controller) Get(ctx *gin.Context) {
 }
 
 func (c *Controller) Create(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "stats.controller.create")
+	sctx, span := tracer.Start(ctx.Request.Context(), "stats.controller.Create")
 	var err error
 
 	defer func() {
@@ -124,7 +124,7 @@ func (c *Controller) Create(ctx *gin.Context) {
 }
 
 func (c *Controller) Modify(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "stats.controller.modify")
+	sctx, span := tracer.Start(ctx.Request.Context(), "stats.controller.Modify")
 	var err error
 
 	defer func() {
@@ -164,7 +164,7 @@ func (c *Controller) Modify(ctx *gin.Context) {
 }
 
 func (c *Controller) Delete(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "stats.controller.delete")
+	sctx, span := tracer.Start(ctx.Request.Context(), "stats.controller.Delete")
 	var err error
 
 	defer func() {
@@ -198,7 +198,7 @@ func (c *Controller) Delete(ctx *gin.Context) {
 }
 
 func (c *Controller) Replace(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "stats.controller.replace")
+	sctx, span := tracer.Start(ctx.Request.Context(), "stats.controller.Replace")
 	var err error
 
 	defer func() {
@@ -238,7 +238,7 @@ func (c *Controller) Replace(ctx *gin.Context) {
 }
 
 func (c *Controller) UpdatePlayerStats(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "stats.controller.updateplayerstats")
+	sctx, span := tracer.Start(ctx.Request.Context(), "stats.controller.UpdatePlayerStats")
 	var err error
 
 	defer func() {

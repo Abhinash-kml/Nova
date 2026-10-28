@@ -5,10 +5,13 @@ import (
 
 	"github.com/abhinash-kml/nova/server/common"
 	"github.com/abhinash-kml/nova/server/config"
+	"github.com/abhinash-kml/nova/server/events"
 	"go.uber.org/zap"
 )
 
 type Service interface {
+	Initialize()
+
 	// Meta operations
 	Add(ctx context.Context, req CreateRequest) (Stats, error)
 	GetAll(ctx context.Context, cursor int, limit int) ([]Stats, error)
@@ -35,6 +38,9 @@ func NewService(r StatsRepository, c *config.StatsConfig, l *zap.Logger) *StatsS
 		repository: r,
 		logger:     l,
 	}
+}
+
+func (s *StatsService) Initialize() {
 }
 
 func (s *StatsService) Add(ctx context.Context, req CreateRequest) (Stats, error) {
@@ -125,7 +131,19 @@ func (s *StatsService) UpdatePlayerStats(ctx context.Context, req UpdatePlayerSt
 	ctx, span := tracer.Start(ctx, "stats.service.updateplayerstats")
 	defer span.End()
 
-	return common.TranslatePostgresError(s.repository.UpdatePlayerStats(ctx, req), s.logger).WithMessage("Failed ot update player stats")
+	err := s.repository.UpdatePlayerStats(ctx, req)
+	if err != nil {
+		return common.TranslatePostgresError(err, s.logger)
+	}
+
+	eventsManager := events.GetGlobalEventsManager()
+	eventsManager.Produce("stats:update", map[string]any{
+		"user_id":       req.Id,
+		"stat_id":       req.StatId,
+		"current_value": req.Value,
+	})
+
+	return nil
 }
 
 func (s *StatsService) DeletePlayerStats(ctx context.Context, req DeletePlayerStatRequest) error {

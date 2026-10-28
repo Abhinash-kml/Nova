@@ -2,10 +2,11 @@ package achievements
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/abhinash-kml/nova/server/config"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.uber.org/zap"
 )
@@ -101,12 +102,6 @@ func (c *Controller) Update(ctx *gin.Context) {
 		span.End()
 	}()
 
-	id, err := strconv.Atoi(ctx.Param("id"))
-	if err != nil {
-		ctx.Error(err)
-		return
-	}
-
 	var req UpdateAchievementRequest
 
 	err = ctx.ShouldBindJSON(&req)
@@ -115,9 +110,7 @@ func (c *Controller) Update(ctx *gin.Context) {
 		return
 	}
 
-	req.Id = id
-
-	err = c.service.Update(sctx, req)
+	achievement, err := c.service.Update(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to update achievement",
 			zap.Int("achievement_id", req.Id),
@@ -126,7 +119,7 @@ func (c *Controller) Update(ctx *gin.Context) {
 		return
 	}
 
-	ctx.Status(http.StatusNoContent)
+	ctx.JSON(http.StatusNoContent, achievement)
 }
 
 func (c *Controller) Delete(ctx *gin.Context) {
@@ -142,20 +135,216 @@ func (c *Controller) Delete(ctx *gin.Context) {
 		span.End()
 	}()
 
-	id, err := strconv.Atoi(ctx.Param("id"))
+	var req DeleteAchievementRequest
+
+	err = ctx.ShouldBindUri(&req)
 	if err != nil {
 		ctx.Error(err)
 		return
-	}
-
-	req := DeleteAchievementRequest{
-		Id: id,
 	}
 
 	err = c.service.Delete(sctx, req)
 	if err != nil {
 		c.logger.Error("Failed to delete achievement",
 			zap.Int("achievement_id", req.Id),
+			zap.Error(err))
+		ctx.Error(err)
+		return
+	}
+
+	ctx.Status(http.StatusNoContent)
+}
+
+func (c *Controller) CompleteAchievement(ctx *gin.Context) {
+	sctx, span := tracer.Start(ctx.Request.Context(), "achievements.controller.CompleteAchievement")
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			c.logger.Debug("Failed to complete achievement", zap.Error(err))
+		}
+		span.End()
+	}()
+
+	var req CompleteAchievementRequest
+
+	err = ctx.ShouldBindBodyWith(&req, binding.JSON)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	err = c.service.CompleteAchievement(sctx, req)
+	if err != nil {
+		c.logger.Error("Failed to create achievement", zap.Error(err))
+		ctx.Error(err)
+		return
+	}
+
+	ctx.Status(http.StatusCreated)
+}
+
+func (c *Controller) GetProgress(ctx *gin.Context) {
+	sctx, span := tracer.Start(ctx.Request.Context(), "achievements.controller.GetProgress")
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			c.logger.Debug("Failed to get achievement progress", zap.Error(err))
+		}
+		span.End()
+	}()
+
+	var req GetProgressRequest
+
+	err = ctx.ShouldBindUri(&req.ProgressId)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	result, err := c.service.GetProgress(sctx, req)
+	if err != nil {
+		c.logger.Error("Failed to get achievement progress",
+			zap.Int("progress_id", req.Id),
+			zap.Error(err))
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, result)
+}
+
+func (c *Controller) DeleteProgress(ctx *gin.Context) {
+	sctx, span := tracer.Start(ctx.Request.Context(), "achievement.controller.DeleteProgress")
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			c.logger.Debug("Failed to delete achievement progress", zap.Error(err))
+		}
+		span.End()
+	}()
+
+	var req DeleteProgressRequest
+
+	err = ctx.ShouldBindUri(&req.ProgressId)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	span.SetAttributes(attribute.Int("progress_id", req.Id))
+
+	_, err = c.service.DeleteProgress(sctx, req)
+	if err != nil {
+		c.logger.Error("Failed to delete achievement progress",
+			zap.Int("progress_id", req.Id),
+			zap.Error(err))
+		ctx.Error(err)
+		return
+	}
+
+	ctx.Status(http.StatusNoContent)
+}
+
+func (c *Controller) GetProgressOfUser(ctx *gin.Context) {
+	sctx, span := tracer.Start(ctx.Request.Context(), "achievement.controller.GetProgressOfUser")
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			c.logger.Debug("Failed to get achievement progress of user", zap.Error(err))
+		}
+		span.End()
+	}()
+
+	var req GetProgressOfUserRequest
+
+	err = ctx.ShouldBindQuery(&req)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	result, err := c.service.GetProgressOfUser(sctx, req)
+	if err != nil {
+		c.logger.Error("Failed to get achievement progress of user", zap.Error(err))
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, result)
+}
+
+func (c *Controller) UpdateProgressOfUser(ctx *gin.Context) {
+	sctx, span := tracer.Start(ctx.Request.Context(), "achievement.controller.UpdateProgressOfUser")
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			c.logger.Debug("Failed to update achievement progress", zap.Error(err))
+		}
+		span.End()
+	}()
+
+	var req UpdateProgressRequest
+
+	err = ctx.ShouldBindBodyWithJSON(&req)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+	span.SetAttributes(attribute.String("user_id", req.UserId))
+
+	err = c.service.UpdateProgress(sctx, req)
+	if err != nil {
+		c.logger.Error("Failed to update achievement progress",
+			zap.String("user_id", req.UserId),
+			zap.Error(err))
+		ctx.Error(err)
+		return
+	}
+
+	ctx.Status(http.StatusNoContent)
+}
+
+func (c *Controller) DeleteAllProgressOfUser(ctx *gin.Context) {
+	sctx, span := tracer.Start(ctx.Request.Context(), "achievements.controller.DeleteAllProgressOfUser")
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			c.logger.Debug("Failed to delete achievement progress of user", zap.Error(err))
+		}
+		span.End()
+	}()
+
+	var req DeleteProgressOfUserRequest
+
+	err = ctx.ShouldBindUri(&req.UserId)
+	if err != nil {
+		ctx.Error(err)
+	}
+
+	span.SetAttributes(attribute.String("user_id", req.UserId))
+
+	err = c.service.DeleteAllProgressOfUser(sctx, req)
+	if err != nil {
+		c.logger.Error("Failed to delete acheievemnt progress of user",
+			zap.String("user_id", req.UserId),
 			zap.Error(err))
 		ctx.Error(err)
 		return
