@@ -19,6 +19,7 @@ type Service interface {
 	DeleteProgress(ctx context.Context, req DeleteProgressRequest) (ProgressId, error)
 
 	GetProgressOfUser(ctx context.Context, req GetProgressOfUserRequest) ([]AchievementProgress, error)
+	GetCompletedAchievementsOfUser(ctx context.Context, req CompletedAchievementRequest) ([]int, error)
 	DeleteAllProgressOfUser(ctx context.Context, req DeleteProgressOfUserRequest) error
 
 	CompleteAchievement(ctx context.Context, req CompleteAchievementRequest) error
@@ -48,7 +49,6 @@ func (s *AchievementService) Create(ctx context.Context, req CreateAchievementRe
 	if err != nil {
 		return AchievementResponse{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to create achievement")
 	}
-
 	return achievement, nil
 }
 
@@ -80,14 +80,24 @@ func (s *AchievementService) Delete(ctx context.Context, req DeleteAchievementRe
 	ctx, span := tracer.Start(ctx, "achievements.service.Delete")
 	defer span.End()
 
-	return common.TranslatePostgresError(s.repository.Delete(ctx, req), s.logger).WithMessage("Failed to delete achievement")
+	err := s.repository.Delete(ctx, req)
+	if err != nil {
+		return common.TranslatePostgresError(err, s.logger).WithMessage("Failed to delete achievement")
+	}
+
+	return nil
 }
 
 func (s *AchievementService) CompleteAchievement(ctx context.Context, req CompleteAchievementRequest) error {
 	ctx, span := tracer.Start(ctx, "achievements.service.CompleteAchievement")
 	defer span.End()
 
-	return common.TranslatePostgresError(s.repository.CompleteAchievement(ctx, req), s.logger).WithMessage("Failed to create compleeted achievement")
+	err := s.repository.CompleteAchievement(ctx, req)
+	if err != nil {
+		return common.TranslatePostgresError(err, s.logger).WithMessage("Failed to create compleeted achievement")
+	}
+
+	return nil
 }
 
 func (s *AchievementService) GetProgress(ctx context.Context, req GetProgressRequest) (AchievementProgress, error) {
@@ -108,7 +118,19 @@ func (s *AchievementService) GetProgressOfUser(ctx context.Context, req GetProgr
 
 	achievements, err := s.repository.GetProgressOfUser(ctx, req)
 	if err != nil {
-		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to to achievement progrogress of user")
+		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to get achievement progress of user")
+	}
+
+	return achievements, nil
+}
+
+func (s *AchievementService) GetCompletedAchievementsOfUser(ctx context.Context, req CompletedAchievementRequest) ([]int, error) {
+	ctx, span := tracer.Start(ctx, "achievements.service.GetCompletedAchievements")
+	defer span.End()
+
+	achievements, err := s.repository.GetCompletedAchievementsOfUser(ctx, req)
+	if err != nil {
+		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to get completed achievements of user")
 	}
 
 	return achievements, nil

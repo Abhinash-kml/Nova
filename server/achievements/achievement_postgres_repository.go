@@ -168,10 +168,12 @@ func (r *PostgresRepository) CompleteAchievement(ctx context.Context, req Comple
 	rawQuery := `INSERT INTO 
 					completed_achievements(
 						user_id,
-						achievement_id
+						achievement_id,
+						completed_on
 					) VALUES (
 					 	$1,
-						$2
+						$2,
+						CURRENT_TIMESTAMP
 					);`
 
 	_, err := r.pgx.Exec(ctx, rawQuery, req.UserId, req.AchievementId)
@@ -180,6 +182,37 @@ func (r *PostgresRepository) CompleteAchievement(ctx context.Context, req Comple
 	}
 
 	return nil
+}
+
+func (r *PostgresRepository) GetCompletedAchievementsOfUser(ctx context.Context, req CompletedAchievementRequest) ([]int, error) {
+	rawQuery := `SELECT
+					achievement_id
+				FROM
+					completed_achievements
+				WHERE
+					user_id = $1;	
+	`
+
+	rows, err := r.pgx.Query(ctx, rawQuery, req.UserId)
+	if err != nil {
+		return nil, fmt.Errorf("getting achievements: %w", err)
+	}
+	defer rows.Close()
+
+	var achievements []int
+	var achievement int
+	for rows.Next() {
+		if err = rows.Scan(&achievement); err != nil {
+			return nil, fmt.Errorf("scanning row: %w", err)
+		}
+		achievements = append(achievements, achievement)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating rows: %w", err)
+	}
+
+	return achievements, nil
 }
 
 func (r *PostgresRepository) GetProgress(ctx context.Context, dto GetProgressRequest) (AchievementProgress, error) {

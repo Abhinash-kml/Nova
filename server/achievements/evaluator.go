@@ -3,6 +3,7 @@ package achievements
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
 
 	"github.com/abhinash-kml/nova/server/events"
@@ -73,9 +74,36 @@ func (e *Evaluator) Evaluate(userid string, statid int, statCurrentvalue int) {
 	fmt.Println("STAT_ID:", statid, "USER_ID:", userid, "CURRENT_VALUE:", statCurrentvalue)
 	achievements := e.mapping[statid]
 
+	// Fetch user's completed achievements
+	completedUserAchievements, err := e.service.GetCompletedAchievementsOfUser(context.Background(), CompletedAchievementRequest{UserId: userid})
+	if err != nil {
+		return
+	}
+
+	// Loop through all the achievents based on incoming stat value
 	for _, a := range achievements {
+		// If the current achievement is completed skip it
+		if slices.Contains(completedUserAchievements, a.AchievementId) {
+			fmt.Println("achievement id", a.AchievementId, "already completed. skipping...")
+			return
+		}
+
+		// Check if current stat value of achievement is greated than or equal to required stat value, if so complete achievement
 		if statCurrentvalue >= a.TargetValue {
-			fmt.Printf("UserID: %s completed achievement %s\n", userid, a.Key)
+			err = e.service.CompleteAchievement(context.Background(), CompleteAchievementRequest{UserId: userid, AchievementId: a.AchievementId})
+			if err != nil {
+				fmt.Println("Error:", err)
+				return
+			}
+			fmt.Println("UserID:", userid, "completed achievement id:", a.AchievementId)
+
+			// Send notification to realtime hub, it will forward further
+			eventsManager := events.GetGlobalEventsManager()
+			eventsManager.Produce("user:notifications", map[string]any{
+				"type":           "achievement_complete",
+				"user_id":        userid,
+				"achievement_id": a.AchievementId,
+			})
 		}
 	}
 

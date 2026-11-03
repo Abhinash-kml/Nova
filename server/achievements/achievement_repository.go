@@ -15,6 +15,7 @@ type Repository interface {
 	DeleteProgress(ctx context.Context, req DeleteProgressRequest) (ProgressId, error)
 
 	GetProgressOfUser(ctx context.Context, req GetProgressOfUserRequest) ([]AchievementProgress, error)
+	GetCompletedAchievementsOfUser(ctx context.Context, req CompletedAchievementRequest) ([]int, error)
 	DeleteAllProgressOfUser(ctx context.Context, req DeleteProgressOfUserRequest) error
 
 	GetAchievementsForEvaluator(ctx context.Context) ([]Achievement, error)

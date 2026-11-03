@@ -72,3 +72,7 @@ type GetProgressOfUserRequest struct {
 type DeleteProgressOfUserRequest struct {
 	UserId string `uri:"id" binding:"required"`
 }
+
+type CompletedAchievementRequest struct {
+	UserId string `uri:"id" binding:"required,numeric"`
+}

@@ -71,7 +71,7 @@ type DeletePlayerStatSpecificRequest struct {
 
 type IncomingPlayerStat struct {
 	StatId string `json:"stat_id"`
-	Value  int    `json:"value"`
+	Value  string `json:"value"`
 }
 
 type UpdatePlayerStatRequest struct {
