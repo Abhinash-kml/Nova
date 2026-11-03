@@ -367,7 +367,7 @@ func main() {
 		achievementController := achievements.NewController(achievementService, config, logger)
 
 		// Achievement evaluator
-		evaluator := achievements.NewEvaluator(globalCtx, achievementService, "stats:update")
+		evaluator := achievements.NewEvaluator(globalCtx, achievementService, "stats:update", logger)
 		evaluator.Initialize()
 		evaluator.BuildMapping()
 		evaluator.Run()

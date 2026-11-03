@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/abhinash-kml/nova/server/events"
+	"go.uber.org/zap"
 )
 
 type Evaluator struct {
@@ -16,9 +17,10 @@ type Evaluator struct {
 	mapping      map[int][]Achievement
 	ctx          context.Context
 	cancel       context.CancelFunc
+	logger       *zap.Logger
 }
 
-func NewEvaluator(ctx context.Context, s Service, channel string) *Evaluator {
+func NewEvaluator(ctx context.Context, s Service, channel string, l *zap.Logger) *Evaluator {
 	internalCtx, cancelFunc := context.WithCancel(ctx)
 	return &Evaluator{
 		service:      s,
@@ -26,13 +28,14 @@ func NewEvaluator(ctx context.Context, s Service, channel string) *Evaluator {
 		statsChannel: channel,
 		ctx:          internalCtx,
 		cancel:       cancelFunc,
+		logger:       l,
 	}
 }
 
 func (e *Evaluator) Initialize() {
 	achievements, err := e.service.GetAchievementsForEvaluator(context.Background())
 	if err != nil {
-		fmt.Println("Failed to get achievements for evaluator. Error: %w", err)
+		e.logger.Error("Failed to get achievements for evaluator", zap.Error(err))
 		return
 	}
 	e.achievements = append(e.achievements, achievements...)
@@ -49,7 +52,7 @@ func (e *Evaluator) Run() {
 		for {
 			select {
 			case <-e.ctx.Done():
-				fmt.Println("Evaluator stopped due to context cancellation")
+				e.logger.Info("Achievement evaluator stopped due to context cancellation")
 				return
 			case event := <-eventsCh:
 				userId := event["user_id"].(string)
@@ -71,7 +74,12 @@ func (e *Evaluator) buildMapping() {
 }
 
 func (e *Evaluator) Evaluate(userid string, statid int, statCurrentvalue int) {
-	fmt.Println("STAT_ID:", statid, "USER_ID:", userid, "CURRENT_VALUE:", statCurrentvalue)
+	e.logger.Debug(
+		"Incoming values",
+		zap.String("user_id", userid),
+		zap.Int("stat_id", statid),
+		zap.Int("current_value", statCurrentvalue),
+	)
 	achievements := e.mapping[statid]
 
 	// Fetch user's completed achievements
@@ -84,7 +92,7 @@ func (e *Evaluator) Evaluate(userid string, statid int, statCurrentvalue int) {
 	for _, a := range achievements {
 		// If the current achievement is completed skip it
 		if slices.Contains(completedUserAchievements, a.AchievementId) {
-			fmt.Println("achievement id", a.AchievementId, "already completed. skipping...")
+			e.logger.Debug("Achievement already completed", zap.Int("achievement_id", a.AchievementId))
 			return
 		}
 
@@ -92,10 +100,10 @@ func (e *Evaluator) Evaluate(userid string, statid int, statCurrentvalue int) {
 		if statCurrentvalue >= a.TargetValue {
 			err = e.service.CompleteAchievement(context.Background(), CompleteAchievementRequest{UserId: userid, AchievementId: a.AchievementId})
 			if err != nil {
-				fmt.Println("Error:", err)
+				e.logger.Error("Failed to get completed achievements of user", zap.Error(err))
 				return
 			}
-			fmt.Println("UserID:", userid, "completed achievement id:", a.AchievementId)
+			e.logger.Debug("User completed achievement", zap.String("user_id", userid), zap.Int("achievement_id", a.AchievementId))
 
 			// Send notification to realtime hub, it will forward further
 			eventsManager := events.GetGlobalEventsManager()
@@ -104,6 +112,7 @@ func (e *Evaluator) Evaluate(userid string, statid int, statCurrentvalue int) {
 				"user_id":        userid,
 				"achievement_id": a.AchievementId,
 			})
+			e.logger.Debug("Sent achievement completed notification to realtime hub")
 		}
 	}
 
