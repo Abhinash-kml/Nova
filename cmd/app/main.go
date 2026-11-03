@@ -294,7 +294,7 @@ func main() {
 	tieredCache := cache.NewTieredCache(redisClient, time.Second*30, time.Second*30, time.Second*10)
 
 	// Global events manager
-	globalEventsManager := events.NewRedisEventsManager(globalCtx, redisClient)
+	globalEventsManager := events.NewInMemoryEventsManager(globalCtx, 10)
 	events.SetGlobalEventsManager(globalEventsManager)
 
 	// Setup users module
