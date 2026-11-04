@@ -7,12 +7,11 @@ import (
 )
 
 type InventoryItem struct {
-	UserID     uuid.UUID `json:"user_id"`
-	ItemID     uuid.UUID `json:"item_id"`
-	Quantity   int       `json:"quantity"`
-	Source     string    `json:"source"`
-	IsEquipped bool      `json:"is_equipped"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	UserID     *uuid.UUID `json:"user_id,omitempty"`
+	ItemID     *uuid.UUID `json:"item_id,omitempty"`
+	Quantity   *int       `json:"quantity,omitempty"`
+	IsEquipped *bool      `json:"is_equipped,omitempty"`
+	UpdatedAt  *time.Time `json:"updated_at,omitempty"`
 }
 
 type UserID struct {

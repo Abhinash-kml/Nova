@@ -25,7 +25,7 @@ func NewItemsController(s ItemsService, l *zap.Logger) *ItemsController {
 }
 
 func (c *ItemsController) GetAll(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.items.controller.getall")
+	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.items.controller.GetAll")
 	var err error
 
 	defer func() {
@@ -58,7 +58,7 @@ func (c *ItemsController) GetAll(ctx *gin.Context) {
 }
 
 func (c *ItemsController) Get(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.items.controller.get")
+	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.items.controller.Get")
 	var err error
 
 	defer func() {
@@ -94,7 +94,7 @@ func (c *ItemsController) Get(ctx *gin.Context) {
 }
 
 func (c *ItemsController) Create(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.items.controller.create")
+	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.items.controller.Create")
 	var err error
 
 	defer func() {
@@ -124,7 +124,7 @@ func (c *ItemsController) Create(ctx *gin.Context) {
 }
 
 func (c *ItemsController) Modify(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.items.controller.modify")
+	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.items.controller.Modify")
 	var err error
 
 	defer func() {
@@ -164,7 +164,7 @@ func (c *ItemsController) Modify(ctx *gin.Context) {
 }
 
 func (c *ItemsController) Replace(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.items.controller.replace")
+	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.items.controller.Replace")
 	var err error
 
 	defer func() {
@@ -204,7 +204,7 @@ func (c *ItemsController) Replace(ctx *gin.Context) {
 }
 
 func (c *ItemsController) Delete(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.items.controller.delete")
+	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.items.controller.Delete")
 	var err error
 
 	defer func() {

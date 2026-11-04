@@ -9,4 +9,6 @@ type InventoryRepository interface {
 	AddInventoryItemOfUser(ctx context.Context, dto AddInventoryItemOfUserRequest) (InventoryItem, error)
 	UpdateInventoryItemOfUser(ctx context.Context, dto UpdateInventoryItemOfUserRequest) (PlayerInventory, error)
 	DeleteInventoryItemOfUser(ctx context.Context, dto DeleteInventoryItemOfUserRequest) error
+
+	BuildInventoryFromEntitlements(ctx context.Context, req GetInventoryOfUserRequest) ([]InventoryItem, error)
 }

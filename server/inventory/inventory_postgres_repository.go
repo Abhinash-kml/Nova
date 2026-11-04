@@ -34,7 +34,6 @@ func (r *PostgresInventoryRepository) GetInventoryOfUser(ctx context.Context, re
 					item_id,
 					quantity,
 					updated_at,
-					source,
 					is_equipped
 				FROM
 					player_inventory
@@ -63,7 +62,6 @@ func (r *PostgresInventoryRepository) GetInventoryOfUser(ctx context.Context, re
 			&item.ItemId,
 			&item.Quantity,
 			&item.UpdatedAt,
-			&item.Source,
 			&item.IsEquipped,
 		)
 		if err != nil {
@@ -85,7 +83,8 @@ func (r *PostgresInventoryRepository) DeleteInventoryOfUser(ctx context.Context,
 					player_inventory 
 				WHERE
 					user_id = $1
-				RETURNING user_id;`
+				RETURNING 
+					user_id;`
 
 	var deletedID string
 	userID, _ := uuid.Parse(req.Id)
@@ -104,7 +103,6 @@ func (r *PostgresInventoryRepository) GetInventoryItemOfUser(ctx context.Context
 					item_id,
 					quantity,
 					updated_at,
-					source,
 					is_equipped
 				FROM
 					player_inventory
@@ -124,7 +122,6 @@ func (r *PostgresInventoryRepository) GetInventoryItemOfUser(ctx context.Context
 		&inventory.ItemId,
 		&inventory.Quantity,
 		&inventory.UpdatedAt,
-		&inventory.Source,
 		&inventory.IsEquipped,
 	)
 
@@ -141,11 +138,17 @@ func (r *PostgresInventoryRepository) AddInventoryItemOfUser(ctx context.Context
 					user_id,
 					item_id,
 					quantity,
-					source,
 					is_equipped,
 					updated_at
-				) VALUES ($1, $2, $3, $4, $5, $6)
-				RETURNING *;`
+				) VALUES (
+					$1, 
+					$2, 
+					$3, 
+					$4, 
+					$5
+				)
+				RETURNING 
+					*;`
 
 	now := time.Now()
 	var item InventoryItem
@@ -155,7 +158,6 @@ func (r *PostgresInventoryRepository) AddInventoryItemOfUser(ctx context.Context
 		req.UserID,
 		req.ItemID,
 		req.Quantity,
-		req.Source,
 		req.IsEquipped,
 		now)
 
@@ -163,7 +165,6 @@ func (r *PostgresInventoryRepository) AddInventoryItemOfUser(ctx context.Context
 		&item.UserID,
 		&item.ItemID,
 		&item.Quantity,
-		&item.Source,
 		&item.IsEquipped,
 		&item.UpdatedAt,
 	)
@@ -189,10 +190,6 @@ func (r *PostgresInventoryRepository) UpdateInventoryItemOfUser(ctx context.Cont
 		queryBuilder = queryBuilder.Set("quantity", *req.Quantity)
 	}
 
-	if req.Source != nil {
-		queryBuilder = queryBuilder.Set("source", *req.Source)
-	}
-
 	if req.IsEquipped != nil {
 		queryBuilder = queryBuilder.Set("is_equipped", *req.IsEquipped)
 	}
@@ -203,7 +200,6 @@ func (r *PostgresInventoryRepository) UpdateInventoryItemOfUser(ctx context.Cont
 			item_id,
 			quantity,
 			updated_at,
-			source,
 			is_equipped`,
 	)
 
@@ -223,7 +219,6 @@ func (r *PostgresInventoryRepository) UpdateInventoryItemOfUser(ctx context.Cont
 		&inventory.ItemId,
 		&inventory.Quantity,
 		&inventory.UpdatedAt,
-		&inventory.Source,
 		&inventory.IsEquipped,
 	)
 
@@ -254,4 +249,52 @@ func (r *PostgresInventoryRepository) DeleteInventoryItemOfUser(ctx context.Cont
 	}
 
 	return nil
+}
+
+func (r *PostgresInventoryRepository) BuildInventoryFromEntitlements(ctx context.Context, req GetInventoryOfUserRequest) ([]InventoryItem, error) {
+	rawQuery := `
+	WITH valid_entitlements AS (
+		SELECT
+			item_id
+		FROM
+			entitlements
+		WHERE
+			user_id = $1
+			AND
+			(valid_till IS NULL
+			OR valid_till > CURRENT_TIMESTAMP)
+	)
+	SELECT
+		pi.item_id,
+		pi.quantity,
+		pi.is_equipped
+	FROM
+		player_inventory pi
+	JOIN
+		valid_entitlements e ON e.item_id = pi.item_id
+	WHERE
+		pi.user_id = $1;
+	`
+
+	userID, _ := uuid.Parse(req.Id)
+	rows, err := r.pgx.Query(ctx, rawQuery, userID)
+	if err != nil {
+		return nil, fmt.Errorf("getting inventory: %w", err)
+	}
+	defer rows.Close()
+
+	var inventory []InventoryItem
+	var inventoryItem InventoryItem
+	for rows.Next() {
+		if err = rows.Scan(&inventoryItem.ItemID, &inventoryItem.Quantity, &inventoryItem.IsEquipped); err != nil {
+			return nil, fmt.Errorf("scanning row: %w", err)
+		}
+		inventory = append(inventory, inventoryItem)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating rows: %w", err)
+	}
+
+	return inventory, nil
 }

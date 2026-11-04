@@ -15,6 +15,7 @@ type InventoryService interface {
 	AddInventoryItemOfUser(ctx context.Context, req AddInventoryItemOfUserRequest) (InventoryItem, error)
 	UpdateInventoryItemOfUser(ctx context.Context, req UpdateInventoryItemOfUserRequest) (PlayerInventory, error)
 	DeleteInventoryItemOfUser(ctx context.Context, req DeleteInventoryItemOfUserRequest) error
+	BuildInventoryFromEntitlements(ctx context.Context, req GetInventoryOfUserRequest) ([]InventoryItem, error)
 }
 
 type LocalInventoryService struct {
@@ -32,6 +33,9 @@ func NewLocalInventoryService(r InventoryRepository, c *config.Config, l *zap.Lo
 }
 
 func (s *LocalInventoryService) GetInventoryOfUser(ctx context.Context, req GetInventoryOfUserRequest) ([]PlayerInventory, error) {
+	ctx, span := tracer.Start(ctx, "inventory.service.GetInventoryOfUser")
+	defer span.End()
+
 	items, err := s.repository.GetInventoryOfUser(ctx, req)
 	if err != nil {
 		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to get inventory of user")
@@ -41,6 +45,9 @@ func (s *LocalInventoryService) GetInventoryOfUser(ctx context.Context, req GetI
 }
 
 func (s *LocalInventoryService) DeleteInventoryOfUser(ctx context.Context, req DeleteInventoryOfUserRequest) (UserID, error) {
+	ctx, span := tracer.Start(ctx, "inventory.service.DeleteInventoryOfUser")
+	defer span.End()
+
 	userID, err := s.repository.DeleteInventoryOfUser(ctx, req)
 	if err != nil {
 		return UserID{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to delete inventory of user")
@@ -50,6 +57,9 @@ func (s *LocalInventoryService) DeleteInventoryOfUser(ctx context.Context, req D
 }
 
 func (s *LocalInventoryService) GetInventoryItemOfUser(ctx context.Context, req GetInventoryItemOfUserRequest) (PlayerInventory, error) {
+	ctx, span := tracer.Start(ctx, "inventory.service.GetInventoryItemOfUser")
+	defer span.End()
+
 	inventory, err := s.repository.GetInventoryItemOfUser(ctx, req)
 	if err != nil {
 		return PlayerInventory{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to get inventory item of user")
@@ -59,6 +69,9 @@ func (s *LocalInventoryService) GetInventoryItemOfUser(ctx context.Context, req 
 }
 
 func (s *LocalInventoryService) AddInventoryItemOfUser(ctx context.Context, req AddInventoryItemOfUserRequest) (InventoryItem, error) {
+	ctx, span := tracer.Start(ctx, "inventory.service.AddInventoryItemOfUser")
+	defer span.End()
+
 	inventory, err := s.repository.AddInventoryItemOfUser(ctx, req)
 	if err != nil {
 		return InventoryItem{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to add inventory item of user")
@@ -68,6 +81,9 @@ func (s *LocalInventoryService) AddInventoryItemOfUser(ctx context.Context, req 
 }
 
 func (s *LocalInventoryService) UpdateInventoryItemOfUser(ctx context.Context, req UpdateInventoryItemOfUserRequest) (PlayerInventory, error) {
+	ctx, span := tracer.Start(ctx, "inventory.service.UpdateInventoryItemOfUser")
+	defer span.End()
+
 	inventory, err := s.repository.UpdateInventoryItemOfUser(ctx, req)
 	if err != nil {
 		return PlayerInventory{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to update inventory item of user")
@@ -77,8 +93,25 @@ func (s *LocalInventoryService) UpdateInventoryItemOfUser(ctx context.Context, r
 }
 
 func (s *LocalInventoryService) DeleteInventoryItemOfUser(ctx context.Context, req DeleteInventoryItemOfUserRequest) error {
-	return common.TranslatePostgresError(
-		s.repository.DeleteInventoryItemOfUser(ctx, req),
-		s.logger,
-	).WithMessage("Failed to delete inventory item of user")
+	ctx, span := tracer.Start(ctx, "inventory.service.DeleteInventoryItemOfUser")
+	defer span.End()
+
+	err := s.repository.DeleteInventoryItemOfUser(ctx, req)
+	if err != nil {
+		return common.TranslatePostgresError(err, s.logger).WithMessage("Failed to delete inventory item of user")
+	}
+
+	return nil
+}
+
+func (s *LocalInventoryService) BuildInventoryFromEntitlements(ctx context.Context, req GetInventoryOfUserRequest) ([]InventoryItem, error) {
+	ctx, span := tracer.Start(ctx, "inventory.service.BuildInventoryFromEntitlements")
+	defer span.End()
+
+	items, err := s.repository.BuildInventoryFromEntitlements(ctx, req)
+	if err != nil {
+		return nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to build inventory from entitlements")
+	}
+
+	return items, nil
 }

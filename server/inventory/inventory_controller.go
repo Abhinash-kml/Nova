@@ -25,7 +25,7 @@ func NewInventoryController(s InventoryService, c *config.InventoryConfig, l *za
 }
 
 func (c *InventoryController) GetInventoryOfUser(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.getinventoryofuser")
+	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.controller.GetInventoryOfUser")
 	var err error
 
 	defer func() {
@@ -56,7 +56,7 @@ func (c *InventoryController) GetInventoryOfUser(ctx *gin.Context) {
 }
 
 func (c *InventoryController) DeleteInventoryOfUser(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.deleteinventoryofuser")
+	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.controller.DeleteInventoryOfUser")
 	var err error
 
 	defer func() {
@@ -88,7 +88,7 @@ func (c *InventoryController) DeleteInventoryOfUser(ctx *gin.Context) {
 }
 
 func (c *InventoryController) GetInventoryItemOfUser(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.getinventoryofuser")
+	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.controller.GetInventoryItemOfUser")
 	var err error
 
 	defer func() {
@@ -127,7 +127,7 @@ func (c *InventoryController) GetInventoryItemOfUser(ctx *gin.Context) {
 }
 
 func (c *InventoryController) AddInventoryItemOfUser(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.getinventoryofuser")
+	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.controller.AddInventoryItemOfUser")
 	var err error
 
 	defer func() {
@@ -160,7 +160,7 @@ func (c *InventoryController) AddInventoryItemOfUser(ctx *gin.Context) {
 }
 
 func (c *InventoryController) UpdateInventoryItemOfUser(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.getinventoryofuser")
+	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.controller.UpdateInventoryItemOfUser")
 	var err error
 
 	defer func() {
@@ -205,7 +205,7 @@ func (c *InventoryController) UpdateInventoryItemOfUser(ctx *gin.Context) {
 }
 
 func (c *InventoryController) DeleteInventoryItemOfUser(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.getinventoryofuser")
+	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.controller.DeleteInventoryItemOfUser")
 	var err error
 
 	defer func() {
@@ -241,4 +241,33 @@ func (c *InventoryController) DeleteInventoryItemOfUser(ctx *gin.Context) {
 	}
 
 	ctx.Status(http.StatusNoContent)
+}
+
+func (c *InventoryController) BuildInventoryFromEntitlements(ctx *gin.Context) {
+	sctx, span := tracer.Start(ctx.Request.Context(), "inventory.controller.BuildInventoryFromEntitlements")
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
+
+	var req GetInventoryOfUserRequest
+
+	err = ctx.ShouldBindQuery(&req)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	items, err := c.service.BuildInventoryFromEntitlements(sctx, req)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, items)
 }

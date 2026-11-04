@@ -19,7 +19,8 @@ func SetupRoutes(router *gin.Engine, ic *ItemsController, inc *InventoryControll
 
 	inventoryPublic := router.Group("/public/inventory")
 	{
-		inventoryPublic.GET("", inc.GetInventoryOfUser)
+		// inventoryPublic.GET("", inc.GetInventoryOfUser)
+		inventoryPublic.GET("", inc.BuildInventoryFromEntitlements)
 		inventoryPublic.DELETE("", inc.DeleteInventoryOfUser)
 	}
 

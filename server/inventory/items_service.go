@@ -31,7 +31,7 @@ func NewLocalItemsService(r ItemsRepository, c *config.Config, l *zap.Logger) *L
 }
 
 func (s *LocalItemsService) Add(ctx context.Context, req CreateItemRequest) (PlayerItem, error) {
-	ctx, span := tracer.Start(ctx, "inventory.items.add")
+	ctx, span := tracer.Start(ctx, "inventory.items.service.Add")
 	defer span.End()
 
 	item, err := s.repository.Add(ctx, req)
@@ -43,7 +43,7 @@ func (s *LocalItemsService) Add(ctx context.Context, req CreateItemRequest) (Pla
 }
 
 func (s *LocalItemsService) GetAll(ctx context.Context, cursor int, limit int) ([]PlayerItem, error) {
-	ctx, span := tracer.Start(ctx, "inventory.items.getall")
+	ctx, span := tracer.Start(ctx, "inventory.items.service.GetAll")
 	defer span.End()
 
 	items, err := s.repository.GetAll(ctx, cursor, limit)
@@ -55,7 +55,7 @@ func (s *LocalItemsService) GetAll(ctx context.Context, cursor int, limit int) (
 }
 
 func (s *LocalItemsService) GetById(ctx context.Context, id uuid.UUID) (PlayerItem, error) {
-	ctx, span := tracer.Start(ctx, "inventory.items.getbyid")
+	ctx, span := tracer.Start(ctx, "inventory.items.service.GetById")
 	defer span.End()
 
 	item, err := s.repository.GetById(ctx, id)
@@ -67,7 +67,7 @@ func (s *LocalItemsService) GetById(ctx context.Context, id uuid.UUID) (PlayerIt
 }
 
 func (s *LocalItemsService) Update(ctx context.Context, req UpdateItemRequest) (PlayerItem, error) {
-	ctx, span := tracer.Start(ctx, "inventory.items.update")
+	ctx, span := tracer.Start(ctx, "inventory.items.service.Update")
 	defer span.End()
 
 	item, err := s.repository.Update(ctx, req)
@@ -79,7 +79,7 @@ func (s *LocalItemsService) Update(ctx context.Context, req UpdateItemRequest) (
 }
 
 func (s *LocalItemsService) Replace(ctx context.Context, req ReplaceItemRequest) (PlayerItem, error) {
-	ctx, span := tracer.Start(ctx, "inventory.items.replace")
+	ctx, span := tracer.Start(ctx, "inventory.items.service.Replace")
 	defer span.End()
 
 	item, err := s.repository.Replace(ctx, req)
@@ -91,7 +91,7 @@ func (s *LocalItemsService) Replace(ctx context.Context, req ReplaceItemRequest)
 }
 
 func (s *LocalItemsService) Delete(ctx context.Context, req DeleteItemRequest) (uuid.UUID, error) {
-	ctx, span := tracer.Start(ctx, "inventory.items.delete")
+	ctx, span := tracer.Start(ctx, "inventory.items.service.Delete")
 	defer span.End()
 
 	itemID, err := s.repository.Delete(ctx, req)
