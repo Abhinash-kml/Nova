@@ -261,6 +261,8 @@ func (r *PostgresInventoryRepository) BuildInventoryFromEntitlements(ctx context
 		WHERE
 			user_id = $1
 			AND
+			is_active = true
+			AND
 			(valid_till IS NULL
 			OR valid_till > CURRENT_TIMESTAMP)
 	)
