@@ -6,21 +6,28 @@ import (
 	"github.com/google/uuid"
 )
 
+type EntitlementID struct {
+	Id string `uri:"id" binding:"required,uuid"`
+}
+
 type CreateRequest struct {
-	UserID     string    `json:"user_id"`
-	ItemID     string    `json:"item_id"`
-	Source     string    `json:"source"`
-	ObtainedOn time.Time `json:"obtained_on"`
-	ValidTill  time.Time `json:"valid_till"`
-	IsActive   bool      `json:"is_active"`
+	UserID    string    `json:"user_id"`
+	ItemID    string    `json:"item_id"`
+	Source    string    `json:"source"`
+	ValidTill time.Time `json:"valid_till"`
+	IsActive  bool      `json:"is_active"`
 }
 
 type DeleteRequest struct {
-	Id uuid.UUID `form:"id" binding:"required"`
+	EntitlementID
+}
+
+type DeleteResponse struct {
+	Id uuid.UUID `json:"id"`
 }
 
 type CheckIfActiveRequest struct {
-	Id uuid.UUID `form:"id" binding:"required"`
+	EntitlementID
 }
 
 type GetAllOfUserRequest struct {

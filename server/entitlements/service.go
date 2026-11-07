@@ -4,13 +4,12 @@ import (
 	"context"
 
 	"github.com/abhinash-kml/nova/server/common"
-	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
 type Service interface {
 	Create(ctx context.Context, req CreateRequest) (Entitlement, error)
-	Delete(ctx context.Context, req DeleteRequest) (uuid.UUID, error)
+	Delete(ctx context.Context, req DeleteRequest) (DeleteResponse, error)
 	CheckIfActive(ctx context.Context, req CheckIfActiveRequest) (bool, error)
 
 	GetAllOfUser(ctx context.Context, req GetAllOfUserRequest) ([]Entitlement, error)
@@ -40,13 +39,13 @@ func (s *LocalEntitlementService) Create(ctx context.Context, req CreateRequest)
 	return ent, nil
 }
 
-func (s *LocalEntitlementService) Delete(ctx context.Context, req DeleteRequest) (uuid.UUID, error) {
+func (s *LocalEntitlementService) Delete(ctx context.Context, req DeleteRequest) (DeleteResponse, error) {
 	ctx, span := tracer.Start(ctx, "entitlements.service.Delete")
 	defer span.End()
 
 	id, err := s.repo.Delete(ctx, req)
 	if err != nil {
-		return uuid.Nil, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to delete entitlement")
+		return id, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to delete entitlement")
 	}
 
 	return id, nil

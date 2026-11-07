@@ -2,6 +2,7 @@ package entitlements
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -79,7 +80,7 @@ func (r *PostgresRepository) Create(ctx context.Context, req CreateRequest) (Ent
 	}, nil
 }
 
-func (r *PostgresRepository) Delete(ctx context.Context, req DeleteRequest) (uuid.UUID, error) {
+func (r *PostgresRepository) Delete(ctx context.Context, req DeleteRequest) (DeleteResponse, error) {
 	rawQuery := `
 		DELETE FROM
 			entitlements
@@ -89,12 +90,12 @@ func (r *PostgresRepository) Delete(ctx context.Context, req DeleteRequest) (uui
 			entitlement_id;
 	`
 
-	var deletedID uuid.UUID
+	var deletedID DeleteResponse
 
 	row := r.pgx.QueryRow(ctx, rawQuery, req.Id)
-	err := row.Scan(&deletedID)
+	err := row.Scan(&deletedID.Id)
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("deleting entitlement: %w", err)
+		return DeleteResponse{Id: uuid.Nil}, fmt.Errorf("deleting entitlement: %w", err)
 	}
 
 	return deletedID, nil
@@ -102,6 +103,7 @@ func (r *PostgresRepository) Delete(ctx context.Context, req DeleteRequest) (uui
 
 func (r *PostgresRepository) CheckIfActive(ctx context.Context, req CheckIfActiveRequest) (bool, error) {
 	rawQuery := `
+	SELECT EXISTS (
 		SELECT
 			true
 		FROM
@@ -109,7 +111,8 @@ func (r *PostgresRepository) CheckIfActive(ctx context.Context, req CheckIfActiv
 		WHERE
 			is_active = true
 			AND
-			entitlement_id = $1;
+			entitlement_id = $1
+	);
 	`
 
 	var isActive bool
@@ -150,16 +153,20 @@ func (r *PostgresRepository) GetAllOfUser(ctx context.Context, req GetAllOfUserR
 	var ent Entitlement
 
 	for rows.Next() {
+		var valid_till sql.NullTime
 		if err = rows.Scan(
 			&ent.ID,
 			&ent.UserID,
 			&ent.ItemID,
 			&ent.Source,
 			&ent.ObtainedOn,
-			&ent.ValidTill,
+			&valid_till,
 			&ent.IsActive,
 		); err != nil {
 			return nil, fmt.Errorf("scanning row: %w", err)
+		}
+		if valid_till.Valid {
+			ent.ValidTill = valid_till.Time
 		}
 		entitlements = append(entitlements, ent)
 	}

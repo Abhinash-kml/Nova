@@ -18,10 +18,10 @@ Features -
   
 **Stack**
 * Golang
-* Gin
-* Postgres
-* Redis
-* Websocket
+* Gin - http router
+* Postgres - persistance storage
+* Redis - caching, pub sub, event stream, presence
+* Websocket - realtime
 
 ```mermaid
 graph LR
@@ -101,6 +101,14 @@ autonumber
     Inventory Service-->>Client: 200 OK (response)
 ```
 
+**Inventory update flow**
+```mermaid
+sequenceDiagram
+autonumber
+    Client->>Server: Consume item
+    Server-->>Client: Updated item details response
+```
+
 **Presence update flow**
 ```mermaid
 sequenceDiagram
@@ -111,4 +119,37 @@ autonumber
     Edge Server->>Redis Presence Store: Fetch subscribed users
     Redis Presence Store-->>Presence Service: response list
     Presence Service->>Edge server: Fan out presence update message to subscribed users
+```
+
+**Send Friend Request flow**
+```mermaid
+sequenceDiagram
+autonumber
+    Client->>Social Service: POST add friend
+    Social Service->>Database: Persist relationship info
+    Social Service-->>Client: 200 OK
+    Social Service->>Presence Service: Fetch target connected edge server info
+    Presence Service-->>Social Service: Edge server info
+    Social Service->>Edge Server: Send friend request notification
+```
+
+**Accept Friend Request flow**
+```mermaid
+sequenceDiagram
+autonumber
+    Client->>Social Service: POST accept friend request
+    Social Service->>Database: Persist relationship info
+    Social Service-->>Client: 200 OK
+    Social Service->>Presence Service: Fetch target connected edge server info
+    Presence Service-->>Social Service: Edge server info
+    Social Service->>Edge Server: Send friend request accepted notification
+```
+
+**Reject Friend Request flow**
+```mermaid
+sequenceDiagram
+autonumber
+    Client->>Social Service: POST reject friend request
+    Social Service->>Database: Persist relationship info
+    Social Service-->>Client: 200 OK
 ```

@@ -63,7 +63,7 @@ func (c *Controller) Delete(ctx *gin.Context) {
 
 	var req DeleteRequest
 
-	err = ctx.ShouldBindUri(&req)
+	err = ctx.ShouldBindUri(&req.EntitlementID)
 	if err != nil {
 		ctx.Error(err)
 		return
@@ -79,7 +79,7 @@ func (c *Controller) Delete(ctx *gin.Context) {
 }
 
 func (c *Controller) CheckIfActive(ctx *gin.Context) {
-	sctx, span := tracer.Start(ctx.Request.Context(), "entitlements.controller.CheckIfAlive")
+	sctx, span := tracer.Start(ctx.Request.Context(), "entitlements.controller.CheckIfActive")
 	var err error
 
 	defer func() {
@@ -92,7 +92,7 @@ func (c *Controller) CheckIfActive(ctx *gin.Context) {
 
 	var req CheckIfActiveRequest
 
-	err = ctx.ShouldBindQuery(&req)
+	err = ctx.ShouldBindUri(&req.EntitlementID)
 	if err != nil {
 		ctx.Error(err)
 		return
@@ -105,4 +105,33 @@ func (c *Controller) CheckIfActive(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, isActive)
+}
+
+func (c *Controller) GetAllOfUser(ctx *gin.Context) {
+	sctx, span := tracer.Start(ctx.Request.Context(), "entitlements.controller.GetAllOfUser")
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
+
+	var req GetAllOfUserRequest
+
+	err = ctx.ShouldBindQuery(&req)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	entitlements, err := c.service.GetAllOfUser(sctx, req)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, entitlements)
 }

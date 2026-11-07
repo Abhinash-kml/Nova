@@ -24,6 +24,7 @@ import (
 	"github.com/abhinash-kml/nova/server/common"
 	configs "github.com/abhinash-kml/nova/server/config"
 	"github.com/abhinash-kml/nova/server/economy"
+	"github.com/abhinash-kml/nova/server/entitlements"
 	"github.com/abhinash-kml/nova/server/events"
 	"github.com/abhinash-kml/nova/server/infra"
 	"github.com/abhinash-kml/nova/server/inventory"
@@ -374,6 +375,13 @@ func main() {
 
 		// Setup routes
 		achievements.SetupRoutes(globalRouter, achievementController)
+	}
+	// Setup entitlements module
+	{
+		entitlementRepo := entitlements.NewPostgresRepository(postgresPool, logger)
+		entitlementService := entitlements.NewLocalEntitlementService(entitlementRepo, logger)
+		entitlementController := entitlements.NewController(entitlementService, logger)
+		entitlements.SetupRoutes(globalRouter, entitlementController)
 	}
 	// Setup inventory module
 	{
