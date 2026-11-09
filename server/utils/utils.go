@@ -266,6 +266,20 @@ func SendProblemDetails(c *gin.Context, err error) {
 				c.JSON(problem.StatusCode, problem)
 				return
 			}
+		case apperr.CodeInvalidInput:
+			{
+				problem.Type = "nova.com/invalid-input"
+				problem.Title = "Invalid input"
+				problem.StatusCode = http.StatusBadRequest
+				if cError.Message != "" {
+					problem.Description = cError.Message
+				} else {
+					problem.Description = "One or more invalid inputs"
+				}
+
+				c.JSON(problem.StatusCode, problem)
+				return
+			}
 		case apperr.CodeInfraIssue:
 			problem.Type = "nova.com/internal-issue"
 			problem.Title = "Internal server issue"

@@ -1,0 +1,15 @@
+# In v3, the top level must remain completely clean or only use allowed global orchestrators.
+# All generation settings must sit underneath your explicit go.mod package maps.
+
+all: false # Set root all to false so v3 relies entirely on your package directives
+
+packages:
+  # Replace this string with the exact module name from your go.mod + target path
+  github.com/abhinash-kml/nova/server/entitlements:
+    config:
+      all: true
+      # In v3, testify is the default template, enabling the type-safe expecter automatically.
+      # If you need to manipulate paths dynamically within the package context, configure it here:
+      dir: "{{.InterfaceDir}}"
+      filename: "mock_{{.InterfaceName}}_test.go"
+      pkgname: "{{.SrcPackageName}}_test" 

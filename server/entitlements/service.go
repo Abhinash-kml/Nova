@@ -3,10 +3,13 @@ package entitlements
 import (
 	"context"
 
+	"github.com/abhinash-kml/nova/server/apperr"
 	"github.com/abhinash-kml/nova/server/common"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
+//go:generate mockery
 type Service interface {
 	Create(ctx context.Context, req CreateRequest) (Entitlement, error)
 	Delete(ctx context.Context, req DeleteRequest) (DeleteResponse, error)
@@ -31,6 +34,13 @@ func (s *LocalEntitlementService) Create(ctx context.Context, req CreateRequest)
 	ctx, span := tracer.Start(ctx, "entitlements.service.Create")
 	defer span.End()
 
+	if req.Source == "" {
+		return Entitlement{}, apperr.InvalidInput(nil, "cannot create entitlement with no source")
+	}
+	if !req.IsActive {
+		return Entitlement{}, apperr.InvalidInput(nil, "cannot create disabled entitlement")
+	}
+
 	ent, err := s.repo.Create(ctx, req)
 	if err != nil {
 		return Entitlement{}, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to create entitlement")
@@ -42,6 +52,10 @@ func (s *LocalEntitlementService) Create(ctx context.Context, req CreateRequest)
 func (s *LocalEntitlementService) Delete(ctx context.Context, req DeleteRequest) (DeleteResponse, error) {
 	ctx, span := tracer.Start(ctx, "entitlements.service.Delete")
 	defer span.End()
+
+	if uuid.Validate(req.Id) != nil {
+		return DeleteResponse{}, apperr.InvalidInput(nil, "cannot delete entitlement with empty id")
+	}
 
 	id, err := s.repo.Delete(ctx, req)
 	if err != nil {
@@ -55,6 +69,10 @@ func (s *LocalEntitlementService) CheckIfActive(ctx context.Context, req CheckIf
 	ctx, span := tracer.Start(ctx, "entitlements.service.CheckIfActive")
 	defer span.End()
 
+	if uuid.Validate(req.Id) != nil {
+		return false, apperr.InvalidInput(nil, "cannot check with invalid entitlement id")
+	}
+
 	isActive, err := s.repo.CheckIfActive(ctx, req)
 	if err != nil {
 		return false, common.TranslatePostgresError(err, s.logger).WithMessage("Failed to check if entitlement was active")
@@ -66,6 +84,10 @@ func (s *LocalEntitlementService) CheckIfActive(ctx context.Context, req CheckIf
 func (s *LocalEntitlementService) GetAllOfUser(ctx context.Context, req GetAllOfUserRequest) ([]Entitlement, error) {
 	ctx, span := tracer.Start(ctx, "entitlements.service.GetAllOfuser")
 	defer span.End()
+
+	if uuid.Validate(req.UserID) != nil {
+		return nil, apperr.InvalidInput(nil, "cannot get all entitlements of user with invalid uuid")
+	}
 
 	entitlements, err := s.repo.GetAllOfUser(ctx, req)
 	if err != nil {
