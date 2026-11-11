@@ -419,11 +419,7 @@ func main() {
 	socialService := social.NewLocalSocialService(socialRepository, config, logger)
 	socialController := social.NewController(socialService, config, logger)
 	social.SetupRoutes(globalRouter, socialController)
-
-	persister := realtime.NewLocalMessagePersister(logger)
-	realtime.SetGlobalPersistor(persister)
-	ch := persister.Channel()
-	listener := social.NewMessageListener(socialService, ch, logger)
+	listener := social.NewMessageListener(globalCtx, socialService, logger)
 	listener.Listen()
 
 	// Setup realtime module

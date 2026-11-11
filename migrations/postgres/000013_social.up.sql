@@ -23,7 +23,7 @@ CREATE INDEX idx_friendship_user_one ON friendships(user_one_id, status);
 
 CREATE TABLE IF NOT EXISTS conversations(
     id UUID PRIMARY KEY DEFAULT uuidv7(),
-    type VARCHAR NOT NULL,
+    type INT NOT NULL DEFAULT 1,
     name VARCHAR UNIQUE,
     last_message_id BIGINT,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP

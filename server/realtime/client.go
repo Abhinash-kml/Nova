@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/abhinash-kml/nova/server/config"
+	"github.com/abhinash-kml/nova/server/events"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
@@ -18,24 +19,17 @@ type Client struct {
 	queuedMessages chan Envelope
 	conn           *websocket.Conn
 	config         *config.WebsocketConfig
-	persister      MessagePersister
 }
 
 func NewClient(config *config.WebsocketConfig, uid uuid.UUID, connection *websocket.Conn) *Client {
-	fmt.Println("Ping:", config.PingInterval)
-	fmt.Println("Pong:", config.PongWait)
-	fmt.Println("WriteWait:", config.WriteWait)
-
 	return &Client{
 		Uid:            uid,
 		conn:           connection,
 		queuedMessages: make(chan Envelope, 1000),
 		config:         config,
-		persister:      GetLocalMessagePersistor(),
 	}
 }
 
-// TODO: Implement this
 func (c *Client) ReadIncoming() {
 	defer func() {
 		c.conn.Close()
@@ -153,12 +147,6 @@ Loop:
 				zap.L().Error("Failed to write message using writer", zap.Error(err))
 				break Loop
 			}
-
-			// err = c.conn.SetWriteDeadline(time.Time{}) // Expirement
-			// if err != nil {
-			// 	zap.L().Error("Failed to set write deadline", zap.Error(err))
-			// 	return
-			// }
 		case <-ticker.C:
 			err := c.conn.SetWriteDeadline(time.Now().Add(c.config.WriteWait))
 			if err != nil {
@@ -207,7 +195,8 @@ func (c *Client) ProcessMessage(message Envelope) {
 
 	// If message type is Chat Receipt - dont persist just forward
 	if message.Header.Type == MessageReceipt {
-		fmt.Println("Sending receipt message to hub")
+		zap.L().Sugar().Debug("Sending receipt message to hub")
+
 		GetGlobalHub().Send(message)
 		return
 	}
@@ -219,26 +208,39 @@ func (c *Client) ProcessMessage(message Envelope) {
 		return
 	}
 
-	fmt.Println("After Persisting")
+	zap.L().Sugar().Debug("After Persisting")
+	zap.L().Sugar().Debug("Sending acknowledgement")
 
 	// 3. Send Acknowledgement receipt
 	err = c.SendAcknowledgement(message)
 	if err != nil {
 		zap.L().Error("Failed to send acknowledgement", zap.Error(err))
 	}
-	// fmt.Println("Sending acknowledgemenet")
 
 	// 4. Forward it to hub for realtime forwarding
 	GetGlobalHub().Send(message)
-	fmt.Println("After fowarding to hub")
+	zap.L().Sugar().Debug("After fowarding to hub")
 }
 
 func (c *Client) PersistMessage(message Envelope) error {
-	err := c.persister.Persist(message)
+	var cMessage ChatMessage
+	err := json.Unmarshal(message.Data, &cMessage)
 	if err != nil {
-		return fmt.Errorf("persisting message: %w", err)
+		return fmt.Errorf("unmarshalling chat message: %w", err)
 	}
 
+	eventsManager := events.GetGlobalEventsManager()
+	eventsManager.Produce("stream:chatmessages", map[string]any{
+		"conversation_type": cMessage.ConversationType,
+		"chat_id":           cMessage.ChatId.String(),
+		"message_id":        cMessage.MessageId.String(),
+		"user_id":           message.Header.SenderID.String(),
+		"target_id":         message.Header.ReceiverID.String(),
+		"payload":           cMessage.Body,
+		"deleted":           cMessage.Deleted,
+		"status":            cMessage.Status,
+		"created_at":        message.Header.CreatedAt,
+	})
 	return nil
 }
 

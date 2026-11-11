@@ -1,3 +1,5 @@
+//go:build integration
+
 package entitlements_test
 
 import (
@@ -9,12 +11,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/abhinash-kml/nova/server/entitlements"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -127,39 +131,107 @@ func runSpecificMigrations(dbURL, dirPath string, targetFiles []string) error {
 // --- Example Usage Across Multiple Tests ---
 
 // cleanupTables resets state between tests without violating foreign keys
-func cleanupTables(t *testing.T, ctx context.Context) {
+func cleanupTables(t *testing.T) {
 	t.Helper()
-	_, err := testPool.Exec(ctx, `TRUNCATE TABLE users, orders RESTART IDENTITY CASCADE`)
-	if err != nil {
-		t.Fatalf("failed to truncate tables: %v", err)
-	}
+	_, err := testPool.Exec(context.Background(), `TRUNCATE TABLE entitlements RESTART IDENTITY CASCADE`)
+	require.NoError(t, err, "failed to truncate table during cleanup")
 }
 
 func Test_Integration_Create(t *testing.T) {
-	query := `
-		INSERT INTO 
-			entitlements(
-				entitlement_id,
-				user_id,
-				item_id,
-				source,
-				is_active
-			) VALUES (
-				$1,
-				$2,
-				$3,
-				'purchase',
-				$4 
-			) RETURNING entitlement_id;
-	`
+	t.Cleanup(func() {
+		cleanupTables(t)
+	})
 
-	entitlementID, _ := uuid.Parse("4ccba445-a0a7-41f1-bc6b-228937fb6f4b")
+	repo := entitlements.NewPostgresRepository(testPool, nil)
 	userID, _ := uuid.Parse("40ef63e4-7e79-4e4e-bd7f-49a9ae1ce84a")
 	itemID, _ := uuid.Parse("1d9fe0fb-c42c-4686-b224-52653727150f")
-	isActive := true
 
-	var gotID uuid.UUID
-	err := testPool.QueryRow(context.Background(), query, entitlementID, userID, itemID, isActive).Scan(&gotID)
-	assert.Nil(t, err)
-	assert.Equal(t, entitlementID, gotID)
+	created, err := repo.Create(context.Background(), entitlements.CreateRequest{
+		UserID:   userID.String(),
+		ItemID:   itemID.String(),
+		Source:   "purchase",
+		IsActive: true,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, created.UserID, userID)
+}
+
+func Test_Integration_Delete(t *testing.T) {
+	t.Cleanup(func() {
+		cleanupTables(t)
+	})
+
+	repo := entitlements.NewPostgresRepository(testPool, nil)
+	userID, _ := uuid.Parse("40ef63e4-7e79-4e4e-bd7f-49a9ae1ce84a")
+	itemID, _ := uuid.Parse("1d9fe0fb-c42c-4686-b224-52653727150f")
+
+	created, err := repo.Create(context.Background(), entitlements.CreateRequest{
+		UserID:   userID.String(),
+		ItemID:   itemID.String(),
+		Source:   "purchase",
+		IsActive: true,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, created.UserID, userID)
+
+	deletedId, err := repo.Delete(context.Background(), entitlements.DeleteRequest{
+		EntitlementID: entitlements.EntitlementID{
+			Id: created.ID.String(),
+		},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, deletedId.Id, created.ID)
+}
+
+func Test_Integration_IsActive(t *testing.T) {
+	t.Cleanup(func() {
+		cleanupTables(t)
+	})
+
+	repo := entitlements.NewPostgresRepository(testPool, nil)
+	userID, _ := uuid.Parse("40ef63e4-7e79-4e4e-bd7f-49a9ae1ce84a")
+	itemID, _ := uuid.Parse("1d9fe0fb-c42c-4686-b224-52653727150f")
+
+	created, err := repo.Create(context.Background(), entitlements.CreateRequest{
+		UserID:   userID.String(),
+		ItemID:   itemID.String(),
+		Source:   "purchase",
+		IsActive: true,
+	})
+	require.NoError(t, err)
+	require.Equal(t, created.UserID, userID)
+
+	isActive, err := repo.CheckIfActive(context.Background(), entitlements.CheckIfActiveRequest{
+		EntitlementID: entitlements.EntitlementID{
+			Id: created.ID.String(),
+		},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, isActive, created.IsActive)
+}
+
+func Test_Integration_GetAllOfUser(t *testing.T) {
+	t.Cleanup(func() {
+		cleanupTables(t)
+	})
+
+	repo := entitlements.NewPostgresRepository(testPool, nil)
+	userID, _ := uuid.Parse("40ef63e4-7e79-4e4e-bd7f-49a9ae1ce84a")
+	itemID, _ := uuid.Parse("1d9fe0fb-c42c-4686-b224-52653727150f")
+
+	created, err := repo.Create(context.Background(), entitlements.CreateRequest{
+		UserID:   userID.String(),
+		ItemID:   itemID.String(),
+		Source:   "purchase",
+		IsActive: true,
+	})
+	require.NoError(t, err)
+	require.Equal(t, created.UserID, userID)
+
+	ents, err := repo.GetAllOfUser(context.Background(), entitlements.GetAllOfUserRequest{
+		UserID: userID.String(),
+	})
+	require.NoError(t, err)
+	require.NotNil(t, ents)
+	assert.Equal(t, ents[0].UserID, userID)
 }
