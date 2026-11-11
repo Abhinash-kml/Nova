@@ -48,6 +48,11 @@ type BindingUri interface {
 	BindUri(map[string][]string, any) error
 }
 
+type BindingAll interface {
+	Name() string
+	BindAll(*http.Request, map[string][]string, any) error
+}
+
 // StructValidator is the minimal interface which needs to be implemented in
 // order for it to be used as the validator engine for ensuring the correctness
 // of the request. Gin provides a default implementation for this using
@@ -88,6 +93,7 @@ var (
 	Plain         BindingBody = plainBinding{}
 	TOML          BindingBody = tomlBinding{}
 	BSON          BindingBody = bsonBinding{}
+	ALL           BindingAll  = allSourceBinding{}
 )
 
 // Default returns the appropriate Binding instance based on the HTTP method

@@ -605,3 +605,24 @@ func (c *Controller) GetAllUsernames(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, usernames)
 }
+
+func (c *Controller) Test(ctx *gin.Context) {
+	request := struct {
+		Head  string `header:"head" json:"head"`
+		Uri   string `uri:"uri" json:"uri"`
+		Query string `form:"query" json:"query"`
+		BodyA string `json:"body_a"`
+		BodyB int    `json:"body_b"`
+	}{}
+
+	err := ctx.ShouldBindAllSource(&request)
+	if err != nil {
+		ctx.String(200, err.Error())
+	}
+
+	fmt.Println("Header:", request.Head)
+	fmt.Println("Uri:", request.Uri)
+	fmt.Println("Query:", request.Query)
+
+	ctx.JSON(200, request)
+}

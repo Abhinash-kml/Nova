@@ -914,6 +914,17 @@ func (c *Context) ShouldBindUri(obj any) error {
 	return binding.Uri.BindUri(m, obj)
 }
 
+// ShouldBindAll binds the passed struct pointer from all the sources
+// Order = Uri -> Query & Form -> Body
+func (c *Context) ShouldBindAllSource(obj any) error {
+	m := make(map[string][]string, len(c.Params))
+	for _, v := range c.Params {
+		m[v.Key] = []string{v.Value}
+	}
+
+	return binding.ALL.BindAll(c.Request, m, obj)
+}
+
 // ShouldBindWith binds the passed struct pointer using the specified binding engine.
 // See the binding package.
 func (c *Context) ShouldBindWith(obj any, b binding.Binding) error {

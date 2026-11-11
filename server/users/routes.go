@@ -29,5 +29,8 @@ func SetupRoutes(router *gin.Engine, c *Controller) {
 		// Username
 		group.GET("/checkusername", c.CheckUsername)
 		group.GET("/usernames/:id", c.GetAllUsernames)
+
+		// Test
+		group.GET("/test/:uri", c.Test)
 	}
 }
