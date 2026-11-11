@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/abhinash-kml/nova/server/config"
-	"github.com/abhinash-kml/nova/server/events"
+	"github.com/abhinash-kml/nova/server/messagebroker"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
@@ -229,8 +229,8 @@ func (c *Client) PersistMessage(message Envelope) error {
 		return fmt.Errorf("unmarshalling chat message: %w", err)
 	}
 
-	eventsManager := events.GetGlobalEventsManager()
-	eventsManager.Produce("stream:chatmessages", map[string]any{
+	messageBroker := messagebroker.GetGlobal()
+	messageBroker.Produce("stream:chatmessages", map[string]any{
 		"conversation_type": cMessage.ConversationType,
 		"chat_id":           cMessage.ChatId.String(),
 		"message_id":        cMessage.MessageId.String(),

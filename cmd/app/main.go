@@ -25,10 +25,10 @@ import (
 	configs "github.com/abhinash-kml/nova/server/config"
 	"github.com/abhinash-kml/nova/server/economy"
 	"github.com/abhinash-kml/nova/server/entitlements"
-	"github.com/abhinash-kml/nova/server/events"
 	"github.com/abhinash-kml/nova/server/infra"
 	"github.com/abhinash-kml/nova/server/inventory"
 	"github.com/abhinash-kml/nova/server/leaderboard"
+	"github.com/abhinash-kml/nova/server/messagebroker"
 	"github.com/abhinash-kml/nova/server/observability"
 	"github.com/abhinash-kml/nova/server/posts"
 	"github.com/abhinash-kml/nova/server/realtime"
@@ -295,8 +295,8 @@ func main() {
 	tieredCache := cache.NewTieredCache(redisClient, time.Second*30, time.Second*30, time.Second*10)
 
 	// Global events manager
-	globalEventsManager := events.NewInMemoryEventsManager(globalCtx, 10)
-	events.SetGlobalEventsManager(globalEventsManager)
+	globalMessageBroker := messagebroker.NewInMemoryMessageBroker(globalCtx, 10)
+	messagebroker.SetGlobal(globalMessageBroker)
 
 	// Setup users module
 	{

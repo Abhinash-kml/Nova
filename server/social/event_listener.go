@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/abhinash-kml/nova/server/events"
+	"github.com/abhinash-kml/nova/server/messagebroker"
 	"github.com/abhinash-kml/nova/server/realtime"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -29,7 +29,7 @@ func NewMessageListener(ctx context.Context, service Service, l *zap.Logger) *Me
 
 func (ml *MessageListener) Listen() {
 	go func() {
-		messageBroker := events.GetGlobalEventsManager()
+		messageBroker := messagebroker.GetGlobal()
 		incomingChan := messageBroker.Consume("stream:chatmessages")
 		for {
 			select {

@@ -1,25 +1,25 @@
-package events
+package messagebroker
 
 import "sync"
 
 var (
-	globalInstance EventsManager
+	globalInstance MessageBroker
 	once           sync.Once
 )
 
-type EventsManager interface {
+type MessageBroker interface {
 	Initialize()
 	Produce(channel string, payload map[string]any)
 	Consume(channel string) <-chan map[string]any
 }
 
-func SetGlobalEventsManager(em EventsManager) {
+func SetGlobal(mb MessageBroker) {
 	once.Do(func() {
-		globalInstance = em
+		globalInstance = mb
 	})
 }
 
-func GetGlobalEventsManager() EventsManager {
+func GetGlobal() MessageBroker {
 	if globalInstance == nil {
 		panic("Global events manager is nil")
 	}

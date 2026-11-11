@@ -1,30 +1,30 @@
-package events
+package messagebroker
 
 import (
 	"context"
 	"sync"
 )
 
-type InMemoryEventsManager struct {
+type InMemoryMessageBroker struct {
 	mu       sync.RWMutex
 	channels map[string]chan map[string]any
 	ctx      context.Context
 	cancel   context.CancelFunc
 }
 
-func NewInMemoryEventsManager(ctx context.Context, size int) *InMemoryEventsManager {
+func NewInMemoryMessageBroker(ctx context.Context, size int) *InMemoryMessageBroker {
 	innerCtx, cancelFunc := context.WithCancel(ctx)
-	return &InMemoryEventsManager{
+	return &InMemoryMessageBroker{
 		channels: make(map[string]chan map[string]any, size),
 		ctx:      innerCtx,
 		cancel:   cancelFunc,
 	}
 }
 
-func (em *InMemoryEventsManager) Initialize() {}
+func (em *InMemoryMessageBroker) Initialize() {}
 
 // Helper method to safely ensure a channel exists under a write lock
-func (em *InMemoryEventsManager) getOrCreateChannel(channel string) chan map[string]any {
+func (em *InMemoryMessageBroker) getOrCreateChannel(channel string) chan map[string]any {
 	// 1. First check with a lightweight Read lock
 	em.mu.RLock()
 	ch, found := em.channels[channel]
@@ -46,7 +46,7 @@ func (em *InMemoryEventsManager) getOrCreateChannel(channel string) chan map[str
 	return ch
 }
 
-func (em *InMemoryEventsManager) Produce(channel string, payload map[string]any) {
+func (em *InMemoryMessageBroker) Produce(channel string, payload map[string]any) {
 	ch := em.getOrCreateChannel(channel)
 
 	// Safely emit without locking the entire map during network/channel blockage
@@ -57,7 +57,7 @@ func (em *InMemoryEventsManager) Produce(channel string, payload map[string]any)
 	}
 }
 
-func (em *InMemoryEventsManager) Consume(channel string) <-chan map[string]any {
+func (em *InMemoryMessageBroker) Consume(channel string) <-chan map[string]any {
 	ch := em.getOrCreateChannel(channel)
 	outCh := make(chan map[string]any, 100)
 

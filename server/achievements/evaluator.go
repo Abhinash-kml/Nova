@@ -6,7 +6,7 @@ import (
 	"slices"
 	"strconv"
 
-	"github.com/abhinash-kml/nova/server/events"
+	"github.com/abhinash-kml/nova/server/messagebroker"
 	"go.uber.org/zap"
 )
 
@@ -46,8 +46,8 @@ func (e *Evaluator) BuildMapping() {
 }
 
 func (e *Evaluator) Run() {
-	eventsManager := events.GetGlobalEventsManager()
-	eventsCh := eventsManager.Consume(e.statsChannel)
+	messageBroker := messagebroker.GetGlobal()
+	eventsCh := messageBroker.Consume(e.statsChannel)
 	go func() {
 		for {
 			select {
@@ -106,8 +106,8 @@ func (e *Evaluator) Evaluate(userid string, statid int, statCurrentvalue int) {
 			e.logger.Debug("User completed achievement", zap.String("user_id", userid), zap.Int("achievement_id", a.AchievementId))
 
 			// Send notification to realtime hub, it will forward further
-			eventsManager := events.GetGlobalEventsManager()
-			eventsManager.Produce("user:notifications", map[string]any{
+			messageBroker := messagebroker.GetGlobal()
+			messageBroker.Produce("user:notifications", map[string]any{
 				"type":           "achievement_complete",
 				"user_id":        userid,
 				"achievement_id": a.AchievementId,

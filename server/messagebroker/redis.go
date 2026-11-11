@@ -1,4 +1,4 @@
-package events
+package messagebroker
 
 import (
 	"context"
@@ -7,26 +7,26 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-type RedisEventsManager struct {
+type RedisMessageBroker struct {
 	redis  *redis.Client
 	ctx    context.Context
 	cancal context.CancelFunc
 }
 
-func NewRedisEventsManager(ctx context.Context, redis *redis.Client) *RedisEventsManager {
+func NewRedisMessageBroker(ctx context.Context, redis *redis.Client) *RedisMessageBroker {
 	innerCtx, cancelFunc := context.WithCancel(ctx)
-	return &RedisEventsManager{
+	return &RedisMessageBroker{
 		redis:  redis,
 		ctx:    innerCtx,
 		cancal: cancelFunc,
 	}
 }
 
-func (re *RedisEventsManager) Initialize() {
+func (re *RedisMessageBroker) Initialize() {
 
 }
 
-func (re *RedisEventsManager) Produce(channel string, payload map[string]any) {
+func (re *RedisMessageBroker) Produce(channel string, payload map[string]any) {
 	fmt.Println("Got event. producing....")
 	err := re.redis.XAdd(re.ctx, &redis.XAddArgs{
 		Stream: channel,
@@ -38,7 +38,7 @@ func (re *RedisEventsManager) Produce(channel string, payload map[string]any) {
 	}
 }
 
-func (re *RedisEventsManager) Consume(channel string) <-chan map[string]any {
+func (re *RedisMessageBroker) Consume(channel string) <-chan map[string]any {
 	outCh := make(chan map[string]any, 100)
 
 	go func() {

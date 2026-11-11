@@ -5,7 +5,7 @@ import (
 
 	"github.com/abhinash-kml/nova/server/common"
 	"github.com/abhinash-kml/nova/server/config"
-	"github.com/abhinash-kml/nova/server/events"
+	"github.com/abhinash-kml/nova/server/messagebroker"
 	"go.uber.org/zap"
 )
 
@@ -136,8 +136,8 @@ func (s *StatsService) UpdatePlayerStats(ctx context.Context, req UpdatePlayerSt
 		return common.TranslatePostgresError(err, s.logger)
 	}
 
-	eventsManager := events.GetGlobalEventsManager()
-	eventsManager.Produce("stats:update", map[string]any{
+	messageBroker := messagebroker.GetGlobal()
+	messageBroker.Produce("stats:update", map[string]any{
 		"user_id":       req.Id,
 		"stat_id":       req.StatId,
 		"current_value": req.Value,
